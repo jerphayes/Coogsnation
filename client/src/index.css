@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Font Awesome icons */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
+
 :root {
   --background: hsl(0, 0%, 100%);
   --foreground: hsl(20, 14.3%, 4.1%);
@@ -98,9 +101,6 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-
-/* Font Awesome icons */
-@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
 
 /* Animation for loading states */
 @keyframes pulse {

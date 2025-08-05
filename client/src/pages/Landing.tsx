@@ -45,12 +45,65 @@ export default function Landing() {
           <div className="mb-8">
             <h1 className="text-6xl font-black mb-4 transform -rotate-2 inline-block">WHOSE HOUSE?</h1>
             <div className="flex justify-center mb-6">
-              {/* Cougar Mascot Illustration */}
-              <div className="w-32 h-24 bg-white rounded-lg flex items-center justify-center mx-4">
-                <div className="w-20 h-16 bg-uh-red rounded-full relative">
-                  <div className="absolute top-2 left-3 w-3 h-3 bg-white rounded-full"></div>
-                  <div className="absolute top-2 right-3 w-3 h-3 bg-white rounded-full"></div>
-                  <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-6 h-3 bg-white rounded-full"></div>
+              {/* Fierce Cougar Mascot */}
+              <div className="relative w-48 h-32">
+                {/* Main cougar body - lying position */}
+                <div className="absolute bottom-0 left-4 w-40 h-20 bg-uh-red rounded-3xl transform rotate-1 shadow-lg">
+                  {/* Body details */}
+                  <div className="absolute top-2 right-8 w-12 h-8 bg-red-600 rounded-2xl transform -rotate-12"></div>
+                  <div className="absolute bottom-1 left-6 w-6 h-4 bg-red-700 rounded-xl"></div>
+                  <div className="absolute bottom-1 right-12 w-6 h-4 bg-red-700 rounded-xl"></div>
+                  <div className="absolute bottom-1 right-6 w-6 h-4 bg-red-700 rounded-xl"></div>
+                  <div className="absolute bottom-1 right-0 w-6 h-4 bg-red-700 rounded-xl"></div>
+                </div>
+                
+                {/* Cougar head */}
+                <div className="absolute top-2 left-0 w-24 h-20 bg-uh-red rounded-2xl transform -rotate-6 shadow-lg">
+                  {/* Head shape */}
+                  <div className="absolute top-4 left-2 w-20 h-12 bg-uh-red rounded-xl">
+                    {/* Ears */}
+                    <div className="absolute -top-2 left-2 w-4 h-6 bg-uh-red rounded-t-full transform -rotate-12"></div>
+                    <div className="absolute -top-2 right-2 w-4 h-6 bg-uh-red rounded-t-full transform rotate-12"></div>
+                    <div className="absolute -top-1 left-3 w-2 h-3 bg-black rounded-t-full transform -rotate-12"></div>
+                    <div className="absolute -top-1 right-3 w-2 h-3 bg-black rounded-t-full transform rotate-12"></div>
+                    
+                    {/* Eyes - fierce expression */}
+                    <div className="absolute top-2 left-3 w-3 h-4 bg-white rounded-full">
+                      <div className="absolute top-1 left-0.5 w-2 h-2 bg-black rounded-full"></div>
+                      <div className="absolute top-0 left-1 w-1 h-1 bg-white rounded-full"></div>
+                    </div>
+                    <div className="absolute top-2 right-3 w-3 h-4 bg-white rounded-full">
+                      <div className="absolute top-1 right-0.5 w-2 h-2 bg-black rounded-full"></div>
+                      <div className="absolute top-0 right-1 w-1 h-1 bg-white rounded-full"></div>
+                    </div>
+                    
+                    {/* Fierce eyebrows */}
+                    <div className="absolute top-1 left-2 w-4 h-1 bg-black transform -rotate-12"></div>
+                    <div className="absolute top-1 right-2 w-4 h-1 bg-black transform rotate-12"></div>
+                    
+                    {/* Nose and muzzle */}
+                    <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-8 h-6 bg-white rounded-2xl">
+                      <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-black rounded-full"></div>
+                      <div className="absolute bottom-1 left-2 w-1 h-2 bg-black"></div>
+                      <div className="absolute bottom-1 right-2 w-1 h-2 bg-black"></div>
+                    </div>
+                    
+                    {/* Whiskers */}
+                    <div className="absolute top-6 left-0 w-6 h-0.5 bg-black transform -rotate-12"></div>
+                    <div className="absolute top-7 left-0 w-5 h-0.5 bg-black transform -rotate-6"></div>
+                    <div className="absolute top-6 right-0 w-6 h-0.5 bg-black transform rotate-12"></div>
+                    <div className="absolute top-7 right-0 w-5 h-0.5 bg-black transform rotate-6"></div>
+                  </div>
+                </div>
+                
+                {/* Tail */}
+                <div className="absolute bottom-4 right-0 w-8 h-16 bg-uh-red rounded-full transform rotate-45 origin-bottom"></div>
+                
+                {/* Black outline effect */}
+                <div className="absolute inset-0 pointer-events-none">
+                  <div className="absolute bottom-0 left-4 w-40 h-20 border-2 border-black rounded-3xl transform rotate-1"></div>
+                  <div className="absolute top-2 left-0 w-24 h-20 border-2 border-black rounded-2xl transform -rotate-6"></div>
+                  <div className="absolute bottom-4 right-0 w-8 h-16 border-2 border-black rounded-full transform rotate-45 origin-bottom"></div>
                 </div>
               </div>
             </div>
