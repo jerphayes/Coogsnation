@@ -1,10 +1,7 @@
-import { Button } from "@/components/ui/button";
-
 export default function Landing() {
   return (
-    <>
-      <div dangerouslySetInnerHTML={{
-        __html: `
+    <div dangerouslySetInnerHTML={{
+      __html: `
           <!DOCTYPE html>
           <html lang="en">
           <head>
@@ -232,8 +229,7 @@ export default function Landing() {
             </footer>
           </body>
           </html>
-        `
-      }} />
-    </>
+      `
+    }} />
   );
 }
