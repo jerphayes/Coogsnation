@@ -21,6 +21,7 @@ import AdvancedProfile from "@/pages/AdvancedProfile";
 import Messages from "@/pages/Messages";
 import EventManagement from "@/pages/EventManagement";
 import EnhancedDashboard from "@/pages/EnhancedDashboard";
+import AdminDashboard from "@/pages/AdminDashboard";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -40,6 +41,7 @@ function Router() {
       <Route path="/profile/advanced" component={AdvancedProfile} />
       <Route path="/messages" component={Messages} />
       <Route path="/event-management" component={EventManagement} />
+      <Route path="/admin" component={AdminDashboard} />
       <Route path="/forums/categories/:categoryId" component={ForumCategory} />
       <Route path="/forums/topics/:topicId" component={ForumTopic} />
       <Route component={NotFound} />

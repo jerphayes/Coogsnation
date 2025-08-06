@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, MessageSquare, Calendar, ShoppingCart, FileText, BarChart3, Settings, Shield } from "lucide-react";
 import { Link } from "wouter";
-import Header from "@/components/Header";
+import { Header } from "@/components/Header";
 
 interface AdminStats {
   totalUsers: number;
@@ -198,7 +198,7 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {users && Array.isArray(users) && users.slice(0, 10).map((user: any) => (
+                  {users && Array.isArray(users) && (users as any[]).slice(0, 10).map((user: any) => (
                     <div key={user.id} className="flex items-center justify-between p-3 border rounded">
                       <div>
                         <p className="font-medium">{user.displayName || user.username}</p>
@@ -271,7 +271,7 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {forums && Array.isArray(forums) && forums.map((forum: any) => (
+                  {forums && Array.isArray(forums) && (forums as any[]).map((forum: any) => (
                     <div key={forum.id} className="flex items-center justify-between p-3 border rounded">
                       <div>
                         <p className="font-medium">{forum.name}</p>
