@@ -104,7 +104,7 @@ export default function Landing() {
             style={{
               maxWidth: '1200px',
               width: '95%',
-              maxHeight: '500px',
+              maxHeight: '600px',
               height: 'auto'
             }}
           />
