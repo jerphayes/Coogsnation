@@ -1,82 +1,156 @@
 export default function Landing() {
   return (
     <div 
-      style={{ width: '100%', height: '100vh', overflow: 'auto' }}
+      style={{ 
+        width: '100%', 
+        height: '100vh', 
+        overflow: 'auto',
+        fontFamily: 'Roboto, sans-serif',
+        margin: 0,
+        backgroundColor: '#fff',
+        color: '#222'
+      }}
       dangerouslySetInnerHTML={{
         __html: `
           <style>
-            body {
-              font-family: 'Roboto', sans-serif;
-              margin: 0;
-              background-color: #fff;
-              color: #222;
+            * {
+              box-sizing: border-box;
+            }
+            html, body {
+              font-family: 'Roboto', sans-serif !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              background-color: #fff !important;
+              color: #222 !important;
+              line-height: 1.6;
             }
             header {
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              padding: 1rem 2rem;
-              background-color: #fff;
-              border-bottom: 2px solid #ccc;
+              display: flex !important;
+              justify-content: space-between !important;
+              align-items: center !important;
+              padding: 1rem 2rem !important;
+              background-color: #fff !important;
+              border-bottom: 3px solid #a00000 !important;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
             }
             header img.logo {
-              height: 60px;
+              height: 60px !important;
             }
             nav a {
-              margin-left: 1.5rem;
-              text-decoration: none;
-              color: #222;
-              font-weight: bold;
+              margin-left: 1.5rem !important;
+              text-decoration: none !important;
+              color: #222 !important;
+              font-weight: bold !important;
+              font-size: 16px !important;
+              padding: 8px 12px !important;
+              border-radius: 4px !important;
+              transition: all 0.3s ease !important;
+            }
+            nav a:hover {
+              background-color: #a00000 !important;
+              color: #fff !important;
             }
             .hero {
-              text-align: center;
-              padding: 3rem 1rem;
+              text-align: center !important;
+              padding: 4rem 2rem !important;
+              background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
+              min-height: 400px !important;
+              display: flex !important;
+              flex-direction: column !important;
+              justify-content: center !important;
             }
             .hero img {
-              width: 200px;
+              width: 200px !important;
+              height: auto !important;
+              margin: 0 auto 2rem auto !important;
+              display: block !important;
             }
             .hero h1 {
-              font-size: 2.5rem;
-              margin: 1rem 0 0.5rem;
-              color: #a00000;
+              font-size: 3rem !important;
+              margin: 1rem 0 0.5rem !important;
+              color: #a00000 !important;
+              font-weight: bold !important;
+              text-shadow: 1px 1px 2px rgba(0,0,0,0.1) !important;
             }
             .hero h2 {
-              font-size: 2.2rem;
-              margin: 0;
-              color: #a00000;
+              font-size: 2.5rem !important;
+              margin: 0 0 1rem 0 !important;
+              color: #a00000 !important;
+              font-weight: bold !important;
+              text-shadow: 1px 1px 2px rgba(0,0,0,0.1) !important;
             }
             .hero p {
-              font-size: 1.2rem;
-              margin-top: 1rem;
+              font-size: 1.3rem !important;
+              margin: 1rem 0 2rem 0 !important;
+              color: #333 !important;
+              max-width: 600px !important;
+              margin-left: auto !important;
+              margin-right: auto !important;
             }
             .hero button {
-              margin-top: 1.5rem;
-              padding: 0.75rem 2rem;
-              font-size: 1rem;
-              color: white;
-              background-color: #a00000;
-              border: none;
-              border-radius: 5px;
-              cursor: pointer;
+              margin-top: 1.5rem !important;
+              padding: 1rem 2.5rem !important;
+              font-size: 1.1rem !important;
+              color: white !important;
+              background-color: #a00000 !important;
+              border: none !important;
+              border-radius: 8px !important;
+              cursor: pointer !important;
+              font-weight: bold !important;
+              transition: all 0.3s ease !important;
+              box-shadow: 0 4px 8px rgba(160,0,0,0.3) !important;
+            }
+            .hero button:hover {
+              background-color: #800000 !important;
+              transform: translateY(-2px) !important;
+              box-shadow: 0 6px 12px rgba(160,0,0,0.4) !important;
             }
             .section {
-              padding: 2rem;
-              display: flex;
-              flex-wrap: wrap;
-              justify-content: space-around;
-              background-color: #f9f9f9;
+              padding: 4rem 2rem !important;
+              display: flex !important;
+              flex-wrap: wrap !important;
+              justify-content: center !important;
+              gap: 2rem !important;
+              background-color: #f8f9fa !important;
+              max-width: 1200px !important;
+              margin: 0 auto !important;
             }
             .card {
-              margin: 1rem;
-              flex: 1 1 300px;
-              background-color: white;
-              border: 1px solid #ccc;
-              padding: 1rem;
-              border-radius: 8px;
+              flex: 1 1 350px !important;
+              max-width: 400px !important;
+              background-color: white !important;
+              border: 2px solid #e9ecef !important;
+              padding: 2rem !important;
+              border-radius: 12px !important;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+              transition: all 0.3s ease !important;
+            }
+            .card:hover {
+              transform: translateY(-4px) !important;
+              box-shadow: 0 8px 20px rgba(0,0,0,0.15) !important;
+              border-color: #a00000 !important;
             }
             .card h3 {
-              margin-top: 0;
-              color: #a00000;
+              margin-top: 0 !important;
+              margin-bottom: 1rem !important;
+              color: #a00000 !important;
+              font-size: 1.4rem !important;
+              font-weight: bold !important;
+            }
+            .card p {
+              color: #555 !important;
+              font-size: 1rem !important;
+              line-height: 1.6 !important;
+              margin-bottom: 1rem !important;
+            }
+            .card ul {
+              margin: 0 !important;
+              padding-left: 1.2rem !important;
+            }
+            .card li {
+              color: #666 !important;
+              margin-bottom: 0.5rem !important;
+              font-size: 0.95rem !important;
             }
             .forum-table {
               width: 100%;
@@ -183,42 +257,42 @@ export default function Landing() {
             </div>
           </div>
 
-          <div style="text-align: center; padding: 3rem; background-color: #a00000; color: white;">
-            <h2>Ready to Go Coogs?</h2>
-            <p>Join thousands of Houston Cougar fans in the most active online community</p>
-            <button onclick="window.location.href='/api/login'" style="background: white; color: #a00000; padding: 1rem 2rem; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">
+          <div style="text-align: center; padding: 4rem 2rem; background: linear-gradient(135deg, #a00000 0%, #800000 100%); color: white; margin-top: 2rem;">
+            <h2 style="font-size: 2.5rem; margin-bottom: 1rem; font-weight: bold;">Ready to Go Coogs?</h2>
+            <p style="font-size: 1.2rem; margin-bottom: 2rem; max-width: 600px; margin-left: auto; margin-right: auto;">Join thousands of Houston Cougar fans in the most active online community</p>
+            <button onclick="window.location.href='/api/login'" style="background: white; color: #a00000; padding: 1.2rem 3rem; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: all 0.3s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(0,0,0,0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.2)'">
               Join CoogsNation Today
             </button>
-            <p style="margin-top: 1rem; font-size: 0.9rem;">Free to join • Instant access • Go Coogs! 🐾</p>
+            <p style="margin-top: 1.5rem; font-size: 1rem; opacity: 0.9;">Free to join • Instant access • Go Coogs! 🐾</p>
           </div>
 
-          <footer style="background-color: #222; color: white; padding: 2rem; text-align: center;">
-            <div style="display: flex; justify-content: space-around; flex-wrap: wrap; margin-bottom: 2rem;">
-              <div style="min-width: 200px; margin: 1rem;">
-                <h4>CoogsNation</h4>
-                <p style="color: #ccc;">The premier online community for University of Houston fans, students, and alumni.</p>
+          <footer style="background-color: #1a1a1a; color: white; padding: 3rem 2rem 2rem 2rem; text-align: center;">
+            <div style="display: flex; justify-content: space-around; flex-wrap: wrap; margin-bottom: 2rem; max-width: 1000px; margin-left: auto; margin-right: auto;">
+              <div style="min-width: 250px; margin: 1rem; text-align: left;">
+                <h4 style="color: #a00000; font-size: 1.3rem; margin-bottom: 1rem;">CoogsNation</h4>
+                <p style="color: #ccc; line-height: 1.6; font-size: 1rem;">The premier online community for University of Houston fans, students, and alumni.</p>
               </div>
-              <div style="min-width: 150px; margin: 1rem;">
-                <h4>Community</h4>
-                <ul style="list-style: none; padding: 0; color: #ccc;">
-                  <li>Forums</li>
-                  <li>Events</li>
-                  <li>News</li>
-                  <li>Store</li>
+              <div style="min-width: 180px; margin: 1rem; text-align: left;">
+                <h4 style="color: #a00000; font-size: 1.3rem; margin-bottom: 1rem;">Community</h4>
+                <ul style="list-style: none; padding: 0; color: #ccc; line-height: 1.8;">
+                  <li style="margin-bottom: 0.5rem;">Forums</li>
+                  <li style="margin-bottom: 0.5rem;">Events</li>
+                  <li style="margin-bottom: 0.5rem;">News</li>
+                  <li style="margin-bottom: 0.5rem;">Store</li>
                 </ul>
               </div>
-              <div style="min-width: 150px; margin: 1rem;">
-                <h4>Connect</h4>
-                <ul style="list-style: none; padding: 0; color: #ccc;">
-                  <li>About UH</li>
-                  <li>Student Resources</li>
-                  <li>Alumni Network</li>
-                  <li>Contact Us</li>
+              <div style="min-width: 180px; margin: 1rem; text-align: left;">
+                <h4 style="color: #a00000; font-size: 1.3rem; margin-bottom: 1rem;">Connect</h4>
+                <ul style="list-style: none; padding: 0; color: #ccc; line-height: 1.8;">
+                  <li style="margin-bottom: 0.5rem;">About UH</li>
+                  <li style="margin-bottom: 0.5rem;">Student Resources</li>
+                  <li style="margin-bottom: 0.5rem;">Alumni Network</li>
+                  <li style="margin-bottom: 0.5rem;">Contact Us</li>
                 </ul>
               </div>
             </div>
-            <div style="border-top: 1px solid #444; padding-top: 1rem; color: #ccc;">
-              <p>&copy; 2025 CoogsNation. Go Coogs! 🐾</p>
+            <div style="border-top: 2px solid #333; padding-top: 1.5rem; color: #999; text-align: center;">
+              <p style="font-size: 1rem; margin: 0;">&copy; 2025 CoogsNation. Go Coogs! 🐾</p>
             </div>
           </footer>
         `
