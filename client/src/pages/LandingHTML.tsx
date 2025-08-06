@@ -1,300 +1,347 @@
 export default function Landing() {
   return (
     <div 
-      style={{ 
-        width: '100%', 
-        height: '100vh', 
-        overflow: 'auto',
-        fontFamily: 'Roboto, sans-serif',
-        margin: 0,
-        backgroundColor: '#fff',
-        color: '#222'
-      }}
       dangerouslySetInnerHTML={{
         __html: `
-          <style>
-            * {
-              box-sizing: border-box;
-            }
-            html, body {
-              font-family: 'Roboto', sans-serif !important;
-              margin: 0 !important;
-              padding: 0 !important;
-              background-color: #fff !important;
-              color: #222 !important;
-              line-height: 1.6;
-            }
-            header {
-              display: flex !important;
-              justify-content: space-between !important;
-              align-items: center !important;
-              padding: 1rem 2rem !important;
-              background-color: #fff !important;
-              border-bottom: 3px solid #a00000 !important;
-              box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
-            }
-            header img.logo {
-              height: 60px !important;
-            }
-            nav a {
-              margin-left: 1.5rem !important;
-              text-decoration: none !important;
-              color: #222 !important;
-              font-weight: bold !important;
-              font-size: 16px !important;
-              padding: 8px 12px !important;
-              border-radius: 4px !important;
-              transition: all 0.3s ease !important;
-            }
-            nav a:hover {
-              background-color: #a00000 !important;
-              color: #fff !important;
-            }
-            .hero {
-              text-align: center !important;
-              padding: 4rem 2rem !important;
-              background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
-              min-height: 400px !important;
-              display: flex !important;
-              flex-direction: column !important;
-              justify-content: center !important;
-            }
-            .hero img {
-              width: 200px !important;
-              height: auto !important;
-              margin: 0 auto 2rem auto !important;
-              display: block !important;
-            }
-            .hero h1 {
-              font-size: 3rem !important;
-              margin: 1rem 0 0.5rem !important;
-              color: #a00000 !important;
-              font-weight: bold !important;
-              text-shadow: 1px 1px 2px rgba(0,0,0,0.1) !important;
-            }
-            .hero h2 {
-              font-size: 2.5rem !important;
-              margin: 0 0 1rem 0 !important;
-              color: #a00000 !important;
-              font-weight: bold !important;
-              text-shadow: 1px 1px 2px rgba(0,0,0,0.1) !important;
-            }
-            .hero p {
-              font-size: 1.3rem !important;
-              margin: 1rem 0 2rem 0 !important;
-              color: #333 !important;
-              max-width: 600px !important;
-              margin-left: auto !important;
-              margin-right: auto !important;
-            }
-            .hero button {
-              margin-top: 1.5rem !important;
-              padding: 1rem 2.5rem !important;
-              font-size: 1.1rem !important;
-              color: white !important;
-              background-color: #a00000 !important;
-              border: none !important;
-              border-radius: 8px !important;
-              cursor: pointer !important;
-              font-weight: bold !important;
-              transition: all 0.3s ease !important;
-              box-shadow: 0 4px 8px rgba(160,0,0,0.3) !important;
-            }
-            .hero button:hover {
-              background-color: #800000 !important;
-              transform: translateY(-2px) !important;
-              box-shadow: 0 6px 12px rgba(160,0,0,0.4) !important;
-            }
-            .section {
-              padding: 4rem 2rem !important;
-              display: flex !important;
-              flex-wrap: wrap !important;
-              justify-content: center !important;
-              gap: 2rem !important;
-              background-color: #f8f9fa !important;
-              max-width: 1200px !important;
-              margin: 0 auto !important;
-            }
-            .card {
-              flex: 1 1 350px !important;
-              max-width: 400px !important;
-              background-color: white !important;
-              border: 2px solid #e9ecef !important;
-              padding: 2rem !important;
-              border-radius: 12px !important;
-              box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
-              transition: all 0.3s ease !important;
-            }
-            .card:hover {
-              transform: translateY(-4px) !important;
-              box-shadow: 0 8px 20px rgba(0,0,0,0.15) !important;
-              border-color: #a00000 !important;
-            }
-            .card h3 {
-              margin-top: 0 !important;
-              margin-bottom: 1rem !important;
-              color: #a00000 !important;
-              font-size: 1.4rem !important;
-              font-weight: bold !important;
-            }
-            .card p {
-              color: #555 !important;
-              font-size: 1rem !important;
-              line-height: 1.6 !important;
-              margin-bottom: 1rem !important;
-            }
-            .card ul {
-              margin: 0 !important;
-              padding-left: 1.2rem !important;
-            }
-            .card li {
-              color: #666 !important;
-              margin-bottom: 0.5rem !important;
-              font-size: 0.95rem !important;
-            }
-            .forum-table {
-              width: 100%;
-              border-collapse: collapse;
-            }
-            .forum-table th, .forum-table td {
-              border: 1px solid #ddd;
-              padding: 0.5rem;
-              text-align: left;
-            }
-            .avatars img {
-              width: 50px;
-              height: 50px;
-              border-radius: 50%;
-              margin-right: 0.5rem;
-            }
-          </style>
-          
-          <header>
-            <img src="https://upload.wikimedia.org/wikipedia/commons/2/2e/University_of_Houston_logo.svg" alt="UH Logo" class="logo" />
-            <nav>
-              <a href="/api/login">Login</a>
-              <a href="/forums">Forums</a>
-              <a href="/news">News</a>
-              <a href="/event-management">Events</a>
-              <a href="/store">Store</a>
-            </nav>
-          </header>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CoogsNation.com</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      margin: 0;
+      background-color: #f5f5f5;
+      color: #222;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      background-color: #fff;
+    }
+    .uh-logo {
+      width: 80px;
+      height: 80px;
+    }
+    nav {
+      display: flex;
+      gap: 2rem;
+    }
+    nav a {
+      text-decoration: none;
+      color: #333;
+      font-weight: 500;
+      font-size: 16px;
+    }
+    .hero {
+      text-align: center;
+      padding: 3rem 2rem;
+      background-color: #f5f5f5;
+    }
+    .whose-house {
+      font-size: 4rem;
+      font-weight: bold;
+      color: #B91C1C;
+      margin: 0 0 2rem 0;
+      transform: rotate(-8deg);
+      letter-spacing: 0.1em;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }
+    .cougar-container {
+      margin: 2rem 0;
+    }
+    .coogs-house {
+      font-size: 4rem;
+      font-weight: bold;
+      color: #B91C1C;
+      margin: 2rem 0;
+      letter-spacing: 0.1em;
+    }
+    .welcome-title {
+      font-size: 2rem;
+      color: #333;
+      margin: 2rem 0 1rem 0;
+      font-weight: normal;
+    }
+    .welcome-subtitle {
+      font-size: 1.2rem;
+      color: #666;
+      margin: 0 0 2rem 0;
+    }
+    .get-started-btn {
+      background-color: #B91C1C;
+      color: white;
+      padding: 1rem 2rem;
+      font-size: 1.1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .bottom-section {
+      display: flex;
+      padding: 2rem;
+      background-color: #fff;
+      gap: 2rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .section-card {
+      flex: 1;
+      min-width: 300px;
+      max-width: 400px;
+    }
+    .section-title {
+      font-size: 1.3rem;
+      color: #333;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .red-icon {
+      color: #B91C1C;
+    }
+    .forum-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+    }
+    .forum-header {
+      font-weight: bold;
+      color: #333;
+    }
+    .forum-cell {
+      color: #666;
+      padding: 0.5rem 0;
+    }
+    .forum-cell.center {
+      text-align: center;
+    }
+    .member-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .member-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-color: #B91C1C;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 0.8rem;
+      font-weight: bold;
+    }
+    .member-name {
+      color: #666;
+      font-size: 0.9rem;
+    }
+    .group-list {
+      font-size: 0.9rem;
+      color: #666;
+      line-height: 1.8;
+    }
+    .group-item {
+      margin-bottom: 0.5rem;
+    }
+    .events-section {
+      padding: 2rem;
+      background-color: #f5f5f5;
+      text-align: center;
+    }
+    .events-title {
+      font-size: 1.5rem;
+      color: #333;
+      margin: 0 0 1rem 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+    .events-content {
+      color: #666;
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <svg class="uh-logo" viewBox="0 0 100 100">
+      <rect x="10" y="15" width="15" height="70" fill="#B91C1C"/>
+      <rect x="30" y="35" width="15" height="50" fill="#B91C1C"/>
+      <rect x="50" y="15" width="15" height="30" fill="#B91C1C"/>
+      <rect x="50" y="55" width="15" height="30" fill="#B91C1C"/>
+      <rect x="70" y="35" width="15" height="50" fill="#B91C1C"/>
+    </svg>
+    <nav>
+      <a href="/home">Home</a>
+      <a href="/forums">Forums</a>
+      <a href="/members">Members</a>
+      <a href="/api/login">Log In</a>
+      <a href="/api/login">Sign Up</a>
+    </nav>
+  </header>
 
-          <div class="hero">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/2/2e/University_of_Houston_logo.svg" alt="CoogsNation Logo" />
-            <h1>Welcome to</h1>
-            <h2>CoogsNation.com</h2>
-            <p>The Premier Online Community for Houston Cougar Fans, Students, and Alumni</p>
-            <button onclick="window.location.href='/api/login'">Join the Pack 🐾</button>
-          </div>
+  <div class="hero">
+    <div class="whose-house">WHOSE HOUSE?</div>
+    
+    <div class="cougar-container">
+      <svg width="400" height="250" viewBox="0 0 400 250">
+        <!-- Cougar body in lying position -->
+        <ellipse cx="200" cy="180" rx="120" ry="35" fill="#B91C1C" stroke="#000" stroke-width="3"/>
+        
+        <!-- Cougar chest/front -->
+        <ellipse cx="150" cy="160" rx="40" ry="30" fill="#B91C1C" stroke="#000" stroke-width="2"/>
+        
+        <!-- Cougar head -->
+        <ellipse cx="120" cy="120" rx="50" ry="45" fill="#B91C1C" stroke="#000" stroke-width="3"/>
+        
+        <!-- Ears -->
+        <ellipse cx="95" cy="85" rx="12" ry="18" fill="#B91C1C" stroke="#000" stroke-width="2"/>
+        <ellipse cx="145" cy="85" rx="12" ry="18" fill="#B91C1C" stroke="#000" stroke-width="2"/>
+        <ellipse cx="95" cy="88" rx="6" ry="10" fill="#000"/>
+        <ellipse cx="145" cy="88" rx="6" ry="10" fill="#000"/>
+        
+        <!-- Eyes - half-closed, angry look -->
+        <ellipse cx="105" cy="110" rx="8" ry="6" fill="#000"/>
+        <ellipse cx="135" cy="110" rx="8" ry="6" fill="#000"/>
+        <ellipse cx="105" cy="108" rx="2" ry="2" fill="#fff"/>
+        <ellipse cx="135" cy="108" rx="2" ry="2" fill="#fff"/>
+        
+        <!-- Eyebrows for angry look -->
+        <path d="M 95 100 L 115 105" stroke="#000" stroke-width="3" stroke-linecap="round"/>
+        <path d="M 145 100 L 125 105" stroke="#000" stroke-width="3" stroke-linecap="round"/>
+        
+        <!-- Nose -->
+        <path d="M 115 125 L 125 125 L 120 135 Z" fill="#000"/>
+        
+        <!-- Mouth area - white muzzle -->
+        <ellipse cx="120" cy="145" rx="20" ry="12" fill="#fff" stroke="#000" stroke-width="2"/>
+        
+        <!-- Mouth line -->
+        <path d="M 105 145 Q 120 150 135 145" stroke="#000" stroke-width="2" fill="none"/>
+        
+        <!-- Whiskers -->
+        <line x1="75" y1="120" x2="95" y2="125" stroke="#000" stroke-width="2"/>
+        <line x1="75" y1="130" x2="95" y2="130" stroke="#000" stroke-width="2"/>
+        <line x1="145" y1="125" x2="165" y2="120" stroke="#000" stroke-width="2"/>
+        <line x1="145" y1="130" x2="165" y2="130" stroke="#000" stroke-width="2"/>
+        
+        <!-- Front legs/paws -->
+        <ellipse cx="160" cy="190" rx="12" ry="20" fill="#B91C1C" stroke="#000" stroke-width="2"/>
+        <ellipse cx="180" cy="195" rx="12" ry="18" fill="#B91C1C" stroke="#000" stroke-width="2"/>
+        
+        <!-- Back legs -->
+        <ellipse cx="240" cy="195" rx="15" ry="20" fill="#B91C1C" stroke="#000" stroke-width="2"/>
+        <ellipse cx="270" cy="190" rx="12" ry="18" fill="#B91C1C" stroke="#000" stroke-width="2"/>
+        
+        <!-- Tail -->
+        <path d="M 320 170 Q 340 150 350 130 Q 355 120 350 110" stroke="#000" stroke-width="6" fill="none" stroke-linecap="round"/>
+        <path d="M 320 170 Q 340 150 350 130 Q 355 120 350 110" stroke="#B91C1C" stroke-width="4" fill="none" stroke-linecap="round"/>
+        
+        <!-- Body details/muscle definition -->
+        <path d="M 180 150 Q 200 155 220 150" stroke="#000" stroke-width="2" fill="none"/>
+        <path d="M 160 170 Q 180 175 200 170" stroke="#000" stroke-width="2" fill="none"/>
+      </svg>
+    </div>
+    
+    <div class="coogs-house">COOGS' HOUSE!</div>
+    
+    <div class="welcome-title">Welcome to CoogsNation.com</div>
+    <div class="welcome-subtitle">The online community for University of Houston fans.</div>
+    
+    <button class="get-started-btn" onclick="window.location.href='/api/login'">Get Started</button>
+  </div>
 
-          <div class="section">
-            <div class="card">
-              <h3>🏈 Dynamic Forums</h3>
-              <p>Join discussions on football, basketball, academics, and campus life with fellow Coogs.</p>
-              <ul>
-                <li>Sports Discussion</li>
-                <li>Academic Forums</li>
-                <li>Water Cooler Talk</li>
-                <li>Heartbeats Dating</li>
-                <li>UH Hall of Fame</li>
-              </ul>
-            </div>
+  <div class="bottom-section">
+    <!-- Community Forums -->
+    <div class="section-card">
+      <div class="section-title">
+        <span class="red-icon">💬</span> Community Forums
+      </div>
+      
+      <div class="forum-grid">
+        <div class="forum-header">Forum Topics</div>
+        <div class="forum-header center">Topics</div>
+        <div class="forum-header center">Posts</div>
+        
+        <div class="forum-cell">Whose Football</div>
+        <div class="forum-cell center">10</div>
+        <div class="forum-cell center">47</div>
+        
+        <div class="forum-cell">Whose Basketball</div>
+        <div class="forum-cell center">8</div>
+        <div class="forum-cell center">32</div>
+        
+        <div class="forum-cell">Coogs in the Big 12</div>
+        <div class="forum-cell center">5</div>
+        <div class="forum-cell center">19</div>
+      </div>
+    </div>
 
-            <div class="card">
-              <h3>📰 Latest News</h3>
-              <p>Stay updated with the latest Houston Cougars news, game results, and campus events.</p>
-              <ul>
-                <li>Breaking News</li>
-                <li>Game Coverage</li>
-                <li>Recruiting Updates</li>
-                <li>Campus Events</li>
-              </ul>
-            </div>
+    <!-- Members -->
+    <div class="section-card">
+      <div class="section-title">
+        <span class="red-icon">👥</span> Members
+      </div>
+      
+      <div class="member-item">
+        <div class="member-avatar">S</div>
+        <div class="member-name">Sarah</div>
+      </div>
+      
+      <div class="member-item">
+        <div class="member-avatar">J</div>
+        <div class="member-name">Jessica</div>
+      </div>
+      
+      <div class="member-item">
+        <div class="member-avatar">E</div>
+        <div class="member-name">Emily</div>
+      </div>
+      
+      <div class="member-item">
+        <div class="member-avatar">A</div>
+        <div class="member-name">Amanda</div>
+      </div>
+    </div>
 
-            <div class="card">
-              <h3>📅 Community Events</h3>
-              <p>Discover and attend meetups, watch parties, and exclusive community gatherings.</p>
-              <ul>
-                <li>Watch Parties</li>
-                <li>Alumni Meetups</li>
-                <li>Tailgate Events</li>
-                <li>Study Groups</li>
-              </ul>
-            </div>
+    <!-- Groups -->
+    <div class="section-card">
+      <div class="section-title">
+        <span class="red-icon">👥</span> Groups
+      </div>
+      
+      <div class="group-list">
+        <div class="group-item">Step by Your Coog</div>
+        <div class="group-item">CoogsCourt</div>
+        <div class="group-item">CoogsCourt</div>
+        <div class="group-item">CoogsLadies</div>
+      </div>
+    </div>
+  </div>
 
-            <div class="card">
-              <h3>🛍️ Coogs Store</h3>
-              <p>Show your Houston pride with exclusive merchandise and official gear.</p>
-              <ul>
-                <li>Apparel & Gear</li>
-                <li>Hats & Accessories</li>
-                <li>Tech Accessories</li>
-                <li>Unique Gifts</li>
-              </ul>
-            </div>
-
-            <div class="card">
-              <h3>💬 Direct Messaging</h3>
-              <p>Connect privately with fellow Coogs through our real-time messaging system.</p>
-              <ul>
-                <li>Private Chats</li>
-                <li>Real-time Updates</li>
-                <li>Group Messages</li>
-                <li>Mobile Friendly</li>
-              </ul>
-            </div>
-
-            <div class="card">
-              <h3>👤 Enhanced Profiles</h3>
-              <p>Build your reputation with achievement badges and community recognition.</p>
-              <ul>
-                <li>Achievement Badges</li>
-                <li>Activity Tracking</li>
-                <li>Reputation System</li>
-                <li>Privacy Controls</li>
-              </ul>
-            </div>
-          </div>
-
-          <div style="text-align: center; padding: 4rem 2rem; background: linear-gradient(135deg, #a00000 0%, #800000 100%); color: white; margin-top: 2rem;">
-            <h2 style="font-size: 2.5rem; margin-bottom: 1rem; font-weight: bold;">Ready to Go Coogs?</h2>
-            <p style="font-size: 1.2rem; margin-bottom: 2rem; max-width: 600px; margin-left: auto; margin-right: auto;">Join thousands of Houston Cougar fans in the most active online community</p>
-            <button onclick="window.location.href='/api/login'" style="background: white; color: #a00000; padding: 1.2rem 3rem; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: all 0.3s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(0,0,0,0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.2)'">
-              Join CoogsNation Today
-            </button>
-            <p style="margin-top: 1.5rem; font-size: 1rem; opacity: 0.9;">Free to join • Instant access • Go Coogs! 🐾</p>
-          </div>
-
-          <footer style="background-color: #1a1a1a; color: white; padding: 3rem 2rem 2rem 2rem; text-align: center;">
-            <div style="display: flex; justify-content: space-around; flex-wrap: wrap; margin-bottom: 2rem; max-width: 1000px; margin-left: auto; margin-right: auto;">
-              <div style="min-width: 250px; margin: 1rem; text-align: left;">
-                <h4 style="color: #a00000; font-size: 1.3rem; margin-bottom: 1rem;">CoogsNation</h4>
-                <p style="color: #ccc; line-height: 1.6; font-size: 1rem;">The premier online community for University of Houston fans, students, and alumni.</p>
-              </div>
-              <div style="min-width: 180px; margin: 1rem; text-align: left;">
-                <h4 style="color: #a00000; font-size: 1.3rem; margin-bottom: 1rem;">Community</h4>
-                <ul style="list-style: none; padding: 0; color: #ccc; line-height: 1.8;">
-                  <li style="margin-bottom: 0.5rem;">Forums</li>
-                  <li style="margin-bottom: 0.5rem;">Events</li>
-                  <li style="margin-bottom: 0.5rem;">News</li>
-                  <li style="margin-bottom: 0.5rem;">Store</li>
-                </ul>
-              </div>
-              <div style="min-width: 180px; margin: 1rem; text-align: left;">
-                <h4 style="color: #a00000; font-size: 1.3rem; margin-bottom: 1rem;">Connect</h4>
-                <ul style="list-style: none; padding: 0; color: #ccc; line-height: 1.8;">
-                  <li style="margin-bottom: 0.5rem;">About UH</li>
-                  <li style="margin-bottom: 0.5rem;">Student Resources</li>
-                  <li style="margin-bottom: 0.5rem;">Alumni Network</li>
-                  <li style="margin-bottom: 0.5rem;">Contact Us</li>
-                </ul>
-              </div>
-            </div>
-            <div style="border-top: 2px solid #333; padding-top: 1.5rem; color: #999; text-align: center;">
-              <p style="font-size: 1rem; margin: 0;">&copy; 2025 CoogsNation. Go Coogs! 🐾</p>
-            </div>
-          </footer>
+  <!-- Upcoming Events -->
+  <div class="events-section">
+    <div class="events-title">
+      <span class="red-icon">📅</span> Upcoming Events
+    </div>
+    <div class="events-content">Check back soon for upcoming events!</div>
+  </div>
+</body>
+</html>
         `
       }}
     />
