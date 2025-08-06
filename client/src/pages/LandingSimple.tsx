@@ -1,4 +1,5 @@
 import bannerImage from "@assets/file_00000000ed946246b26194ea80eb5e3a_conversation_id=67fb526f-75cc-8001-93e0-7b286caca06c&message_id=f5151dca-9d4a-4d7c-acf1-5e125d01acfb_1754449989402.png";
+import uhSeal from "@assets/1200px-University_of_Houston_seal.svg_1754451467648.png";
 import { useEffect, useRef } from "react";
 
 export default function Landing() {
@@ -39,12 +40,12 @@ export default function Landing() {
         <source src="https://quicksounds.com/uploads/tracks/295879743_2073341770_1313737317.mp3" type="audio/mpeg" />
       </audio>
 
-      {/* UH Logo Centered */}
+      {/* UH Seal Centered */}
       <div style={{ marginTop: '20px' }}>
         <img 
-          src="https://upload.wikimedia.org/wikipedia/commons/2/2e/University_of_Houston_logo.svg" 
-          alt="UH Logo"
-          style={{ width: '250px' }}
+          src={uhSeal} 
+          alt="University of Houston Official Seal"
+          style={{ width: '200px', height: 'auto' }}
         />
       </div>
 
