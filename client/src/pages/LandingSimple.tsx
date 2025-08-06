@@ -40,21 +40,16 @@ export default function Landing() {
       color: #000;
     }
 
-    .hero img {
-      width: 200px;
-      margin-top: 20px;
+    .banner-container {
+      margin: 30px 0;
+      display: flex;
+      justify-content: center;
     }
 
-    .hero h1 {
-      font-size: 2.5em;
-      color: #a00000;
-      margin: 20px 0 5px;
-    }
-
-    .hero h2 {
-      font-size: 2.2em;
-      color: #a00000;
-      margin: 0;
+    .main-banner {
+      max-width: 500px;
+      width: 90%;
+      height: auto;
     }
 
     .hero p {
@@ -93,9 +88,9 @@ export default function Landing() {
 
   <!-- Hero Section -->
   <div class="hero">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/Houston_Cougar_logo.png/800px-Houston_Cougar_logo.png" alt="Cougar Mascot">
-    <h1>WHOSE HOUSE?</h1>
-    <h2>COOGS' HOUSE!</h2>
+    <div class="banner-container">
+      <img src="/attached_assets/file_00000000ed946246b26194ea80eb5e3a_conversation_id=67fb526f-75cc-8001-93e0-7b286caca06c&message_id=f5151dca-9d4a-4d7c-acf1-5e125d01acfb_1754449989402.png" alt="Whose House? Coogs House! Banner" class="main-banner">
+    </div>
     <p>Welcome to CoogsNation.com — the online community for University of Houston fans.</p>
     <button onclick="window.location.href='/api/login'">Get Started</button>
   </div>
