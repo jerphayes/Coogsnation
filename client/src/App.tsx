@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
-import Landing from "@/pages/LandingSimple";
+import Landing from "@/pages/LandingTest";
 import Home from "@/pages/Home";
 import Forums from "@/pages/Forums";
 import News from "@/pages/News";
@@ -27,26 +27,21 @@ function Router() {
 
   return (
     <Switch>
-      {isLoading || !isAuthenticated ? (
-        <Route path="/" component={Landing} />
-      ) : (
-        <>
-          <Route path="/" component={Home} />
-          <Route path="/dashboard" component={EnhancedDashboard} />
-          <Route path="/forums" component={Forums} />
-          <Route path="/news" component={News} />
-          <Route path="/store" component={Store} />
-          <Route path="/cart" component={Cart} />
-          <Route path="/profile" component={Profile} />
-          <Route path="/events" component={Events} />
-          <Route path="/admin/news" component={NewsAdmin} />
-          <Route path="/profile/advanced" component={AdvancedProfile} />
-          <Route path="/messages" component={Messages} />
-          <Route path="/event-management" component={EventManagement} />
-          <Route path="/forums/categories/:categoryId" component={ForumCategory} />
-          <Route path="/forums/topics/:topicId" component={ForumTopic} />
-        </>
-      )}
+      <Route path="/" component={Landing} />
+      <Route path="/home" component={isAuthenticated ? Home : Landing} />
+      <Route path="/dashboard" component={EnhancedDashboard} />
+      <Route path="/forums" component={Forums} />
+      <Route path="/news" component={News} />
+      <Route path="/store" component={Store} />
+      <Route path="/cart" component={Cart} />
+      <Route path="/profile" component={Profile} />
+      <Route path="/events" component={Events} />
+      <Route path="/admin/news" component={NewsAdmin} />
+      <Route path="/profile/advanced" component={AdvancedProfile} />
+      <Route path="/messages" component={Messages} />
+      <Route path="/event-management" component={EventManagement} />
+      <Route path="/forums/categories/:categoryId" component={ForumCategory} />
+      <Route path="/forums/topics/:topicId" component={ForumTopic} />
       <Route component={NotFound} />
     </Switch>
   );
