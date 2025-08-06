@@ -17,39 +17,38 @@ export default function Landing() {
       text-align: center;
     }
 
-    .logo-container {
-      padding: 20px 0 10px;
+    .top-logo {
+      margin-top: 20px;
     }
 
-    .logo {
-      height: 80px;
+    .top-logo img {
+      width: 250px;
     }
 
-    nav {
+    .nav-bar {
+      margin-top: 10px;
+      margin-bottom: 20px;
       padding: 10px 0;
       border-bottom: 2px solid #ccc;
+      font-size: 1.1em;
     }
 
-    nav a {
+    .nav-bar a {
       margin: 0 15px;
       text-decoration: none;
       font-weight: bold;
       color: #000;
     }
 
-    .hero {
-      padding: 40px 20px;
-    }
-
     .hero img {
       width: 200px;
-      max-width: 90%;
+      margin-top: 20px;
     }
 
     .hero h1 {
       font-size: 2.5em;
       color: #a00000;
-      margin: 20px 0 10px;
+      margin: 20px 0 5px;
     }
 
     .hero h2 {
@@ -60,11 +59,12 @@ export default function Landing() {
 
     .hero p {
       font-size: 1.1em;
-      margin-top: 15px;
+      margin: 20px auto;
+      max-width: 600px;
     }
 
     .hero button {
-      margin-top: 25px;
+      margin-top: 15px;
       padding: 12px 25px;
       font-size: 1em;
       background-color: #a00000;
@@ -77,19 +77,19 @@ export default function Landing() {
 </head>
 <body>
 
-  <!-- Top-centered UH Logo -->
-  <div class="logo-container">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/2/2e/University_of_Houston_logo.svg" class="logo" alt="UH Logo">
+  <!-- UH Logo Centered -->
+  <div class="top-logo">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/2/2e/University_of_Houston_logo.svg" alt="UH Logo">
   </div>
 
-  <!-- Centered Navigation -->
-  <nav>
+  <!-- Navigation Menu -->
+  <div class="nav-bar">
     <a href="/home">Home</a>
     <a href="/forums">Forums</a>
     <a href="/members">Members</a>
     <a href="/api/login">Log In</a>
     <a href="/api/login">Sign Up</a>
-  </nav>
+  </div>
 
   <!-- Hero Section -->
   <div class="hero">
