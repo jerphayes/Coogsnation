@@ -1,195 +1,395 @@
 import { useState } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { Link } from "wouter";
+import { formatDistance } from "date-fns";
+
+type CategoryType = {
+  id: number;
+  name: string;
+  description: string | null;
+  slug: string;
+  icon: string | null;
+  color: string | null;
+  sortOrder: number | null;
+  isActive: boolean | null;
+  createdAt: Date | null;
+};
 
 export default function Forums() {
-  const { isAuthenticated } = useAuth();
-  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const { user, isAuthenticated } = useAuth();
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { data: forumCategories, isLoading: categoriesLoading } = useQuery({
     queryKey: ["/api/forums/categories"],
   });
 
-  const { data: forumTopics, isLoading: topicsLoading } = useQuery({
-    queryKey: ["/api/forums/categories", selectedCategory, "topics"],
-    enabled: !!selectedCategory,
-  });
+  const getCategoryIcon = (name: string) => {
+    const iconMap: { [key: string]: string } = {
+      'Football': 'football-ball',
+      'Basketball': 'basketball-ball',
+      'Baseball': 'baseball-ball',
+      'Track & Field': 'running',
+      'Golf': 'golf-ball',
+      'Water Cooler Talk': 'coffee',
+      'Heartbeats': 'heart',
+      'UH Hall of Fame': 'trophy',
+      'Academic Discussion': 'graduation-cap',
+      'Student Life': 'university',
+    };
+    return iconMap[name] || 'comments';
+  };
+
+  const getCategoryColor = (name: string) => {
+    const colorMap: { [key: string]: string } = {
+      'Football': 'bg-green-500',
+      'Basketball': 'bg-orange-500',
+      'Baseball': 'bg-blue-500',
+      'Track & Field': 'bg-purple-500',
+      'Golf': 'bg-green-600',
+      'Water Cooler Talk': 'bg-blue-600',
+      'Heartbeats': 'bg-pink-500',
+      'UH Hall of Fame': 'bg-yellow-600',
+      'Academic Discussion': 'bg-indigo-500',
+      'Student Life': 'bg-teal-500',
+    };
+    return colorMap[name] || 'bg-uh-red';
+  };
+
+  const getCategoryDescription = (name: string) => {
+    const descriptions: { [key: string]: string } = {
+      'Football': 'Discuss Houston Cougar football, games, players, recruiting, and strategy',
+      'Basketball': 'Basketball discussions including game analysis, player stats, and team news',
+      'Baseball': 'Houston Cougar baseball talk, game reviews, and season discussions',
+      'Track & Field': 'Track and field events, athlete achievements, and meet results',
+      'Golf': 'Golf team discussions, tournament results, and course talk',
+      'Water Cooler Talk': 'General discussions, off-topic conversations, and community chat',
+      'Heartbeats': 'Dating, relationships, and connections within the Coogs community',
+      'UH Hall of Fame': 'Celebrating notable UH alumni, achievements, and university history',
+      'Academic Discussion': 'Course discussions, study groups, and academic support',
+      'Student Life': 'Campus events, student organizations, and university life',
+    };
+    return descriptions[name] || 'Forum discussions and community conversations';
+  };
+
+  // Filter categories based on search
+  const filteredCategories = forumCategories ? (forumCategories as CategoryType[]).filter(category =>
+    category.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    getCategoryDescription(category.name).toLowerCase().includes(searchQuery.toLowerCase())
+  ) : [];
+
+  // Group categories by type
+  const sportsCategories = filteredCategories.filter(cat => 
+    ['Football', 'Basketball', 'Baseball', 'Track & Field', 'Golf'].includes(cat.name)
+  );
+  
+  const communityCategories = filteredCategories.filter(cat => 
+    ['Water Cooler Talk', 'Heartbeats', 'UH Hall of Fame'].includes(cat.name)
+  );
+  
+  const academicCategories = filteredCategories.filter(cat => 
+    ['Academic Discussion', 'Student Life'].includes(cat.name)
+  );
+
+  const otherCategories = filteredCategories.filter(cat => 
+    ![...sportsCategories, ...communityCategories, ...academicCategories].includes(cat)
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-uh-black mb-2">Community Forums</h1>
-          <p className="text-gray-600">Join the conversation with fellow Coogs</p>
+        
+        {/* Hero Section */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-uh-black mb-4">CoogsNation Forums</h1>
+          <p className="text-xl text-gray-600 mb-6">
+            Connect, discuss, and engage with the Houston Cougar community
+          </p>
+          <div className="max-w-2xl mx-auto">
+            <Input
+              type="search"
+              placeholder="Search forums and topics..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full text-lg py-3 pl-4 pr-12 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-uh-red focus:border-transparent"
+            />
+            <i className="fas fa-search absolute right-4 top-3 text-gray-400 text-lg"></i>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Categories Sidebar */}
-          <div className="lg:col-span-1">
-            <Card className="p-6 sticky top-4">
-              <h2 className="text-lg font-bold text-uh-black mb-4">Categories</h2>
-              
-              {categoriesLoading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="animate-pulse">
-                      <div className="h-12 bg-gray-200 rounded"></div>
-                    </div>
-                  ))}
-                </div>
-              ) : forumCategories && forumCategories.length > 0 ? (
-                <div className="space-y-2">
-                  <button
-                    onClick={() => setSelectedCategory(null)}
-                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                      selectedCategory === null 
-                        ? 'bg-uh-red text-white' 
-                        : 'hover:bg-gray-100 text-gray-700'
-                    }`}
-                  >
-                    All Categories
-                  </button>
-                  {forumCategories.map((category: any) => (
-                    <button
-                      key={category.id}
-                      onClick={() => setSelectedCategory(category.id)}
-                      className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                        selectedCategory === category.id 
-                          ? 'bg-uh-red text-white' 
-                          : 'hover:bg-gray-100 text-gray-700'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-2">
-                        <i className={`${category.icon || 'fas fa-comments'} text-sm`}></i>
-                        <span className="text-sm font-medium">{category.name}</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-4 text-gray-500">
-                  <p>No categories available</p>
-                </div>
-              )}
-            </Card>
-          </div>
-
-          {/* Main Content */}
-          <div className="lg:col-span-3">
-            {selectedCategory === null ? (
-              /* All Categories View */
-              <div className="space-y-6">
-                {forumCategories && forumCategories.map((category: any) => (
-                  <Card key={category.id} className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-12 h-12 ${category.color || 'bg-uh-red'} rounded-full flex items-center justify-center`}>
-                          <i className={`${category.icon || 'fas fa-comments'} text-white`}></i>
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-bold text-uh-black">{category.name}</h3>
-                          <p className="text-gray-600">{category.description}</p>
-                        </div>
-                      </div>
-                      <Button
-                        onClick={() => setSelectedCategory(category.id)}
-                        variant="outline"
-                        className="border-uh-red text-uh-red hover:bg-uh-red hover:text-white"
-                      >
-                        View Topics
-                      </Button>
-                    </div>
-                  </Card>
-                ))}
+        {/* Forum Statistics */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Card>
+            <CardContent className="p-6 text-center">
+              <div className="mb-2">
+                <i className="fas fa-comments text-3xl text-uh-red"></i>
               </div>
-            ) : (
-              /* Selected Category Topics */
-              <Card className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center space-x-3">
-                    <Button
-                      onClick={() => setSelectedCategory(null)}
-                      variant="ghost"
-                      className="text-uh-red hover:text-uh-black"
-                    >
-                      <i className="fas fa-arrow-left mr-2"></i>
-                      Back to Categories
-                    </Button>
-                  </div>
-                  {isAuthenticated && (
-                    <Button className="bg-uh-red hover:bg-red-700 text-white">
-                      <i className="fas fa-plus mr-2"></i>
-                      New Topic
-                    </Button>
-                  )}
-                </div>
+              <h3 className="text-2xl font-bold text-uh-black">{filteredCategories.length}</h3>
+              <p className="text-gray-600">Active Forums</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-6 text-center">
+              <div className="mb-2">
+                <i className="fas fa-users text-3xl text-blue-600"></i>
+              </div>
+              <h3 className="text-2xl font-bold text-uh-black">2,847</h3>
+              <p className="text-gray-600">Members</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-6 text-center">
+              <div className="mb-2">
+                <i className="fas fa-file-alt text-3xl text-green-600"></i>
+              </div>
+              <h3 className="text-2xl font-bold text-uh-black">15,429</h3>
+              <p className="text-gray-600">Topics</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-6 text-center">
+              <div className="mb-2">
+                <i className="fas fa-comment text-3xl text-purple-600"></i>
+              </div>
+              <h3 className="text-2xl font-bold text-uh-black">89,341</h3>
+              <p className="text-gray-600">Posts</p>
+            </CardContent>
+          </Card>
+        </div>
 
-                {topicsLoading ? (
-                  <div className="space-y-4">
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <div key={i} className="animate-pulse border-b border-gray-200 pb-4">
-                        <div className="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
-                        <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                      </div>
-                    ))}
-                  </div>
-                ) : forumTopics && forumTopics.length > 0 ? (
-                  <div className="space-y-4">
-                    {forumTopics.map((topic: any) => (
-                      <div key={topic.id} className="border-b border-gray-200 pb-4 last:border-b-0">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-2 mb-1">
-                              {topic.isPinned && (
-                                <i className="fas fa-thumbtack text-uh-red text-sm"></i>
-                              )}
-                              {topic.isLocked && (
-                                <i className="fas fa-lock text-gray-500 text-sm"></i>
-                              )}
-                              <h4 className="font-semibold text-uh-black hover:text-uh-red cursor-pointer">
-                                {topic.title}
-                              </h4>
-                            </div>
-                            <p className="text-sm text-gray-600 mb-2">
-                              by {topic.authorId} • {new Date(topic.createdAt).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <div className="text-right text-sm text-gray-600">
-                            <div className="flex items-center space-x-4">
-                              <span><i className="fas fa-eye mr-1"></i>{topic.viewCount || 0}</span>
-                              <span><i className="fas fa-comment mr-1"></i>{topic.replyCount || 0}</span>
-                            </div>
-                            {topic.lastReplyAt && (
-                              <div className="text-xs mt-1">
-                                Last: {new Date(topic.lastReplyAt).toLocaleDateString()}
-                              </div>
-                            )}
+        {/* Tabbed Categories */}
+        <Tabs defaultValue="sports" className="mb-8">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="sports">Sports</TabsTrigger>
+            <TabsTrigger value="community">Community</TabsTrigger>
+            <TabsTrigger value="academic">Academic</TabsTrigger>
+            <TabsTrigger value="all">All Forums</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="sports" className="mt-6">
+            <div className="mb-4">
+              <h2 className="text-2xl font-bold text-uh-black mb-2">Houston Cougar Sports</h2>
+              <p className="text-gray-600">Discuss all UH athletics and follow your favorite teams</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {sportsCategories.map((category) => (
+                <Link key={category.id} href={`/forums/categories/${category.id}`}>
+                  <Card className="hover:shadow-lg transition-shadow duration-200 cursor-pointer">
+                    <CardContent className="p-6">
+                      <div className="flex items-start space-x-4">
+                        <div className={`w-12 h-12 ${getCategoryColor(category.name)} rounded-lg flex items-center justify-center`}>
+                          <i className={`fas fa-${getCategoryIcon(category.name)} text-white text-lg`}></i>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-bold text-uh-black mb-1">{category.name}</h3>
+                          <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                            {getCategoryDescription(category.name)}
+                          </p>
+                          <div className="flex items-center justify-between text-sm text-gray-500">
+                            <span>{0 || 0} topics</span>
+                            <span>Last: {formatDistance(new Date(category.createdAt || new Date()), new Date(), { addSuffix: true })}</span>
                           </div>
                         </div>
                       </div>
-                    ))}
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="community" className="mt-6">
+            <div className="mb-4">
+              <h2 className="text-2xl font-bold text-uh-black mb-2">Community Connection</h2>
+              <p className="text-gray-600">Connect with fellow Coogs and celebrate our community</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {communityCategories.map((category) => (
+                <Link key={category.id} href={`/forums/categories/${category.id}`}>
+                  <Card className="hover:shadow-lg transition-shadow duration-200 cursor-pointer">
+                    <CardContent className="p-6">
+                      <div className="flex items-start space-x-4">
+                        <div className={`w-12 h-12 ${getCategoryColor(category.name)} rounded-lg flex items-center justify-center`}>
+                          <i className={`fas fa-${getCategoryIcon(category.name)} text-white text-lg`}></i>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-bold text-uh-black mb-1">{category.name}</h3>
+                          <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                            {getCategoryDescription(category.name)}
+                          </p>
+                          <div className="flex items-center justify-between text-sm text-gray-500">
+                            <span>{0 || 0} topics</span>
+                            <span>Last: {formatDistance(new Date(category.createdAt || new Date()), new Date(), { addSuffix: true })}</span>
+                          </div>
+                          {category.name === "Heartbeats" && (
+                            <Badge className="mt-2 bg-pink-100 text-pink-800">
+                              <i className="fas fa-heart mr-1"></i>
+                              Special Community
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="academic" className="mt-6">
+            <div className="mb-4">
+              <h2 className="text-2xl font-bold text-uh-black mb-2">Academic & Student Life</h2>
+              <p className="text-gray-600">Academic support, campus life, and student resources</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {academicCategories.map((category) => (
+                <Link key={category.id} href={`/forums/categories/${category.id}`}>
+                  <Card className="hover:shadow-lg transition-shadow duration-200 cursor-pointer">
+                    <CardContent className="p-6">
+                      <div className="flex items-start space-x-4">
+                        <div className={`w-12 h-12 ${getCategoryColor(category.name)} rounded-lg flex items-center justify-center`}>
+                          <i className={`fas fa-${getCategoryIcon(category.name)} text-white text-lg`}></i>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-bold text-uh-black mb-1">{category.name}</h3>
+                          <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                            {getCategoryDescription(category.name)}
+                          </p>
+                          <div className="flex items-center justify-between text-sm text-gray-500">
+                            <span>{0 || 0} topics</span>
+                            <span>Last: {formatDistance(new Date(category.createdAt || new Date()), new Date(), { addSuffix: true })}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="all" className="mt-6">
+            <div className="mb-4">
+              <h2 className="text-2xl font-bold text-uh-black mb-2">All Forum Categories</h2>
+              <p className="text-gray-600">Browse all available discussion forums</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredCategories.map((category) => (
+                <Link key={category.id} href={`/forums/categories/${category.id}`}>
+                  <Card className="hover:shadow-lg transition-shadow duration-200 cursor-pointer">
+                    <CardContent className="p-6">
+                      <div className="flex items-start space-x-4">
+                        <div className={`w-12 h-12 ${getCategoryColor(category.name)} rounded-lg flex items-center justify-center`}>
+                          <i className={`fas fa-${getCategoryIcon(category.name)} text-white text-lg`}></i>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-bold text-uh-black mb-1">{category.name}</h3>
+                          <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                            {getCategoryDescription(category.name)}
+                          </p>
+                          <div className="flex items-center justify-between text-sm text-gray-500">
+                            <span>{0 || 0} topics</span>
+                            <span>Last: {formatDistance(new Date(category.createdAt || new Date()), new Date(), { addSuffix: true })}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
+
+        {/* Recent Activity */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <i className="fas fa-clock mr-2"></i>
+              Recent Forum Activity
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
+                  <Avatar>
+                    <AvatarFallback className="bg-uh-red text-white">
+                      U{i}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-900">
+                      <span className="font-medium">User{i}</span> posted in{" "}
+                      <Link href="/forums/categories/1" className="text-uh-red hover:underline">
+                        Football Discussion
+                      </Link>
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {formatDistance(new Date(Date.now() - i * 1000 * 60 * 15), new Date(), { addSuffix: true })}
+                    </p>
                   </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <i className="fas fa-comments text-4xl mb-4"></i>
-                    <p>No topics in this category yet</p>
-                    {isAuthenticated && (
-                      <Button className="bg-uh-red hover:bg-red-700 text-white mt-4">
-                        Be the first to post!
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </Card>
+                  <Button variant="ghost" size="sm" className="text-uh-red">
+                    View
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Forum Guidelines */}
+        <Card className="mt-8 bg-blue-50 border-blue-200">
+          <CardHeader>
+            <CardTitle className="flex items-center text-blue-800">
+              <i className="fas fa-info-circle mr-2"></i>
+              Community Guidelines
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-blue-700">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 className="font-semibold mb-2">Be Respectful</h4>
+                <ul className="space-y-1 text-sm">
+                  <li>• Treat all members with dignity and respect</li>
+                  <li>• No personal attacks or harassment</li>
+                  <li>• Keep discussions civil and constructive</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-2">Stay On Topic</h4>
+                <ul className="space-y-1 text-sm">
+                  <li>• Post in relevant forum categories</li>
+                  <li>• Use descriptive topic titles</li>
+                  <li>• Search before creating duplicate topics</li>
+                </ul>
+              </div>
+            </div>
+            {!isAuthenticated && (
+              <div className="mt-6 text-center">
+                <Link href="/api/login">
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                    <i className="fas fa-sign-in-alt mr-2"></i>
+                    Join the Discussion
+                  </Button>
+                </Link>
+              </div>
             )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Footer />

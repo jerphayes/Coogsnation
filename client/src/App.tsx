@@ -14,6 +14,9 @@ import Cart from "@/pages/Cart";
 import Profile from "@/pages/Profile";
 import Dashboard from "@/pages/Dashboard";
 import Events from "@/pages/Events";
+import ForumCategory from "@/pages/ForumCategory";
+import ForumTopic from "@/pages/ForumTopic";
+import NewsAdmin from "@/pages/NewsAdmin";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -32,6 +35,9 @@ function Router() {
           <Route path="/cart" component={Cart} />
           <Route path="/profile" component={Profile} />
           <Route path="/events" component={Events} />
+          <Route path="/admin/news" component={NewsAdmin} />
+          <Route path="/forums/categories/:categoryId" component={ForumCategory} />
+          <Route path="/forums/topics/:topicId" component={ForumTopic} />
         </>
       )}
       <Route component={NotFound} />

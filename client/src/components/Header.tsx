@@ -90,15 +90,15 @@ export function Header() {
             {isAuthenticated ? (
               <div className="flex items-center space-x-4">
                 <div className="hidden md:flex items-center space-x-2">
-                  {user?.profileImageUrl && (
+                  {(user as any)?.profileImageUrl && (
                     <img 
-                      src={user.profileImageUrl} 
+                      src={(user as any).profileImageUrl} 
                       alt="Profile" 
                       className="w-8 h-8 rounded-full object-cover"
                     />
                   )}
                   <span className="text-uh-black font-medium">
-                    {user?.firstName || user?.username || 'User'}
+                    {(user as any)?.firstName || (user as any)?.username || 'User'}
                   </span>
                 </div>
                 <Button
