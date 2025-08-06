@@ -35,8 +35,8 @@ export default function Landing() {
         preload="auto"
         style={{ display: 'none' }}
       >
-        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEU+zzV7a1rEB8V" type="audio/wav" />
-        <source src="data:audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGFTb25vdGhlcXVlLm9yZwBURU5DAAAAHQAAAA==" type="audio/mpeg" />
+        <source src="https://quicksounds.com/uploads/tracks/1764799707_799379166_2054415044.mp3" type="audio/mpeg" />
+        <source src="https://quicksounds.com/uploads/tracks/295879743_2073341770_1313737317.mp3" type="audio/mpeg" />
       </audio>
 
       {/* UH Logo Centered */}
@@ -123,6 +123,27 @@ export default function Landing() {
             cursor: 'pointer'
           }}
         >Get Started</button>
+        
+        {/* Test Audio Button */}
+        <button 
+          onClick={() => {
+            if (audioRef.current) {
+              audioRef.current.currentTime = 0;
+              audioRef.current.play().catch(console.log);
+            }
+          }}
+          style={{
+            marginTop: '10px',
+            marginLeft: '15px',
+            padding: '8px 15px',
+            fontSize: '0.9em',
+            backgroundColor: '#666',
+            color: 'white',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: 'pointer'
+          }}
+        >🦁 Play Cougar Roar</button>
       </div>
 
       {/* Community Features Section */}
