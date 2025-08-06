@@ -456,6 +456,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin API endpoints
+  app.get('/api/admin/stats', async (req, res) => {
+    try {
+      const userCount = await storage.getUserCount();
+      const postCount = await storage.getPostCount();
+      const eventCount = await storage.getEventCount();
+      const articleCount = await storage.getArticleCount();
+      const forumCount = await storage.getForumCount();
+      
+      res.json({
+        totalUsers: userCount || 0,
+        totalPosts: postCount || 0,
+        totalEvents: eventCount || 0,
+        totalOrders: 0,
+        totalArticles: articleCount || 0,
+        activeForums: forumCount || 0,
+        todaySignups: 0,
+        monthlyRevenue: 0
+      });
+    } catch (error) {
+      console.error('Error fetching admin stats:', error);
+      res.status(500).json({ error: 'Failed to fetch admin stats' });
+    }
+  });
+
+  app.get('/api/admin/activities', async (req, res) => {
+    try {
+      res.json([
+        { id: '1', type: 'user_signup', description: 'New user registered', timestamp: new Date().toISOString(), user: 'Admin' },
+        { id: '2', type: 'new_post', description: 'New forum post created', timestamp: new Date().toISOString(), user: 'User123' }
+      ]);
+    } catch (error) {
+      console.error('Error fetching admin activities:', error);
+      res.status(500).json({ error: 'Failed to fetch admin activities' });
+    }
+  });
+
+  app.get('/api/admin/users', async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users || []);
+    } catch (error) {
+      console.error('Error fetching admin users:', error);
+      res.status(500).json({ error: 'Failed to fetch users' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

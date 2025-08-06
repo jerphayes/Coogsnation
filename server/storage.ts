@@ -631,6 +631,36 @@ export class DatabaseStorage implements IStorage {
     
     return { topics, articles };
   }
+
+  // Admin statistics methods
+  async getUserCount(): Promise<number> {
+    const result = await db.select({ count: sql<number>`count(*)` }).from(users);
+    return result[0]?.count || 0;
+  }
+
+  async getPostCount(): Promise<number> {
+    const result = await db.select({ count: sql<number>`count(*)` }).from(forumPosts);
+    return result[0]?.count || 0;
+  }
+
+  async getEventCount(): Promise<number> {
+    const result = await db.select({ count: sql<number>`count(*)` }).from(events);
+    return result[0]?.count || 0;
+  }
+
+  async getArticleCount(): Promise<number> {
+    const result = await db.select({ count: sql<number>`count(*)` }).from(newsArticles);
+    return result[0]?.count || 0;
+  }
+
+  async getForumCount(): Promise<number> {
+    const result = await db.select({ count: sql<number>`count(*)` }).from(forumCategories).where(eq(forumCategories.isActive, true));
+    return result[0]?.count || 0;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(desc(users.createdAt));
+  }
 }
 
 export const storage = new DatabaseStorage();
