@@ -4,9 +4,10 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
+import type { Product } from "@shared/schema";
 
 export default function Store() {
-  const { data: products, isLoading } = useQuery({
+  const { data: products, isLoading } = useQuery<Product[]>({
     queryKey: ["/api/products"],
   });
 
@@ -35,7 +36,7 @@ export default function Store() {
           </div>
         ) : products && products.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {products.map((product: any) => (
+            {products.map((product) => (
               <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                 <div className="relative">
                   <img 
@@ -43,7 +44,7 @@ export default function Store() {
                     alt={product.name}
                     className="w-full h-64 object-cover"
                   />
-                  {product.stockQuantity === 0 && (
+                  {(product.stockQuantity === 0 || product.stockQuantity === null) && (
                     <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
                       <Badge variant="destructive" className="text-lg">Out of Stock</Badge>
                     </div>
@@ -72,13 +73,13 @@ export default function Store() {
                     </span>
                     <Button 
                       className="bg-uh-red hover:bg-red-700 text-white"
-                      disabled={product.stockQuantity === 0}
+                      disabled={product.stockQuantity === 0 || product.stockQuantity === null}
                     >
-                      {product.stockQuantity === 0 ? 'Out of Stock' : 'Add to Cart'}
+                      {(product.stockQuantity === 0 || product.stockQuantity === null) ? 'Out of Stock' : 'Add to Cart'}
                     </Button>
                   </div>
                   
-                  {product.stockQuantity > 0 && product.stockQuantity <= 10 && (
+                  {product.stockQuantity && product.stockQuantity > 0 && product.stockQuantity <= 10 && (
                     <p className="text-orange-600 text-xs mt-2">
                       Only {product.stockQuantity} left in stock!
                     </p>
