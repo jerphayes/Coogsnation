@@ -5,10 +5,20 @@ export default function Landing() {
   const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
-    // Play growl sound when component mounts
+    // Play growl sound once when component mounts
     const playGrowl = async () => {
       if (audioRef.current) {
         try {
+          // Set max duration to 3 seconds
+          audioRef.current.addEventListener('loadedmetadata', () => {
+            if (audioRef.current && audioRef.current.duration > 3) {
+              audioRef.current.addEventListener('timeupdate', () => {
+                if (audioRef.current && audioRef.current.currentTime >= 3) {
+                  audioRef.current.pause();
+                }
+              });
+            }
+          });
           await audioRef.current.play();
         } catch (error) {
           console.log("Audio autoplay blocked by browser");
@@ -116,27 +126,6 @@ export default function Landing() {
             cursor: 'pointer'
           }}
         >Get Started</button>
-        
-        {/* Test Audio Button */}
-        <button 
-          onClick={() => {
-            if (audioRef.current) {
-              audioRef.current.currentTime = 0;
-              audioRef.current.play().catch(console.log);
-            }
-          }}
-          style={{
-            marginTop: '10px',
-            marginLeft: '15px',
-            padding: '8px 15px',
-            fontSize: '0.9em',
-            backgroundColor: '#666',
-            color: 'white',
-            border: 'none',
-            borderRadius: '5px',
-            cursor: 'pointer'
-          }}
-        >🦁 Play Cougar Roar</button>
       </div>
 
       {/* Community Features Section */}
