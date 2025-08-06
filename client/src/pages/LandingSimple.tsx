@@ -1,4 +1,6 @@
 import bannerImage from "@assets/file_00000000ed946246b26194ea80eb5e3a_conversation_id=67fb526f-75cc-8001-93e0-7b286caca06c&message_id=f5151dca-9d4a-4d7c-acf1-5e125d01acfb_1754449989402.png";
+import uhInterlockImage from '@assets/file_00000000802c61f6bb3f60ad34bc77ef_conversation_id=6804a0a4-1ad0-8001-adb7-43e76405a8b1&message_id=17b3d883-7913-4e8e-9960-3fc4ee4c619c_1754446244930.png';
+import universitySealImage from '@assets/1200px-University_of_Houston_seal.svg_1754451467648.png';
 import { useEffect, useRef } from "react";
 
 export default function Landing() {
@@ -96,8 +98,30 @@ export default function Landing() {
         <div style={{
           margin: '30px 0',
           display: 'flex',
-          justifyContent: 'center'
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: '20px',
+          position: 'relative'
         }}>
+          {/* UH Interlock on left margin */}
+          <div style={{
+            position: 'absolute',
+            left: '20px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            zIndex: 1
+          }}>
+            <img 
+              src={uhInterlockImage} 
+              alt="UH Interlock Logo" 
+              style={{
+                width: '120px',
+                height: 'auto'
+              }}
+            />
+          </div>
+
+          {/* Main banner */}
           <img 
             src={bannerImage} 
             alt="Whose House? Coogs House! Banner" 
@@ -108,6 +132,25 @@ export default function Landing() {
               height: 'auto'
             }}
           />
+
+          {/* University Seal on right margin */}
+          <div style={{
+            position: 'absolute',
+            right: '20px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            zIndex: 1
+          }}>
+            <img 
+              src={universitySealImage} 
+              alt="University of Houston Seal" 
+              style={{
+                width: '120px',
+                height: '120px',
+                objectFit: 'contain'
+              }}
+            />
+          </div>
         </div>
         <p style={{
           fontSize: '1.1em',
