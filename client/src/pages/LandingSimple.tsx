@@ -15,7 +15,7 @@ export default function Landing() {
         alignItems: 'center',
         padding: '1rem 2rem',
         backgroundColor: '#ffffff',
-        borderBottom: '3px solid #a00000',
+        borderBottom: '3px solid #DC143C',
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
       }}>
         <img 
@@ -78,29 +78,88 @@ export default function Landing() {
         flexDirection: 'column',
         justifyContent: 'center'
       }}>
-        <img 
-          src="https://upload.wikimedia.org/wikipedia/commons/2/2e/University_of_Houston_logo.svg"
-          alt="CoogsNation Logo"
-          style={{
-            width: '200px',
-            height: 'auto',
-            margin: '0 auto 2rem auto',
-            display: 'block'
-          }}
-        />
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          gap: '2rem',
+          marginBottom: '2rem',
+          flexWrap: 'wrap'
+        }}>
+          <svg width="150" height="150" viewBox="0 0 200 200" style={{ filter: 'drop-shadow(2px 2px 4px rgba(0,0,0,0.3))' }}>
+            {/* Fierce Cougar Head */}
+            <defs>
+              <linearGradient id="cougarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style={{ stopColor: '#DC143C', stopOpacity: 1 }} />
+                <stop offset="100%" style={{ stopColor: '#8B0000', stopOpacity: 1 }} />
+              </linearGradient>
+            </defs>
+            
+            {/* Main head shape */}
+            <ellipse cx="100" cy="100" rx="75" ry="65" fill="url(#cougarGradient)" stroke="#000" strokeWidth="2"/>
+            
+            {/* Ears */}
+            <ellipse cx="70" cy="60" rx="20" ry="25" fill="url(#cougarGradient)" stroke="#000" strokeWidth="2"/>
+            <ellipse cx="130" cy="60" rx="20" ry="25" fill="url(#cougarGradient)" stroke="#000" strokeWidth="2"/>
+            <ellipse cx="70" cy="65" rx="12" ry="15" fill="#000"/>
+            <ellipse cx="130" cy="65" rx="12" ry="15" fill="#000"/>
+            
+            {/* Eyes - fierce and angular */}
+            <ellipse cx="85" cy="85" rx="12" ry="15" fill="#FFD700" stroke="#000" strokeWidth="2"/>
+            <ellipse cx="115" cy="85" rx="12" ry="15" fill="#FFD700" stroke="#000" strokeWidth="2"/>
+            <ellipse cx="85" cy="85" rx="6" ry="12" fill="#000"/>
+            <ellipse cx="115" cy="85" rx="6" ry="12" fill="#000"/>
+            <ellipse cx="87" cy="82" rx="2" ry="3" fill="#FFF"/>
+            <ellipse cx="117" cy="82" rx="2" ry="3" fill="#FFF"/>
+            
+            {/* Fierce eyebrows */}
+            <path d="M 75 75 L 95 78 L 90 72 Z" fill="#000"/>
+            <path d="M 125 75 L 105 78 L 110 72 Z" fill="#000"/>
+            
+            {/* Nose */}
+            <path d="M 95 100 L 105 100 L 100 110 Z" fill="#000"/>
+            
+            {/* Mouth - fierce snarl */}
+            <path d="M 85 115 Q 100 125 115 115" stroke="#000" strokeWidth="3" fill="none"/>
+            <path d="M 90 118 Q 100 128 110 118" stroke="#000" strokeWidth="2" fill="none"/>
+            
+            {/* Fangs */}
+            <path d="M 92 118 L 90 130 L 94 125 Z" fill="#FFF" stroke="#000" strokeWidth="1"/>
+            <path d="M 108 118 L 110 130 L 106 125 Z" fill="#FFF" stroke="#000" strokeWidth="1"/>
+            
+            {/* Whiskers */}
+            <line x1="50" y1="95" x2="75" y2="100" stroke="#000" strokeWidth="2"/>
+            <line x1="50" y1="105" x2="75" y2="105" stroke="#000" strokeWidth="2"/>
+            <line x1="125" y1="100" x2="150" y2="95" stroke="#000" strokeWidth="2"/>
+            <line x1="125" y1="105" x2="150" y2="105" stroke="#000" strokeWidth="2"/>
+            
+            {/* Additional fierce details */}
+            <path d="M 70 45 L 75 35 L 80 45" stroke="#000" strokeWidth="2" fill="none"/>
+            <path d="M 120 45 L 125 35 L 130 45" stroke="#000" strokeWidth="2" fill="none"/>
+          </svg>
+          
+          <img 
+            src="https://upload.wikimedia.org/wikipedia/commons/2/2e/University_of_Houston_logo.svg"
+            alt="UH Logo"
+            style={{
+              width: '120px',
+              height: 'auto'
+            }}
+          />
+        </div>
         <h1 style={{
           fontSize: '3rem',
           margin: '1rem 0 0.5rem',
-          color: '#a00000',
+          color: '#DC143C',
           fontWeight: 'bold',
-          textShadow: '1px 1px 2px rgba(0,0,0,0.1)'
+          textShadow: '2px 2px 4px rgba(0,0,0,0.3)'
         }}>Welcome to</h1>
         <h2 style={{
           fontSize: '2.5rem',
           margin: '0 0 1rem 0',
-          color: '#a00000',
+          color: '#DC143C',
           fontWeight: 'bold',
-          textShadow: '1px 1px 2px rgba(0,0,0,0.1)'
+          textShadow: '2px 2px 4px rgba(0,0,0,0.3)'
         }}>CoogsNation.com</h2>
         <p style={{
           fontSize: '1.3rem',
@@ -117,13 +176,13 @@ export default function Landing() {
             padding: '1rem 2.5rem',
             fontSize: '1.1rem',
             color: 'white',
-            backgroundColor: '#a00000',
+            backgroundColor: '#DC143C',
             border: 'none',
             borderRadius: '8px',
             cursor: 'pointer',
             fontWeight: 'bold',
             transition: 'all 0.3s ease',
-            boxShadow: '0 4px 8px rgba(160,0,0,0.3)'
+            boxShadow: '0 4px 8px rgba(220,20,60,0.4)'
           }}
         >Join the Pack 🐾</button>
       </div>
@@ -191,7 +250,7 @@ export default function Landing() {
             <h3 style={{
               marginTop: 0,
               marginBottom: '1rem',
-              color: '#a00000',
+              color: '#DC143C',
               fontSize: '1.4rem',
               fontWeight: 'bold'
             }}>{feature.emoji} {feature.title}</h3>
@@ -221,7 +280,7 @@ export default function Landing() {
       <div style={{
         textAlign: 'center',
         padding: '4rem 2rem',
-        background: 'linear-gradient(135deg, #a00000 0%, #800000 100%)',
+        background: 'linear-gradient(135deg, #DC143C 0%, #8B0000 100%)',
         color: 'white',
         marginTop: '2rem'
       }}>
@@ -241,7 +300,7 @@ export default function Landing() {
           onClick={() => window.location.href = '/api/login'}
           style={{
             background: 'white',
-            color: '#a00000',
+            color: '#DC143C',
             padding: '1.2rem 3rem',
             border: 'none',
             borderRadius: '8px',
@@ -281,7 +340,7 @@ export default function Landing() {
             textAlign: 'left'
           }}>
             <h4 style={{
-              color: '#a00000',
+              color: '#DC143C',
               fontSize: '1.3rem',
               marginBottom: '1rem'
             }}>CoogsNation</h4>
@@ -297,7 +356,7 @@ export default function Landing() {
             textAlign: 'left'
           }}>
             <h4 style={{
-              color: '#a00000',
+              color: '#DC143C',
               fontSize: '1.3rem',
               marginBottom: '1rem'
             }}>Community</h4>
@@ -319,7 +378,7 @@ export default function Landing() {
             textAlign: 'left'
           }}>
             <h4 style={{
-              color: '#a00000',
+              color: '#DC143C',
               fontSize: '1.3rem',
               marginBottom: '1rem'
             }}>Connect</h4>
