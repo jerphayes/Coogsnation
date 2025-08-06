@@ -64,6 +64,16 @@ export function Header() {
             <Link href="/events" className="text-uh-black hover:text-uh-red font-medium transition-colors">
               Events
             </Link>
+            {user && (
+              <>
+                <Link href="/dashboard" className="text-uh-black hover:text-uh-red font-medium transition-colors">
+                  Dashboard
+                </Link>
+                <Link href="/cart" className="text-uh-black hover:text-uh-red font-medium transition-colors flex items-center">
+                  <i className="fas fa-shopping-cart mr-1"></i>Cart
+                </Link>
+              </>
+            )}
           </nav>
 
           {/* Search and Auth */}

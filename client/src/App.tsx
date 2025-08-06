@@ -10,6 +10,9 @@ import Home from "@/pages/Home";
 import Forums from "@/pages/Forums";
 import News from "@/pages/News";
 import Store from "@/pages/Store";
+import Cart from "@/pages/Cart";
+import Profile from "@/pages/Profile";
+import Dashboard from "@/pages/Dashboard";
 import Events from "@/pages/Events";
 
 function Router() {
@@ -22,9 +25,12 @@ function Router() {
       ) : (
         <>
           <Route path="/" component={Home} />
+          <Route path="/dashboard" component={Dashboard} />
           <Route path="/forums" component={Forums} />
           <Route path="/news" component={News} />
           <Route path="/store" component={Store} />
+          <Route path="/cart" component={Cart} />
+          <Route path="/profile" component={Profile} />
           <Route path="/events" component={Events} />
         </>
       )}
