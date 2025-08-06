@@ -1,6 +1,26 @@
 import bannerImage from "@assets/file_00000000ed946246b26194ea80eb5e3a_conversation_id=67fb526f-75cc-8001-93e0-7b286caca06c&message_id=f5151dca-9d4a-4d7c-acf1-5e125d01acfb_1754449989402.png";
+import { useEffect, useRef } from "react";
 
 export default function Landing() {
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  useEffect(() => {
+    // Play growl sound when component mounts
+    const playGrowl = async () => {
+      if (audioRef.current) {
+        try {
+          await audioRef.current.play();
+        } catch (error) {
+          console.log("Audio autoplay blocked by browser");
+        }
+      }
+    };
+
+    // Small delay to ensure page is loaded
+    const timer = setTimeout(playGrowl, 500);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <div style={{
       margin: 0,
@@ -9,6 +29,16 @@ export default function Landing() {
       color: '#111',
       textAlign: 'center'
     }}>
+      {/* Hidden audio element for cougar growl */}
+      <audio
+        ref={audioRef}
+        preload="auto"
+        style={{ display: 'none' }}
+      >
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEU+zzV7a1rEB8V" type="audio/wav" />
+        <source src="data:audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGFTb25vdGhlcXVlLm9yZwBURU5DAAAAHQAAAA==" type="audio/mpeg" />
+      </audio>
+
       {/* UH Logo Centered */}
       <div style={{ marginTop: '20px' }}>
         <img 
@@ -93,6 +123,55 @@ export default function Landing() {
             cursor: 'pointer'
           }}
         >Get Started</button>
+      </div>
+
+      {/* Community Features Section */}
+      <div style={{
+        margin: '50px 0',
+        padding: '30px 20px',
+        backgroundColor: '#f8f8f8'
+      }}>
+        <h3 style={{
+          fontSize: '1.8em',
+          color: '#a00000',
+          marginBottom: '30px'
+        }}>Join the CoogsNation Community</h3>
+        
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          flexWrap: 'wrap',
+          gap: '30px',
+          maxWidth: '800px',
+          margin: '0 auto'
+        }}>
+          <div style={{ textAlign: 'center', flex: '1', minWidth: '200px' }}>
+            <div style={{
+              fontSize: '2em',
+              marginBottom: '10px'
+            }}>💬</div>
+            <h4 style={{ color: '#a00000', margin: '0 0 10px 0' }}>Forums</h4>
+            <p style={{ margin: 0, fontSize: '0.9em' }}>Discuss Coogs sports, share news, and connect with fellow fans</p>
+          </div>
+          
+          <div style={{ textAlign: 'center', flex: '1', minWidth: '200px' }}>
+            <div style={{
+              fontSize: '2em',
+              marginBottom: '10px'
+            }}>🏆</div>
+            <h4 style={{ color: '#a00000', margin: '0 0 10px 0' }}>Sports News</h4>
+            <p style={{ margin: 0, fontSize: '0.9em' }}>Stay updated on Cougar athletics and Big 12 action</p>
+          </div>
+          
+          <div style={{ textAlign: 'center', flex: '1', minWidth: '200px' }}>
+            <div style={{
+              fontSize: '2em',
+              marginBottom: '10px'
+            }}>👥</div>
+            <h4 style={{ color: '#a00000', margin: '0 0 10px 0' }}>Community</h4>
+            <p style={{ margin: 0, fontSize: '0.9em' }}>Join groups, make friends, and show your Cougar pride</p>
+          </div>
+        </div>
       </div>
     </div>
   );
