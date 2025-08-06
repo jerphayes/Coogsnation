@@ -104,7 +104,8 @@ export default function Landing() {
             style={{
               maxWidth: '1200px',
               width: '95%',
-              height: 'auto'
+              height: '300px',
+              objectFit: 'cover'
             }}
           />
         </div>
