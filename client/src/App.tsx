@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
-import Landing from "@/pages/LandingHTML";
+import Landing from "@/pages/LandingCougarPhoto";
 import Home from "@/pages/Home";
 import Forums from "@/pages/Forums";
 import News from "@/pages/News";
