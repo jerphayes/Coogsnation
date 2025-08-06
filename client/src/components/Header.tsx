@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "wouter";
+import uhSeal from "@assets/1200px-University_of_Houston_seal.svg_1754451467648.png";
 
 export function Header() {
   const { isAuthenticated, user } = useAuth();
@@ -15,30 +16,13 @@ export function Header() {
           {/* Logo and Branding */}
           <Link href="/" className="flex items-center space-x-4">
             <div className="flex items-center">
-              {/* Mini Cougar Logo */}
-              <div className="relative w-12 h-12 bg-white rounded-lg flex items-center justify-center shadow-sm border border-gray-200">
-                <div className="relative w-10 h-8">
-                  {/* Mini cougar body */}
-                  <div className="absolute bottom-0 left-1 w-8 h-4 bg-uh-red rounded-2xl shadow-sm">
-                    <div className="absolute bottom-0 left-1 w-1.5 h-1 bg-red-700 rounded"></div>
-                    <div className="absolute bottom-0 right-1 w-1.5 h-1 bg-red-700 rounded"></div>
-                  </div>
-                  {/* Mini cougar head */}
-                  <div className="absolute top-0 left-0 w-6 h-5 bg-uh-red rounded-lg">
-                    {/* Mini ears */}
-                    <div className="absolute -top-0.5 left-1 w-1 h-1.5 bg-uh-red rounded-t-full"></div>
-                    <div className="absolute -top-0.5 right-1 w-1 h-1.5 bg-uh-red rounded-t-full"></div>
-                    {/* Mini eyes */}
-                    <div className="absolute top-1 left-1 w-1 h-1 bg-white rounded-full"></div>
-                    <div className="absolute top-1 right-1 w-1 h-1 bg-white rounded-full"></div>
-                    {/* Mini nose */}
-                    <div className="absolute bottom-0.5 left-1/2 transform -translate-x-1/2 w-2 h-1.5 bg-white rounded-lg">
-                      <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-0.5 h-0.5 bg-black rounded-full"></div>
-                    </div>
-                  </div>
-                  {/* Mini tail */}
-                  <div className="absolute bottom-1 right-0 w-1.5 h-3 bg-uh-red rounded-full transform rotate-45"></div>
-                </div>
+              {/* University of Houston Seal */}
+              <div className="w-12 h-12 flex items-center justify-center">
+                <img 
+                  src={uhSeal} 
+                  alt="University of Houston Official Seal"
+                  className="w-12 h-12 object-contain"
+                />
               </div>
               <div className="ml-3">
                 <h1 className="text-xl font-bold text-uh-black">CoogsNation</h1>
