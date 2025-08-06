@@ -103,7 +103,7 @@ export default function Landing() {
             alt="Whose House? Coogs House! Banner" 
             style={{
               maxWidth: '1200px',
-              width: '98%',
+              width: 'calc(98% + 2.5in)',
               maxHeight: '700px',
               height: 'auto'
             }}
