@@ -297,13 +297,17 @@ export function Header() {
             
             <div className="relative group"
                  onMouseEnter={(e) => {
+                   console.log('Community hover enter');
                    const dropdown = e.currentTarget.querySelector('.community-header-dropdown') as HTMLElement;
+                   console.log('Community dropdown found:', dropdown);
                    if (dropdown) {
                      dropdown.style.opacity = '1';
                      dropdown.style.visibility = 'visible';
+                     console.log('Community dropdown shown');
                    }
                  }}
                  onMouseLeave={(e) => {
+                   console.log('Community hover leave');
                    const dropdown = e.currentTarget.querySelector('.community-header-dropdown') as HTMLElement;
                    if (dropdown) {
                      dropdown.style.opacity = '0';
