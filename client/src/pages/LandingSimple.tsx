@@ -4,9 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 
 export default function Landing() {
   const audioRef = useRef<HTMLAudioElement>(null);
-  const [forumsOpen, setForumsOpen] = useState(false);
-  const [sportsOpen, setSportsOpen] = useState(false);
-  const [communityOpen, setCommunityOpen] = useState(false);
+
   
   // Fetch forum categories for the dropdowns
   const { data: forumCategories } = useQuery({
@@ -233,14 +231,23 @@ export default function Landing() {
               position: 'relative',
               cursor: 'pointer'
             }}
-            onClick={() => setForumsOpen(!forumsOpen)}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-5px)';
               e.currentTarget.style.boxShadow = '0 5px 15px rgba(160,0,0,0.2)';
+              const dropdown = e.currentTarget.querySelector('.forums-dropdown') as HTMLElement;
+              if (dropdown) {
+                dropdown.style.opacity = '1';
+                dropdown.style.visibility = 'visible';
+              }
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
               e.currentTarget.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
+              const dropdown = e.currentTarget.querySelector('.forums-dropdown') as HTMLElement;
+              if (dropdown) {
+                dropdown.style.opacity = '0';
+                dropdown.style.visibility = 'hidden';
+              }
             }}
           >
             <div style={{
@@ -250,7 +257,6 @@ export default function Landing() {
             <h4 style={{ color: '#a00000', margin: '0 0 10px 0' }}>Forums</h4>
             <p style={{ margin: 0, fontSize: '0.9em' }}>Discuss Coogs sports, share news, and connect with fellow fans</p>
             
-            {forumsOpen && (
             <div 
               className="forums-dropdown"
               style={{
@@ -263,6 +269,9 @@ export default function Landing() {
                 border: '1px solid #d1d5db',
                 borderRadius: '8px',
                 boxShadow: '0 10px 25px rgba(0, 0, 0, 0.25)',
+                opacity: '0',
+                visibility: 'hidden',
+                transition: 'all 200ms ease-in-out',
                 zIndex: '999999',
                 textAlign: 'left'
               }}
@@ -330,7 +339,6 @@ export default function Landing() {
                 <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Browse All Categories</div>
               </div>
             </div>
-            )}
           </div>
           
           {/* Sports News Card */}
@@ -347,14 +355,23 @@ export default function Landing() {
               position: 'relative',
               cursor: 'pointer'
             }}
-            onClick={() => setSportsOpen(!sportsOpen)}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-5px)';
               e.currentTarget.style.boxShadow = '0 5px 15px rgba(160,0,0,0.2)';
+              const dropdown = e.currentTarget.querySelector('.sports-dropdown') as HTMLElement;
+              if (dropdown) {
+                dropdown.style.opacity = '1';
+                dropdown.style.visibility = 'visible';
+              }
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
               e.currentTarget.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
+              const dropdown = e.currentTarget.querySelector('.sports-dropdown') as HTMLElement;
+              if (dropdown) {
+                dropdown.style.opacity = '0';
+                dropdown.style.visibility = 'hidden';
+              }
             }}
           >
             <div style={{
@@ -364,7 +381,6 @@ export default function Landing() {
             <h4 style={{ color: '#a00000', margin: '0 0 10px 0' }}>Sports News</h4>
             <p style={{ margin: 0, fontSize: '0.9em' }}>Stay updated on Cougar athletics and Big 12 action</p>
             
-            {sportsOpen && (
             <div 
               className="sports-dropdown"
               style={{
@@ -377,6 +393,9 @@ export default function Landing() {
                 border: '1px solid #d1d5db',
                 borderRadius: '8px',
                 boxShadow: '0 10px 25px rgba(0, 0, 0, 0.25)',
+                opacity: '0',
+                visibility: 'hidden',
+                transition: 'all 200ms ease-in-out',
                 zIndex: '999999',
                 textAlign: 'left'
               }}
@@ -459,7 +478,6 @@ export default function Landing() {
                 <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Men's & Women's Basketball</div>
               </div>
             </div>
-            )}
           </div>
 
           {/* Community Card */}
@@ -476,14 +494,23 @@ export default function Landing() {
               position: 'relative',
               cursor: 'pointer'
             }}
-            onClick={() => setCommunityOpen(!communityOpen)}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-5px)';
               e.currentTarget.style.boxShadow = '0 5px 15px rgba(160,0,0,0.2)';
+              const dropdown = e.currentTarget.querySelector('.community-dropdown') as HTMLElement;
+              if (dropdown) {
+                dropdown.style.opacity = '1';
+                dropdown.style.visibility = 'visible';
+              }
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
               e.currentTarget.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
+              const dropdown = e.currentTarget.querySelector('.community-dropdown') as HTMLElement;
+              if (dropdown) {
+                dropdown.style.opacity = '0';
+                dropdown.style.visibility = 'hidden';
+              }
             }}
           >
             <div style={{
@@ -493,7 +520,6 @@ export default function Landing() {
             <h4 style={{ color: '#a00000', margin: '0 0 10px 0' }}>Community</h4>
             <p style={{ margin: 0, fontSize: '0.9em' }}>Heartbeats dating, Water Cooler Talk, and community resources</p>
             
-            {communityOpen && (
             <div 
               className="community-dropdown"
               style={{
@@ -506,6 +532,9 @@ export default function Landing() {
                 border: '1px solid #d1d5db',
                 borderRadius: '8px',
                 boxShadow: '0 10px 25px rgba(0, 0, 0, 0.25)',
+                opacity: '0',
+                visibility: 'hidden',
+                transition: 'all 200ms ease-in-out',
                 zIndex: '999999',
                 textAlign: 'left'
               }}
@@ -614,7 +643,6 @@ export default function Landing() {
                 <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Helpful resources</div>
               </div>
             </div>
-            )}
           </div>
         </div>
       </div>
