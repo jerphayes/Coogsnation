@@ -1060,12 +1060,12 @@ export default function Landing() {
                   transition: 'all 200ms ease-in-out'
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = '#fef2f2';
-                  e.target.style.color = '#dc2626';
+                  (e.target as HTMLElement).style.backgroundColor = '#fef2f2';
+                  (e.target as HTMLElement).style.color = '#dc2626';
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = 'transparent';
-                  e.target.style.color = 'black';
+                  (e.target as HTMLElement).style.backgroundColor = 'transparent';
+                  (e.target as HTMLElement).style.color = 'black';
                 }}
               >
                 <i className="fas fa-tools" style={{ marginRight: '8px' }}></i>
