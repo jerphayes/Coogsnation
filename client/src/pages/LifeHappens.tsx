@@ -189,6 +189,20 @@ export default function LifeHappens() {
           </CardContent>
         </Card>
 
+        {/* Quick Navigation to Life Solutions */}
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+          <div className="flex flex-wrap gap-2 justify-center">
+            <Button variant="outline" size="sm" className="border-red-300 text-red-700 bg-red-50">
+              💸 Life Happens (You're Here)
+            </Button>
+            <Link href="/life-solutions">
+              <Button variant="outline" size="sm" className="border-blue-300 text-blue-700 hover:bg-blue-50">
+                🛠️ Life Solutions
+              </Button>
+            </Link>
+          </div>
+        </div>
+
         {/* Additional Houston Resources */}
         <Card>
           <CardHeader>

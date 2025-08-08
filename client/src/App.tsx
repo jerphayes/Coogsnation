@@ -25,6 +25,7 @@ import AdminDashboard from "@/pages/AdminDashboard";
 import TestAdmin from "@/pages/TestAdmin";
 import SimpleAdminDashboard from "@/pages/SimpleAdminDashboard";
 import LifeHappens from "@/pages/LifeHappens";
+import LifeSolutions from "@/pages/LifeSolutions";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -48,6 +49,7 @@ function Router() {
       <Route path="/admin-full" component={AdminDashboard} />
       <Route path="/test-admin" component={TestAdmin} />
       <Route path="/life-happens" component={LifeHappens} />
+      <Route path="/life-solutions" component={LifeSolutions} />
       <Route path="/forums/categories/:categoryId" component={ForumCategory} />
       <Route path="/forums/topics/:topicId" component={ForumTopic} />
       <Route component={NotFound} />
