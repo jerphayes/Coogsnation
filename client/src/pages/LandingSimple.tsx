@@ -277,7 +277,7 @@ export default function Landing() {
               >
                 <i className="fas fa-football-ball" style={{ marginRight: '8px' }}></i>
                 Football
-                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Cougar Football Discussion</div>
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Houston Cougar Football discussions</div>
               </div>
               <div 
                 onClick={() => window.location.href = '/forums/categories/2'} 
@@ -300,7 +300,99 @@ export default function Landing() {
               >
                 <i className="fas fa-basketball-ball" style={{ marginRight: '8px' }}></i>
                 Basketball
-                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Men's & Women's Basketball</div>
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>UH Basketball - Men's and Women's teams</div>
+              </div>
+              <div 
+                onClick={() => window.location.href = '/forums/categories/18'} 
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  color: 'black',
+                  borderBottom: '1px solid #e5e7eb',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease-in-out'
+                }}
+                onMouseEnter={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = '#fef2f2';
+                  (e.target as HTMLElement).style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = 'transparent';
+                  (e.target as HTMLElement).style.color = 'black';
+                }}
+              >
+                <i className="fas fa-baseball-ball" style={{ marginRight: '8px' }}></i>
+                Baseball
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Houston Cougar Baseball discussion</div>
+              </div>
+              <div 
+                onClick={() => window.location.href = '/forums/categories/19'} 
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  color: 'black',
+                  borderBottom: '1px solid #e5e7eb',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease-in-out'
+                }}
+                onMouseEnter={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = '#fef2f2';
+                  (e.target as HTMLElement).style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = 'transparent';
+                  (e.target as HTMLElement).style.color = 'black';
+                }}
+              >
+                <i className="fas fa-running" style={{ marginRight: '8px' }}></i>
+                Track & Field
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Houston Cougar Track & Field athletics</div>
+              </div>
+              <div 
+                onClick={() => window.location.href = '/forums/categories/20'} 
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  color: 'black',
+                  borderBottom: '1px solid #e5e7eb',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease-in-out'
+                }}
+                onMouseEnter={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = '#fef2f2';
+                  (e.target as HTMLElement).style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = 'transparent';
+                  (e.target as HTMLElement).style.color = 'black';
+                }}
+              >
+                <i className="fas fa-golf-ball" style={{ marginRight: '8px' }}></i>
+                Golf
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Houston Cougar Golf team discussions</div>
+              </div>
+              <div 
+                onClick={() => window.location.href = '/forums/categories/45'} 
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  color: 'black',
+                  borderBottom: '1px solid #e5e7eb',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease-in-out'
+                }}
+                onMouseEnter={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = '#fef2f2';
+                  (e.target as HTMLElement).style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = 'transparent';
+                  (e.target as HTMLElement).style.color = 'black';
+                }}
+              >
+                <i className="fas fa-female" style={{ marginRight: '8px' }}></i>
+                Women's Sports
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>All Houston Cougar women's athletics</div>
               </div>
               <div 
                 onClick={() => window.location.href = '/forums'} 
