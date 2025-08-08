@@ -216,7 +216,7 @@ export default function Landing() {
           </div>
           
           <div 
-            onClick={() => window.location.href = '/forums/categories/4'}
+            onClick={() => window.location.href = '/forums/categories/9'}
             style={{ 
               textAlign: 'center', 
               flex: '1', 
