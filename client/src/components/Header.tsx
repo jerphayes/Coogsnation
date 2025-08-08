@@ -48,6 +48,9 @@ export function Header() {
             <Link href="/events" className="text-uh-black hover:text-uh-red font-medium transition-colors">
               Events
             </Link>
+            <Link href="/life-happens" className="text-uh-black hover:text-uh-red font-medium transition-colors">
+              Life Happens
+            </Link>
             {user && (
               <>
                 <Link href="/dashboard" className="text-uh-black hover:text-uh-red font-medium transition-colors">
@@ -139,6 +142,9 @@ export function Header() {
               </Link>
               <Link href="/events" className="text-uh-black hover:text-uh-red font-medium">
                 Events
+              </Link>
+              <Link href="/life-happens" className="text-uh-black hover:text-uh-red font-medium">
+                Life Happens
               </Link>
               <div className="pt-4 border-t border-gray-200">
                 <Input 
