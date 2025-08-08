@@ -175,7 +175,27 @@ export default function Landing() {
           margin: '20px auto',
           maxWidth: '600px'
         }}>Welcome to CoogsNation.com — the online community for University of Houston fans.</p>
-        <div className="relative group" style={{ marginTop: '15px' }}>
+        <div 
+          style={{ 
+            position: 'relative', 
+            marginTop: '15px',
+            display: 'inline-block'
+          }}
+          onMouseEnter={(e) => {
+            const dropdown = e.currentTarget.querySelector('.dropdown-menu');
+            if (dropdown) {
+              dropdown.style.opacity = '1';
+              dropdown.style.visibility = 'visible';
+            }
+          }}
+          onMouseLeave={(e) => {
+            const dropdown = e.currentTarget.querySelector('.dropdown-menu');
+            if (dropdown) {
+              dropdown.style.opacity = '0';
+              dropdown.style.visibility = 'hidden';
+            }
+          }}
+        >
           <button 
             style={{
               padding: '12px 25px',
@@ -194,41 +214,121 @@ export default function Landing() {
             <i className="fas fa-chevron-down"></i>
           </button>
           
-          <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+          <div 
+            className="dropdown-menu"
+            style={{
+              position: 'absolute',
+              top: '100%',
+              left: '0',
+              marginTop: '8px',
+              width: '288px',
+              backgroundColor: 'white',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+              opacity: '0',
+              visibility: 'hidden',
+              transition: 'all 200ms ease-in-out',
+              zIndex: '50'
+            }}
+          >
             <div 
               onClick={() => window.location.href = '/forums/categories/24'} 
-              className="block px-4 py-3 text-black hover:bg-red-50 hover:text-red-600 transition-colors border-b border-gray-100 cursor-pointer"
+              style={{
+                display: 'block',
+                padding: '12px 16px',
+                color: 'black',
+                borderBottom: '1px solid #e5e7eb',
+                cursor: 'pointer',
+                transition: 'all 200ms ease-in-out'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = '#fef2f2';
+                e.target.style.color = '#dc2626';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = 'transparent';
+                e.target.style.color = 'black';
+              }}
             >
-              <i className="fas fa-heart mr-2"></i>
+              <i className="fas fa-heart" style={{ marginRight: '8px' }}></i>
               Heartbeats
-              <div className="text-xs text-gray-500 mt-1">Dating & Relationships</div>
+              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Dating & Relationships</div>
             </div>
             <div 
               onClick={() => window.location.href = '/forums/categories/23'} 
-              className="block px-4 py-3 text-black hover:bg-red-50 hover:text-red-600 transition-colors border-b border-gray-100 cursor-pointer"
+              style={{
+                display: 'block',
+                padding: '12px 16px',
+                color: 'black',
+                borderBottom: '1px solid #e5e7eb',
+                cursor: 'pointer',
+                transition: 'all 200ms ease-in-out'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = '#fef2f2';
+                e.target.style.color = '#dc2626';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = 'transparent';
+                e.target.style.color = 'black';
+              }}
             >
-              <i className="fas fa-coffee mr-2"></i>
+              <i className="fas fa-coffee" style={{ marginRight: '8px' }}></i>
               Water Cooler Talk
-              <div className="text-xs text-gray-500 mt-1">General Discussions</div>
+              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>General Discussions</div>
             </div>
-            <div className="px-4 py-2 bg-gray-50 border-b border-gray-100">
-              <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Resources</div>
+            <div style={{
+              padding: '8px 16px',
+              backgroundColor: '#f9fafb',
+              borderBottom: '1px solid #e5e7eb'
+            }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Resources</div>
             </div>
             <div 
               onClick={() => window.location.href = '/life-happens'} 
-              className="block px-4 py-3 text-black hover:bg-red-50 hover:text-red-600 transition-colors border-b border-gray-100 cursor-pointer"
+              style={{
+                display: 'block',
+                padding: '12px 16px',
+                color: 'black',
+                borderBottom: '1px solid #e5e7eb',
+                cursor: 'pointer',
+                transition: 'all 200ms ease-in-out'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = '#fef2f2';
+                e.target.style.color = '#dc2626';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = 'transparent';
+                e.target.style.color = 'black';
+              }}
             >
-              <i className="fas fa-wallet mr-2"></i>
+              <i className="fas fa-wallet" style={{ marginRight: '8px' }}></i>
               Life Happens
-              <div className="text-xs text-gray-500 mt-1">Bills & Payments</div>
+              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Bills & Payments</div>
             </div>
             <div 
               onClick={() => window.location.href = '/life-solutions'} 
-              className="block px-4 py-3 text-black hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer"
+              style={{
+                display: 'block',
+                padding: '12px 16px',
+                color: 'black',
+                cursor: 'pointer',
+                transition: 'all 200ms ease-in-out'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = '#fef2f2';
+                e.target.style.color = '#dc2626';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = 'transparent';
+                e.target.style.color = 'black';
+              }}
             >
-              <i className="fas fa-tools mr-2"></i>
+              <i className="fas fa-tools" style={{ marginRight: '8px' }}></i>
               Life Solutions
-              <div className="text-xs text-gray-500 mt-1">Houston Resources & Support</div>
+              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Houston Resources & Support</div>
             </div>
           </div>
         </div>
