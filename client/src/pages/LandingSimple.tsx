@@ -175,19 +175,51 @@ export default function Landing() {
           margin: '20px auto',
           maxWidth: '600px'
         }}>Welcome to CoogsNation.com — the online community for University of Houston fans.</p>
-        <button 
-          onClick={() => window.location.href = '/api/login'}
-          style={{
-            marginTop: '15px',
-            padding: '12px 25px',
-            fontSize: '1em',
-            backgroundColor: '#a00000',
-            color: 'white',
-            border: 'none',
-            borderRadius: '5px',
-            cursor: 'pointer'
-          }}
-        >Get Started</button>
+        <div className="relative group" style={{ marginTop: '15px' }}>
+          <button 
+            style={{
+              padding: '12px 25px',
+              fontSize: '1em',
+              backgroundColor: '#a00000',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            Community
+            <i className="fas fa-chevron-down"></i>
+          </button>
+          
+          <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+            <a href="/forums/categories/24" className="block px-4 py-3 text-black hover:bg-red-50 hover:text-red-600 transition-colors border-b border-gray-100" style={{ textDecoration: 'none' }}>
+              <i className="fas fa-heart mr-2"></i>
+              Heartbeats
+              <div className="text-xs text-gray-500 mt-1">Dating & Relationships</div>
+            </a>
+            <a href="/forums/categories/23" className="block px-4 py-3 text-black hover:bg-red-50 hover:text-red-600 transition-colors border-b border-gray-100" style={{ textDecoration: 'none' }}>
+              <i className="fas fa-coffee mr-2"></i>
+              Water Cooler Talk
+              <div className="text-xs text-gray-500 mt-1">General Discussions</div>
+            </a>
+            <div className="px-4 py-2 bg-gray-50 border-b border-gray-100">
+              <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Resources</div>
+            </div>
+            <a href="/life-happens" className="block px-4 py-3 text-black hover:bg-red-50 hover:text-red-600 transition-colors border-b border-gray-100" style={{ textDecoration: 'none' }}>
+              <i className="fas fa-wallet mr-2"></i>
+              Life Happens
+              <div className="text-xs text-gray-500 mt-1">Bills & Payments</div>
+            </a>
+            <a href="/life-solutions" className="block px-4 py-3 text-black hover:bg-red-50 hover:text-red-600 transition-colors" style={{ textDecoration: 'none' }}>
+              <i className="fas fa-tools mr-2"></i>
+              Life Solutions
+              <div className="text-xs text-gray-500 mt-1">Houston Resources & Support</div>
+            </a>
+          </div>
+        </div>
       </div>
 
       {/* Community Features Section */}
