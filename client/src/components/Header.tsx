@@ -36,9 +36,143 @@ export function Header() {
             <Link href="/" className="text-uh-black hover:text-uh-red font-medium transition-colors">
               Home
             </Link>
-            <Link href="/forums" className="text-uh-black hover:text-uh-red font-medium transition-colors">
-              Forums
-            </Link>
+            <div className="relative group"
+                 onMouseEnter={(e) => {
+                   console.log('Forums hover enter');
+                   const dropdown = e.currentTarget.querySelector('.forums-header-dropdown') as HTMLElement;
+                   console.log('Forums dropdown found:', dropdown);
+                   if (dropdown) {
+                     dropdown.style.opacity = '1';
+                     dropdown.style.visibility = 'visible';
+                     console.log('Forums dropdown shown');
+                   }
+                 }}
+                 onMouseLeave={(e) => {
+                   console.log('Forums hover leave');
+                   const dropdown = e.currentTarget.querySelector('.forums-header-dropdown') as HTMLElement;
+                   if (dropdown) {
+                     dropdown.style.opacity = '0';
+                     dropdown.style.visibility = 'hidden';
+                   }
+                 }}>
+              <button className="text-uh-black hover:text-uh-red font-medium transition-colors flex items-center">
+                Forums
+                <i className="fas fa-chevron-down ml-1 text-xs"></i>
+              </button>
+              
+              <div className="forums-header-dropdown absolute top-full left-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible transition-all duration-200 z-50 max-h-96 overflow-y-auto">
+                <Link href="/forums/categories/1" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-football-ball mr-2"></i>
+                  Football
+                  <div className="text-xs text-gray-500 mt-1">Houston Cougar Football discussions</div>
+                </Link>
+                <Link href="/forums/categories/2" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-basketball-ball mr-2"></i>
+                  Basketball
+                  <div className="text-xs text-gray-500 mt-1">UH Basketball - Men's and Women's teams</div>
+                </Link>
+                <Link href="/forums/categories/18" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-baseball-ball mr-2"></i>
+                  Baseball
+                  <div className="text-xs text-gray-500 mt-1">Houston Cougar Baseball discussion</div>
+                </Link>
+                <Link href="/forums/categories/19" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-running mr-2"></i>
+                  Track & Field
+                  <div className="text-xs text-gray-500 mt-1">Houston Cougar Track & Field athletics</div>
+                </Link>
+                <Link href="/forums/categories/20" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-golf-ball mr-2"></i>
+                  Golf
+                  <div className="text-xs text-gray-500 mt-1">Houston Cougar Golf team discussions</div>
+                </Link>
+                <Link href="/forums/categories/45" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-female mr-2"></i>
+                  Women's Sports
+                  <div className="text-xs text-gray-500 mt-1">All Houston Cougar women's athletics</div>
+                </Link>
+                <Link href="/forums/categories/21" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-trophy mr-2"></i>
+                  Other Sports
+                  <div className="text-xs text-gray-500 mt-1">All other Houston Cougar athletics</div>
+                </Link>
+                <Link href="/forums/categories/4" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-user-plus mr-2"></i>
+                  Recruiting
+                  <div className="text-xs text-gray-500 mt-1">Latest recruiting news and commitments</div>
+                </Link>
+                <Link href="/forums/categories/5" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-university mr-2"></i>
+                  Cougar Corner
+                  <div className="text-xs text-gray-500 mt-1">General UH discussion and campus life</div>
+                </Link>
+                <Link href="/forums/categories/6" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-globe mr-2"></i>
+                  Politics & Current Events
+                  <div className="text-xs text-gray-500 mt-1">Political discussions and current events</div>
+                </Link>
+                <Link href="/forums/categories/7" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-briefcase mr-2"></i>
+                  Business & Finance
+                  <div className="text-xs text-gray-500 mt-1">Career advice and business discussions</div>
+                </Link>
+                <Link href="/forums/categories/8" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-laptop mr-2"></i>
+                  Technology Hub
+                  <div className="text-xs text-gray-500 mt-1">Tech discussions and programming</div>
+                </Link>
+                <Link href="/forums/categories/9" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-film mr-2"></i>
+                  Entertainment
+                  <div className="text-xs text-gray-500 mt-1">Movies, TV shows, music, and pop culture</div>
+                </Link>
+                <Link href="/forums/categories/10" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-utensils mr-2"></i>
+                  Food & Dining
+                  <div className="text-xs text-gray-500 mt-1">Restaurant recommendations and food discussions</div>
+                </Link>
+                <Link href="/forums/categories/11" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-home mr-2"></i>
+                  Real Estate
+                  <div className="text-xs text-gray-500 mt-1">Houston area real estate and housing</div>
+                </Link>
+                <Link href="/forums/categories/12" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-tags mr-2"></i>
+                  Classifieds
+                  <div className="text-xs text-gray-500 mt-1">Buy, sell, and trade with fellow Coogs</div>
+                </Link>
+                <Link href="/forums/categories/13" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-crown mr-2"></i>
+                  Premium Lounge
+                  <div className="text-xs text-gray-500 mt-1">Exclusive content for premium members</div>
+                </Link>
+                <Link href="/forums/categories/14" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-gamepad mr-2"></i>
+                  Game Day Central
+                  <div className="text-xs text-gray-500 mt-1">Live game discussions and watch parties</div>
+                </Link>
+                <Link href="/forums/categories/15" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-graduation-cap mr-2"></i>
+                  Alumni Network
+                  <div className="text-xs text-gray-500 mt-1">Connect with fellow UH graduates</div>
+                </Link>
+                <Link href="/forums/categories/25" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-star mr-2"></i>
+                  UH Hall of Fame
+                  <div className="text-xs text-gray-500 mt-1">Celebrating famous UH alumni and athletes</div>
+                </Link>
+                <Link href="/forums/categories/46" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-handshake mr-2"></i>
+                  Professional Networking
+                  <div className="text-xs text-gray-500 mt-1">Job opportunities and career connections</div>
+                </Link>
+                <Link href="/forums" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
+                  <i className="fas fa-list mr-2"></i>
+                  All Forums
+                  <div className="text-xs text-gray-500 mt-1">Browse All Categories</div>
+                </Link>
+              </div>
+            </div>
             
             <div className="relative group"
                  onMouseEnter={(e) => {
@@ -161,8 +295,10 @@ export function Header() {
               </div>
             </div>
             
-
-            {isAuthenticated && (
+            <Link href="/community" className="text-uh-black hover:text-uh-red font-medium transition-colors">
+              Community
+            </Link>
+            {user && (
               <>
                 <Link href="/dashboard" className="text-uh-black hover:text-uh-red font-medium transition-colors">
                   Dashboard
@@ -254,7 +390,22 @@ export function Header() {
               <Link href="/events" className="text-uh-black hover:text-uh-red font-medium">
                 Events
               </Link>
-
+              <div className="border-t border-gray-200 pt-2 mt-2">
+                <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Community</div>
+                <Link href="/forums/categories/24" className="text-uh-black hover:text-uh-red font-medium block mb-2">
+                  Heartbeats (Dating)
+                </Link>
+                <Link href="/forums/categories/23" className="text-uh-black hover:text-uh-red font-medium block mb-2">
+                  Water Cooler Talk
+                </Link>
+                <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2 mt-3">Resources</div>
+                <Link href="/life-happens" className="text-uh-black hover:text-uh-red font-medium block mb-2">
+                  Life Happens
+                </Link>
+                <Link href="/life-solutions" className="text-uh-black hover:text-uh-red font-medium block">
+                  Life Solutions
+                </Link>
+              </div>
               <div className="pt-4 border-t border-gray-200">
                 <Input 
                   type="search" 
