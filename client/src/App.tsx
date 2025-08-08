@@ -26,7 +26,6 @@ import TestAdmin from "@/pages/TestAdmin";
 import SimpleAdminDashboard from "@/pages/SimpleAdminDashboard";
 import LifeHappens from "@/pages/LifeHappens";
 import LifeSolutions from "@/pages/LifeSolutions";
-import Community from "@/pages/Community";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -51,7 +50,6 @@ function Router() {
       <Route path="/test-admin" component={TestAdmin} />
       <Route path="/life-happens" component={LifeHappens} />
       <Route path="/life-solutions" component={LifeSolutions} />
-      <Route path="/community" component={Community} />
       <Route path="/forums/categories/:categoryId" component={ForumCategory} />
       <Route path="/forums/topics/:topicId" component={ForumTopic} />
       <Route component={NotFound} />

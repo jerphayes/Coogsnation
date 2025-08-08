@@ -182,9 +182,7 @@ export default function Landing() {
         margin: '50px 0',
         padding: '30px 20px',
         backgroundColor: '#f8f8f8',
-        overflow: 'visible',
-        position: 'relative',
-        zIndex: 1
+        overflow: 'visible'
       }}>
         <h3 style={{
           fontSize: '1.8em',
@@ -216,7 +214,6 @@ export default function Landing() {
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-5px)';
               e.currentTarget.style.boxShadow = '0 5px 15px rgba(160,0,0,0.2)';
-              e.currentTarget.style.zIndex = '1000';
               const dropdown = e.currentTarget.querySelector('.forums-dropdown') as HTMLElement;
               if (dropdown) {
                 dropdown.style.opacity = '1';
@@ -226,7 +223,6 @@ export default function Landing() {
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
               e.currentTarget.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
-              e.currentTarget.style.zIndex = 'auto';
               const dropdown = e.currentTarget.querySelector('.forums-dropdown') as HTMLElement;
               if (dropdown) {
                 dropdown.style.opacity = '0';
@@ -785,7 +781,6 @@ export default function Landing() {
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-5px)';
               e.currentTarget.style.boxShadow = '0 5px 15px rgba(160,0,0,0.2)';
-              e.currentTarget.style.zIndex = '1000';
               const dropdown = e.currentTarget.querySelector('.sports-dropdown') as HTMLElement;
               if (dropdown) {
                 dropdown.style.opacity = '1';
@@ -795,7 +790,6 @@ export default function Landing() {
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
               e.currentTarget.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
-              e.currentTarget.style.zIndex = 'auto';
               const dropdown = e.currentTarget.querySelector('.sports-dropdown') as HTMLElement;
               if (dropdown) {
                 dropdown.style.opacity = '0';
@@ -938,7 +932,6 @@ export default function Landing() {
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-5px)';
               e.currentTarget.style.boxShadow = '0 5px 15px rgba(160,0,0,0.2)';
-              e.currentTarget.style.zIndex = '1000';
               const dropdown = e.currentTarget.querySelector('.community-dropdown') as HTMLElement;
               if (dropdown) {
                 dropdown.style.opacity = '1';
@@ -948,7 +941,6 @@ export default function Landing() {
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
               e.currentTarget.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
-              e.currentTarget.style.zIndex = 'auto';
               const dropdown = e.currentTarget.querySelector('.community-dropdown') as HTMLElement;
               if (dropdown) {
                 dropdown.style.opacity = '0';
@@ -1068,12 +1060,12 @@ export default function Landing() {
                   transition: 'all 200ms ease-in-out'
                 }}
                 onMouseEnter={(e) => {
-                  (e.target as HTMLElement).style.backgroundColor = '#fef2f2';
-                  (e.target as HTMLElement).style.color = '#dc2626';
+                  e.target.style.backgroundColor = '#fef2f2';
+                  e.target.style.color = '#dc2626';
                 }}
                 onMouseLeave={(e) => {
-                  (e.target as HTMLElement).style.backgroundColor = 'transparent';
-                  (e.target as HTMLElement).style.color = 'black';
+                  e.target.style.backgroundColor = 'transparent';
+                  e.target.style.color = 'black';
                 }}
               >
                 <i className="fas fa-tools" style={{ marginRight: '8px' }}></i>
