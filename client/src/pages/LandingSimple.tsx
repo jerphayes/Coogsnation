@@ -198,25 +198,34 @@ export default function Landing() {
           margin: '0 auto'
         }}>
           <div 
-            onClick={() => window.location.href = '/forums'}
             style={{ 
               textAlign: 'center', 
               flex: '1', 
               minWidth: '200px',
-              cursor: 'pointer',
               padding: '20px',
               borderRadius: '10px',
               transition: 'all 0.3s ease',
               backgroundColor: 'white',
-              boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+              boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
+              position: 'relative'
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-5px)';
               e.currentTarget.style.boxShadow = '0 5px 15px rgba(160,0,0,0.2)';
+              const dropdown = e.currentTarget.querySelector('.forums-dropdown');
+              if (dropdown) {
+                dropdown.style.opacity = '1';
+                dropdown.style.visibility = 'visible';
+              }
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
               e.currentTarget.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
+              const dropdown = e.currentTarget.querySelector('.forums-dropdown');
+              if (dropdown) {
+                dropdown.style.opacity = '0';
+                dropdown.style.visibility = 'hidden';
+              }
             }}
           >
             <div style={{
@@ -225,28 +234,126 @@ export default function Landing() {
             }}>💬</div>
             <h4 style={{ color: '#a00000', margin: '0 0 10px 0' }}>Forums</h4>
             <p style={{ margin: 0, fontSize: '0.9em' }}>Discuss Coogs sports, share news, and connect with fellow fans</p>
+            
+            <div 
+              className="forums-dropdown"
+              style={{
+                position: 'absolute',
+                top: '100%',
+                left: '0',
+                marginTop: '8px',
+                width: '100%',
+                backgroundColor: 'white',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
+                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                opacity: '0',
+                visibility: 'hidden',
+                transition: 'all 200ms ease-in-out',
+                zIndex: '50',
+                textAlign: 'left'
+              }}
+            >
+              <div 
+                onClick={() => window.location.href = '/forums/categories/1'} 
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  color: 'black',
+                  borderBottom: '1px solid #e5e7eb',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease-in-out'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#fef2f2';
+                  e.target.style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = 'transparent';
+                  e.target.style.color = 'black';
+                }}
+              >
+                <i className="fas fa-football-ball" style={{ marginRight: '8px' }}></i>
+                Football
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Cougar Football Discussion</div>
+              </div>
+              <div 
+                onClick={() => window.location.href = '/forums/categories/2'} 
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  color: 'black',
+                  borderBottom: '1px solid #e5e7eb',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease-in-out'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#fef2f2';
+                  e.target.style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = 'transparent';
+                  e.target.style.color = 'black';
+                }}
+              >
+                <i className="fas fa-basketball-ball" style={{ marginRight: '8px' }}></i>
+                Basketball
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Men's & Women's Basketball</div>
+              </div>
+              <div 
+                onClick={() => window.location.href = '/forums'} 
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  color: 'black',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease-in-out'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#fef2f2';
+                  e.target.style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = 'transparent';
+                  e.target.style.color = 'black';
+                }}
+              >
+                <i className="fas fa-list" style={{ marginRight: '8px' }}></i>
+                All Forums
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Browse All Categories</div>
+              </div>
+            </div>
           </div>
           
           <div 
-            onClick={() => window.location.href = '/news'}
             style={{ 
               textAlign: 'center', 
               flex: '1', 
               minWidth: '200px',
-              cursor: 'pointer',
               padding: '20px',
               borderRadius: '10px',
               transition: 'all 0.3s ease',
               backgroundColor: 'white',
-              boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+              boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
+              position: 'relative'
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-5px)';
               e.currentTarget.style.boxShadow = '0 5px 15px rgba(160,0,0,0.2)';
+              const dropdown = e.currentTarget.querySelector('.sports-dropdown');
+              if (dropdown) {
+                dropdown.style.opacity = '1';
+                dropdown.style.visibility = 'visible';
+              }
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
               e.currentTarget.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
+              const dropdown = e.currentTarget.querySelector('.sports-dropdown');
+              if (dropdown) {
+                dropdown.style.opacity = '0';
+                dropdown.style.visibility = 'hidden';
+              }
             }}
           >
             <div style={{
@@ -255,6 +362,118 @@ export default function Landing() {
             }}>🏆</div>
             <h4 style={{ color: '#a00000', margin: '0 0 10px 0' }}>Sports News</h4>
             <p style={{ margin: 0, fontSize: '0.9em' }}>Stay updated on Cougar athletics and Big 12 action</p>
+            
+            <div 
+              className="sports-dropdown"
+              style={{
+                position: 'absolute',
+                top: '100%',
+                left: '0',
+                marginTop: '8px',
+                width: '100%',
+                backgroundColor: 'white',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
+                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                opacity: '0',
+                visibility: 'hidden',
+                transition: 'all 200ms ease-in-out',
+                zIndex: '50',
+                textAlign: 'left'
+              }}
+            >
+              <div 
+                onClick={() => window.location.href = '/news?category=football'} 
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  color: 'black',
+                  borderBottom: '1px solid #e5e7eb',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease-in-out'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#fef2f2';
+                  e.target.style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = 'transparent';
+                  e.target.style.color = 'black';
+                }}
+              >
+                <i className="fas fa-football-ball" style={{ marginRight: '8px' }}></i>
+                Football News
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Latest Cougar Football Updates</div>
+              </div>
+              <div 
+                onClick={() => window.location.href = '/news?category=basketball'} 
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  color: 'black',
+                  borderBottom: '1px solid #e5e7eb',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease-in-out'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#fef2f2';
+                  e.target.style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = 'transparent';
+                  e.target.style.color = 'black';
+                }}
+              >
+                <i className="fas fa-basketball-ball" style={{ marginRight: '8px' }}></i>
+                Basketball News
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Men's & Women's Basketball</div>
+              </div>
+              <div 
+                onClick={() => window.location.href = '/news?category=big12'} 
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  color: 'black',
+                  borderBottom: '1px solid #e5e7eb',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease-in-out'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#fef2f2';
+                  e.target.style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = 'transparent';
+                  e.target.style.color = 'black';
+                }}
+              >
+                <i className="fas fa-trophy" style={{ marginRight: '8px' }}></i>
+                Big 12 News
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Conference Updates</div>
+              </div>
+              <div 
+                onClick={() => window.location.href = '/news'} 
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  color: 'black',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease-in-out'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#fef2f2';
+                  e.target.style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = 'transparent';
+                  e.target.style.color = 'black';
+                }}
+              >
+                <i className="fas fa-newspaper" style={{ marginRight: '8px' }}></i>
+                All News
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Browse All Articles</div>
+              </div>
+            </div>
           </div>
           
           <div 
