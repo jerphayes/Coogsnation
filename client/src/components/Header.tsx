@@ -295,56 +295,9 @@ export function Header() {
               </div>
             </div>
             
-            <div className="relative group"
-                 onMouseEnter={(e) => {
-                   console.log('Community hover enter');
-                   const dropdown = e.currentTarget.querySelector('.community-header-dropdown') as HTMLElement;
-                   console.log('Community dropdown found:', dropdown);
-                   if (dropdown) {
-                     dropdown.style.opacity = '1';
-                     dropdown.style.visibility = 'visible';
-                     console.log('Community dropdown shown');
-                   }
-                 }}
-                 onMouseLeave={(e) => {
-                   console.log('Community hover leave');
-                   const dropdown = e.currentTarget.querySelector('.community-header-dropdown') as HTMLElement;
-                   if (dropdown) {
-                     dropdown.style.opacity = '0';
-                     dropdown.style.visibility = 'hidden';
-                   }
-                 }}>
-              <button className="text-uh-black hover:text-uh-red font-medium transition-colors flex items-center">
-                Community
-                <i className="fas fa-chevron-down ml-1 text-xs"></i>
-              </button>
-              
-              <div className="community-header-dropdown absolute top-full left-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible transition-all duration-200 z-50">
-                <Link href="/forums/categories/24" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
-                  <i className="fas fa-heart mr-2"></i>
-                  Heartbeats
-                  <div className="text-xs text-gray-500 mt-1">Dating & Relationships</div>
-                </Link>
-                <Link href="/forums/categories/23" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
-                  <i className="fas fa-coffee mr-2"></i>
-                  Water Cooler Talk
-                  <div className="text-xs text-gray-500 mt-1">General Discussions</div>
-                </Link>
-                <div className="px-4 py-2 bg-gray-50 border-b border-gray-100">
-                  <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Resources</div>
-                </div>
-                <Link href="/life-happens" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
-                  <i className="fas fa-wallet mr-2"></i>
-                  Life Happens
-                  <div className="text-xs text-gray-500 mt-1">Bills & Payments</div>
-                </Link>
-                <Link href="/life-solutions" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
-                  <i className="fas fa-tools mr-2"></i>
-                  Life Solutions
-                  <div className="text-xs text-gray-500 mt-1">Houston Resources & Support</div>
-                </Link>
-              </div>
-            </div>
+            <Link href="/community" className="text-uh-black hover:text-uh-red font-medium transition-colors">
+              Community
+            </Link>
             {user && (
               <>
                 <Link href="/dashboard" className="text-uh-black hover:text-uh-red font-medium transition-colors">
