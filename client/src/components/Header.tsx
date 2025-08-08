@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
@@ -49,113 +49,36 @@ export function Header() {
               Events
             </Link>
             
-            {/* Community Dropdown */}
             <div className="relative group">
               <button className="text-uh-black hover:text-uh-red font-medium transition-colors flex items-center">
                 Community
                 <i className="fas fa-chevron-down ml-1 text-xs"></i>
               </button>
               
-              {/* Dropdown Menu */}
-              <div className="absolute top-full left-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 max-h-96 overflow-y-auto">
-                
-                {/* Heartbeats Section */}
-                <div className="border-b border-gray-100">
-                  <div className="px-4 py-2 bg-red-50">
-                    <div className="text-sm font-semibold text-uh-red flex items-center">
-                      <i className="fas fa-heart mr-2"></i>
-                      HEARTBEATS
-                    </div>
-                  </div>
-                  <Link href="/forums/categories/24" className="block px-6 py-2 text-sm text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
-                    Dating & Relationships
-                  </Link>
-                  <Link href="/forums/categories/24" className="block px-6 py-2 text-sm text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
-                    Meetups & Social Events
-                  </Link>
-                  <Link href="/forums/categories/24" className="block px-6 py-2 text-sm text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
-                    Relationship Advice
-                  </Link>
+              <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <Link href="/forums/categories/24" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-heart mr-2"></i>
+                  Heartbeats
+                  <div className="text-xs text-gray-500 mt-1">Dating & Relationships</div>
+                </Link>
+                <Link href="/forums/categories/23" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-coffee mr-2"></i>
+                  Water Cooler Talk
+                  <div className="text-xs text-gray-500 mt-1">General Discussions</div>
+                </Link>
+                <div className="px-4 py-2 bg-gray-50 border-b border-gray-100">
+                  <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Resources</div>
                 </div>
-
-                {/* Water Cooler Talk Section */}
-                <div className="border-b border-gray-100">
-                  <div className="px-4 py-2 bg-gray-50">
-                    <div className="text-sm font-semibold text-gray-700 flex items-center">
-                      <i className="fas fa-coffee mr-2"></i>
-                      WATER COOLER TALK
-                    </div>
-                  </div>
-                  <Link href="/forums/categories/23" className="block px-6 py-2 text-sm text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
-                    General Discussion
-                  </Link>
-                  <Link href="/forums/categories/23" className="block px-6 py-2 text-sm text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
-                    Random Thoughts
-                  </Link>
-                  <Link href="/forums/categories/23" className="block px-6 py-2 text-sm text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
-                    Off-Topic
-                  </Link>
-                </div>
-
-                {/* Resources Section */}
-                <div>
-                  <div className="px-4 py-2 bg-purple-50">
-                    <div className="text-sm font-semibold text-purple-700 flex items-center">
-                      <i className="fas fa-toolbox mr-2"></i>
-                      RESOURCES
-                    </div>
-                  </div>
-                  
-                  {/* Life Happens Subsection */}
-                  <div className="bg-blue-25">
-                    <div className="px-6 py-1 bg-blue-100">
-                      <div className="text-xs font-semibold text-blue-700 flex items-center">
-                        <i className="fas fa-wallet mr-2"></i>
-                        Life Happens
-                      </div>
-                    </div>
-                    <Link href="/life-happens" className="block px-8 py-1 text-xs text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
-                      Utility Payments (Electric, Gas, Water)
-                    </Link>
-                    <Link href="/life-happens" className="block px-8 py-1 text-xs text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
-                      Emergency Bill Assistance
-                    </Link>
-                    <Link href="/life-happens" className="block px-8 py-1 text-xs text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
-                      Payment Centers & Cash Options
-                    </Link>
-                    <Link href="/life-happens" className="block px-8 py-1 text-xs text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
-                      Financial Emergency Resources
-                    </Link>
-                  </div>
-                  
-                  {/* Life Solutions Subsection */}
-                  <div className="bg-green-25">
-                    <div className="px-6 py-1 bg-green-100">
-                      <div className="text-xs font-semibold text-green-700 flex items-center">
-                        <i className="fas fa-tools mr-2"></i>
-                        Life Solutions
-                      </div>
-                    </div>
-                    <Link href="/life-solutions" className="block px-8 py-1 text-xs text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
-                      Housing & Apartments
-                    </Link>
-                    <Link href="/life-solutions" className="block px-8 py-1 text-xs text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
-                      Transportation & METRO
-                    </Link>
-                    <Link href="/life-solutions" className="block px-8 py-1 text-xs text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
-                      Healthcare & Medical Resources
-                    </Link>
-                    <Link href="/life-solutions" className="block px-8 py-1 text-xs text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
-                      Career & Professional Development
-                    </Link>
-                    <Link href="/life-solutions" className="block px-8 py-1 text-xs text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
-                      Legal & Safety Resources
-                    </Link>
-                    <Link href="/life-solutions" className="block px-8 py-1 text-xs text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
-                      Emergency Contacts & Crisis Support
-                    </Link>
-                  </div>
-                </div>
+                <Link href="/life-happens" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-wallet mr-2"></i>
+                  Life Happens
+                  <div className="text-xs text-gray-500 mt-1">Bills & Payments</div>
+                </Link>
+                <Link href="/life-solutions" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
+                  <i className="fas fa-tools mr-2"></i>
+                  Life Solutions
+                  <div className="text-xs text-gray-500 mt-1">Houston Resources & Support</div>
+                </Link>
               </div>
             </div>
             {user && (

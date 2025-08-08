@@ -1,18 +1,23 @@
+/* Font Awesome icons */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Font Awesome icons */
-@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
-
 /* Community Dropdown CSS Fix */
-.group:hover .group-hover\\:opacity-100 {
+.group:hover .group-hover\:opacity-100 {
   opacity: 1 !important;
   visibility: visible !important;
 }
 
-.group:hover .group-hover\\:visible {
+.group:hover .group-hover\:visible {
   visibility: visible !important;
+}
+
+/* Ensure dropdown is above other elements */
+.community-dropdown {
+  z-index: 9999 !important;
 }
 
 :root {
