@@ -181,7 +181,8 @@ export default function Landing() {
       <div style={{
         margin: '50px 0',
         padding: '30px 20px',
-        backgroundColor: '#f8f8f8'
+        backgroundColor: '#f8f8f8',
+        overflow: 'visible'
       }}>
         <h3 style={{
           fontSize: '1.8em',
@@ -195,7 +196,8 @@ export default function Landing() {
           flexWrap: 'wrap',
           gap: '30px',
           maxWidth: '800px',
-          margin: '0 auto'
+          margin: '0 auto',
+          paddingBottom: '120px'
         }}>
           <div 
             style={{ 
