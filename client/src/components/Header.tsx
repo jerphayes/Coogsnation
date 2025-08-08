@@ -164,7 +164,7 @@ export function Header() {
             <Link href="/community" className="text-uh-black hover:text-uh-red font-medium transition-colors">
               Community
             </Link>
-            {user && (
+            {isAuthenticated && (
               <>
                 <Link href="/dashboard" className="text-uh-black hover:text-uh-red font-medium transition-colors">
                   Dashboard
