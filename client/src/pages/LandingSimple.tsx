@@ -253,7 +253,9 @@ export default function Landing() {
                 visibility: 'hidden',
                 transition: 'all 200ms ease-in-out',
                 zIndex: '1000',
-                textAlign: 'left'
+                textAlign: 'left',
+                maxHeight: '400px',
+                overflowY: 'auto'
               }}
             >
               <div 
@@ -393,6 +395,351 @@ export default function Landing() {
                 <i className="fas fa-female" style={{ marginRight: '8px' }}></i>
                 Women's Sports
                 <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>All Houston Cougar women's athletics</div>
+              </div>
+              <div 
+                onClick={() => window.location.href = '/forums/categories/21'} 
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  color: 'black',
+                  borderBottom: '1px solid #e5e7eb',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease-in-out'
+                }}
+                onMouseEnter={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = '#fef2f2';
+                  (e.target as HTMLElement).style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = 'transparent';
+                  (e.target as HTMLElement).style.color = 'black';
+                }}
+              >
+                <i className="fas fa-trophy" style={{ marginRight: '8px' }}></i>
+                Other Sports
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>All other Houston Cougar athletics</div>
+              </div>
+              <div 
+                onClick={() => window.location.href = '/forums/categories/4'} 
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  color: 'black',
+                  borderBottom: '1px solid #e5e7eb',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease-in-out'
+                }}
+                onMouseEnter={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = '#fef2f2';
+                  (e.target as HTMLElement).style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = 'transparent';
+                  (e.target as HTMLElement).style.color = 'black';
+                }}
+              >
+                <i className="fas fa-user-plus" style={{ marginRight: '8px' }}></i>
+                Recruiting
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Latest recruiting news and commitments</div>
+              </div>
+              <div 
+                onClick={() => window.location.href = '/forums/categories/5'} 
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  color: 'black',
+                  borderBottom: '1px solid #e5e7eb',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease-in-out'
+                }}
+                onMouseEnter={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = '#fef2f2';
+                  (e.target as HTMLElement).style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = 'transparent';
+                  (e.target as HTMLElement).style.color = 'black';
+                }}
+              >
+                <i className="fas fa-home" style={{ marginRight: '8px' }}></i>
+                Cougar Corner
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>General UH discussion and campus life</div>
+              </div>
+              <div 
+                onClick={() => window.location.href = '/forums/categories/6'} 
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  color: 'black',
+                  borderBottom: '1px solid #e5e7eb',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease-in-out'
+                }}
+                onMouseEnter={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = '#fef2f2';
+                  (e.target as HTMLElement).style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = 'transparent';
+                  (e.target as HTMLElement).style.color = 'black';
+                }}
+              >
+                <i className="fas fa-globe" style={{ marginRight: '8px' }}></i>
+                Politics
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Political discussions and current events</div>
+              </div>
+              <div 
+                onClick={() => window.location.href = '/forums/categories/7'} 
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  color: 'black',
+                  borderBottom: '1px solid #e5e7eb',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease-in-out'
+                }}
+                onMouseEnter={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = '#fef2f2';
+                  (e.target as HTMLElement).style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = 'transparent';
+                  (e.target as HTMLElement).style.color = 'black';
+                }}
+              >
+                <i className="fas fa-briefcase" style={{ marginRight: '8px' }}></i>
+                Business
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Career advice and business discussions</div>
+              </div>
+              <div 
+                onClick={() => window.location.href = '/forums/categories/8'} 
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  color: 'black',
+                  borderBottom: '1px solid #e5e7eb',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease-in-out'
+                }}
+                onMouseEnter={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = '#fef2f2';
+                  (e.target as HTMLElement).style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = 'transparent';
+                  (e.target as HTMLElement).style.color = 'black';
+                }}
+              >
+                <i className="fas fa-laptop" style={{ marginRight: '8px' }}></i>
+                Technology
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Tech discussions and programming</div>
+              </div>
+              <div 
+                onClick={() => window.location.href = '/forums/categories/9'} 
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  color: 'black',
+                  borderBottom: '1px solid #e5e7eb',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease-in-out'
+                }}
+                onMouseEnter={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = '#fef2f2';
+                  (e.target as HTMLElement).style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = 'transparent';
+                  (e.target as HTMLElement).style.color = 'black';
+                }}
+              >
+                <i className="fas fa-film" style={{ marginRight: '8px' }}></i>
+                Entertainment
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Movies, TV shows, music, and pop culture</div>
+              </div>
+              <div 
+                onClick={() => window.location.href = '/forums/categories/10'} 
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  color: 'black',
+                  borderBottom: '1px solid #e5e7eb',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease-in-out'
+                }}
+                onMouseEnter={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = '#fef2f2';
+                  (e.target as HTMLElement).style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = 'transparent';
+                  (e.target as HTMLElement).style.color = 'black';
+                }}
+              >
+                <i className="fas fa-utensils" style={{ marginRight: '8px' }}></i>
+                Food & Dining
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Restaurant recommendations and food discussions</div>
+              </div>
+              <div 
+                onClick={() => window.location.href = '/forums/categories/11'} 
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  color: 'black',
+                  borderBottom: '1px solid #e5e7eb',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease-in-out'
+                }}
+                onMouseEnter={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = '#fef2f2';
+                  (e.target as HTMLElement).style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = 'transparent';
+                  (e.target as HTMLElement).style.color = 'black';
+                }}
+              >
+                <i className="fas fa-home" style={{ marginRight: '8px' }}></i>
+                Real Estate
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Houston area real estate and housing</div>
+              </div>
+              <div 
+                onClick={() => window.location.href = '/forums/categories/12'} 
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  color: 'black',
+                  borderBottom: '1px solid #e5e7eb',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease-in-out'
+                }}
+                onMouseEnter={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = '#fef2f2';
+                  (e.target as HTMLElement).style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = 'transparent';
+                  (e.target as HTMLElement).style.color = 'black';
+                }}
+              >
+                <i className="fas fa-shopping-cart" style={{ marginRight: '8px' }}></i>
+                Classifieds
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Buy, sell, and trade with fellow Coogs</div>
+              </div>
+              <div 
+                onClick={() => window.location.href = '/forums/categories/13'} 
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  color: 'black',
+                  borderBottom: '1px solid #e5e7eb',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease-in-out'
+                }}
+                onMouseEnter={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = '#fef2f2';
+                  (e.target as HTMLElement).style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = 'transparent';
+                  (e.target as HTMLElement).style.color = 'black';
+                }}
+              >
+                <i className="fas fa-star" style={{ marginRight: '8px' }}></i>
+                Premium Lounge
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Exclusive content for premium members</div>
+              </div>
+              <div 
+                onClick={() => window.location.href = '/forums/categories/14'} 
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  color: 'black',
+                  borderBottom: '1px solid #e5e7eb',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease-in-out'
+                }}
+                onMouseEnter={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = '#fef2f2';
+                  (e.target as HTMLElement).style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = 'transparent';
+                  (e.target as HTMLElement).style.color = 'black';
+                }}
+              >
+                <i className="fas fa-calendar" style={{ marginRight: '8px' }}></i>
+                Game Day Central
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Live game discussions and watch parties</div>
+              </div>
+              <div 
+                onClick={() => window.location.href = '/forums/categories/15'} 
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  color: 'black',
+                  borderBottom: '1px solid #e5e7eb',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease-in-out'
+                }}
+                onMouseEnter={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = '#fef2f2';
+                  (e.target as HTMLElement).style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = 'transparent';
+                  (e.target as HTMLElement).style.color = 'black';
+                }}
+              >
+                <i className="fas fa-graduation-cap" style={{ marginRight: '8px' }}></i>
+                Alumni Network
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Connect with fellow UH graduates</div>
+              </div>
+              <div 
+                onClick={() => window.location.href = '/forums/categories/25'} 
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  color: 'black',
+                  borderBottom: '1px solid #e5e7eb',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease-in-out'
+                }}
+                onMouseEnter={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = '#fef2f2';
+                  (e.target as HTMLElement).style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = 'transparent';
+                  (e.target as HTMLElement).style.color = 'black';
+                }}
+              >
+                <i className="fas fa-medal" style={{ marginRight: '8px' }}></i>
+                UH Hall of Fame
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Celebrating famous UH alumni and athletes</div>
+              </div>
+              <div 
+                onClick={() => window.location.href = '/forums/categories/46'} 
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  color: 'black',
+                  borderBottom: '1px solid #e5e7eb',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease-in-out'
+                }}
+                onMouseEnter={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = '#fef2f2';
+                  (e.target as HTMLElement).style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = 'transparent';
+                  (e.target as HTMLElement).style.color = 'black';
+                }}
+              >
+                <i className="fas fa-handshake" style={{ marginRight: '8px' }}></i>
+                Professional Networking
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Job opportunities and career connections</div>
               </div>
               <div 
                 onClick={() => window.location.href = '/forums'} 
@@ -638,12 +985,12 @@ export default function Landing() {
                   transition: 'all 200ms ease-in-out'
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = '#fef2f2';
-                  e.target.style.color = '#dc2626';
+                  (e.target as HTMLElement).style.backgroundColor = '#fef2f2';
+                  (e.target as HTMLElement).style.color = '#dc2626';
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = 'transparent';
-                  e.target.style.color = 'black';
+                  (e.target as HTMLElement).style.backgroundColor = 'transparent';
+                  (e.target as HTMLElement).style.color = 'black';
                 }}
               >
                 <i className="fas fa-heart" style={{ marginRight: '8px' }}></i>
@@ -661,12 +1008,12 @@ export default function Landing() {
                   transition: 'all 200ms ease-in-out'
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = '#fef2f2';
-                  e.target.style.color = '#dc2626';
+                  (e.target as HTMLElement).style.backgroundColor = '#fef2f2';
+                  (e.target as HTMLElement).style.color = '#dc2626';
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = 'transparent';
-                  e.target.style.color = 'black';
+                  (e.target as HTMLElement).style.backgroundColor = 'transparent';
+                  (e.target as HTMLElement).style.color = 'black';
                 }}
               >
                 <i className="fas fa-coffee" style={{ marginRight: '8px' }}></i>
@@ -691,12 +1038,12 @@ export default function Landing() {
                   transition: 'all 200ms ease-in-out'
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = '#fef2f2';
-                  e.target.style.color = '#dc2626';
+                  (e.target as HTMLElement).style.backgroundColor = '#fef2f2';
+                  (e.target as HTMLElement).style.color = '#dc2626';
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = 'transparent';
-                  e.target.style.color = 'black';
+                  (e.target as HTMLElement).style.backgroundColor = 'transparent';
+                  (e.target as HTMLElement).style.color = 'black';
                 }}
               >
                 <i className="fas fa-wallet" style={{ marginRight: '8px' }}></i>
