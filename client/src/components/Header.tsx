@@ -57,7 +57,7 @@ export function Header() {
               </button>
               
               {/* Dropdown Menu */}
-              <div className="absolute top-full left-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[60]">
+              <div className="absolute top-full left-0 mt-2 w-96 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[60] max-h-96 overflow-y-auto">
                 
                 {/* Heartbeats Section */}
                 <div className="border-b border-gray-100">
@@ -73,7 +73,7 @@ export function Header() {
                   <Link href="/forums/categories/24" className="block px-6 py-2 text-sm text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
                     Meetups & Social Events
                   </Link>
-                  <Link href="/forums/categories/24" className="block px-6 py-2 text-sm text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <Link href="/forums/categories/24" className="block px-6 py-2 text-sm text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
                     Relationship Advice
                   </Link>
                 </div>
@@ -92,47 +92,69 @@ export function Header() {
                   <Link href="/forums/categories/23" className="block px-6 py-2 text-sm text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
                     Random Thoughts
                   </Link>
-                  <Link href="/forums/categories/23" className="block px-6 py-2 text-sm text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <Link href="/forums/categories/23" className="block px-6 py-2 text-sm text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
                     Off-Topic
                   </Link>
                 </div>
 
-                {/* Life Happens Section */}
-                <div className="border-b border-gray-100">
-                  <div className="px-4 py-2 bg-blue-50">
-                    <div className="text-sm font-semibold text-blue-700 flex items-center">
-                      <i className="fas fa-wallet mr-2"></i>
-                      LIFE HAPPENS
-                    </div>
-                  </div>
-                  <Link href="/life-happens" className="block px-6 py-2 text-sm text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
-                    Bills & Payments
-                  </Link>
-                  <Link href="/life-happens" className="block px-6 py-2 text-sm text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
-                    Emergency Assistance
-                  </Link>
-                  <Link href="/life-happens" className="block px-6 py-2 text-sm text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
-                    Financial Help
-                  </Link>
-                </div>
-
-                {/* Life Solutions Section */}
+                {/* Resources Section */}
                 <div>
-                  <div className="px-4 py-2 bg-green-50">
-                    <div className="text-sm font-semibold text-green-700 flex items-center">
-                      <i className="fas fa-tools mr-2"></i>
-                      LIFE SOLUTIONS
+                  <div className="px-4 py-2 bg-purple-50">
+                    <div className="text-sm font-semibold text-purple-700 flex items-center">
+                      <i className="fas fa-toolbox mr-2"></i>
+                      RESOURCES
                     </div>
                   </div>
-                  <Link href="/life-solutions" className="block px-6 py-2 text-sm text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
-                    Houston Resources
-                  </Link>
-                  <Link href="/life-solutions" className="block px-6 py-2 text-sm text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
-                    Support Services
-                  </Link>
-                  <Link href="/life-solutions" className="block px-6 py-2 text-sm text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
-                    Community Help
-                  </Link>
+                  
+                  {/* Life Happens Subsection */}
+                  <div className="bg-blue-25">
+                    <div className="px-6 py-1 bg-blue-100">
+                      <div className="text-xs font-semibold text-blue-700 flex items-center">
+                        <i className="fas fa-wallet mr-2"></i>
+                        Life Happens
+                      </div>
+                    </div>
+                    <Link href="/life-happens" className="block px-8 py-1 text-xs text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
+                      Utility Payments (Electric, Gas, Water)
+                    </Link>
+                    <Link href="/life-happens" className="block px-8 py-1 text-xs text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
+                      Emergency Bill Assistance
+                    </Link>
+                    <Link href="/life-happens" className="block px-8 py-1 text-xs text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
+                      Payment Centers & Cash Options
+                    </Link>
+                    <Link href="/life-happens" className="block px-8 py-1 text-xs text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
+                      Financial Emergency Resources
+                    </Link>
+                  </div>
+                  
+                  {/* Life Solutions Subsection */}
+                  <div className="bg-green-25">
+                    <div className="px-6 py-1 bg-green-100">
+                      <div className="text-xs font-semibold text-green-700 flex items-center">
+                        <i className="fas fa-tools mr-2"></i>
+                        Life Solutions
+                      </div>
+                    </div>
+                    <Link href="/life-solutions" className="block px-8 py-1 text-xs text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
+                      Housing & Apartments
+                    </Link>
+                    <Link href="/life-solutions" className="block px-8 py-1 text-xs text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
+                      Transportation & METRO
+                    </Link>
+                    <Link href="/life-solutions" className="block px-8 py-1 text-xs text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
+                      Healthcare & Medical Resources
+                    </Link>
+                    <Link href="/life-solutions" className="block px-8 py-1 text-xs text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
+                      Career & Professional Development
+                    </Link>
+                    <Link href="/life-solutions" className="block px-8 py-1 text-xs text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
+                      Legal & Safety Resources
+                    </Link>
+                    <Link href="/life-solutions" className="block px-8 py-1 text-xs text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
+                      Emergency Contacts & Crisis Support
+                    </Link>
+                  </div>
                 </div>
               </div>
             </div>
