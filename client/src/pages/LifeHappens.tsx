@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, ChevronUp, Zap, Droplets, Wifi, DollarSign, MapPin, CreditCard } from "lucide-react";
+import { Link } from "wouter";
 
 interface AccordionSectionProps {
   title: string;
