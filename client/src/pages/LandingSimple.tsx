@@ -195,29 +195,41 @@ export default function Landing() {
           </button>
           
           <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-            <a href="/forums/categories/24" className="block px-4 py-3 text-black hover:bg-red-50 hover:text-red-600 transition-colors border-b border-gray-100" style={{ textDecoration: 'none' }}>
+            <div 
+              onClick={() => window.location.href = '/forums/categories/24'} 
+              className="block px-4 py-3 text-black hover:bg-red-50 hover:text-red-600 transition-colors border-b border-gray-100 cursor-pointer"
+            >
               <i className="fas fa-heart mr-2"></i>
               Heartbeats
               <div className="text-xs text-gray-500 mt-1">Dating & Relationships</div>
-            </a>
-            <a href="/forums/categories/23" className="block px-4 py-3 text-black hover:bg-red-50 hover:text-red-600 transition-colors border-b border-gray-100" style={{ textDecoration: 'none' }}>
+            </div>
+            <div 
+              onClick={() => window.location.href = '/forums/categories/23'} 
+              className="block px-4 py-3 text-black hover:bg-red-50 hover:text-red-600 transition-colors border-b border-gray-100 cursor-pointer"
+            >
               <i className="fas fa-coffee mr-2"></i>
               Water Cooler Talk
               <div className="text-xs text-gray-500 mt-1">General Discussions</div>
-            </a>
+            </div>
             <div className="px-4 py-2 bg-gray-50 border-b border-gray-100">
               <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Resources</div>
             </div>
-            <a href="/life-happens" className="block px-4 py-3 text-black hover:bg-red-50 hover:text-red-600 transition-colors border-b border-gray-100" style={{ textDecoration: 'none' }}>
+            <div 
+              onClick={() => window.location.href = '/life-happens'} 
+              className="block px-4 py-3 text-black hover:bg-red-50 hover:text-red-600 transition-colors border-b border-gray-100 cursor-pointer"
+            >
               <i className="fas fa-wallet mr-2"></i>
               Life Happens
               <div className="text-xs text-gray-500 mt-1">Bills & Payments</div>
-            </a>
-            <a href="/life-solutions" className="block px-4 py-3 text-black hover:bg-red-50 hover:text-red-600 transition-colors" style={{ textDecoration: 'none' }}>
+            </div>
+            <div 
+              onClick={() => window.location.href = '/life-solutions'} 
+              className="block px-4 py-3 text-black hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer"
+            >
               <i className="fas fa-tools mr-2"></i>
               Life Solutions
               <div className="text-xs text-gray-500 mt-1">Houston Resources & Support</div>
-            </a>
+            </div>
           </div>
         </div>
       </div>
