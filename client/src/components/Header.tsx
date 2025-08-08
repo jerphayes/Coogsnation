@@ -38,13 +38,17 @@ export function Header() {
             </Link>
             <div className="relative group"
                  onMouseEnter={(e) => {
+                   console.log('Forums hover enter');
                    const dropdown = e.currentTarget.querySelector('.forums-header-dropdown') as HTMLElement;
+                   console.log('Forums dropdown found:', dropdown);
                    if (dropdown) {
                      dropdown.style.opacity = '1';
                      dropdown.style.visibility = 'visible';
+                     console.log('Forums dropdown shown');
                    }
                  }}
                  onMouseLeave={(e) => {
+                   console.log('Forums hover leave');
                    const dropdown = e.currentTarget.querySelector('.forums-header-dropdown') as HTMLElement;
                    if (dropdown) {
                      dropdown.style.opacity = '0';
