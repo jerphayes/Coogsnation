@@ -212,7 +212,7 @@ export default function Landing() {
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-5px)';
               e.currentTarget.style.boxShadow = '0 5px 15px rgba(160,0,0,0.2)';
-              const dropdown = e.currentTarget.querySelector('.forums-dropdown');
+              const dropdown = e.currentTarget.querySelector('.forums-dropdown') as HTMLElement;
               if (dropdown) {
                 dropdown.style.opacity = '1';
                 dropdown.style.visibility = 'visible';
@@ -221,7 +221,7 @@ export default function Landing() {
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
               e.currentTarget.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
-              const dropdown = e.currentTarget.querySelector('.forums-dropdown');
+              const dropdown = e.currentTarget.querySelector('.forums-dropdown') as HTMLElement;
               if (dropdown) {
                 dropdown.style.opacity = '0';
                 dropdown.style.visibility = 'hidden';
@@ -265,12 +265,12 @@ export default function Landing() {
                   transition: 'all 200ms ease-in-out'
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = '#fef2f2';
-                  e.target.style.color = '#dc2626';
+                  (e.target as HTMLElement).style.backgroundColor = '#fef2f2';
+                  (e.target as HTMLElement).style.color = '#dc2626';
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = 'transparent';
-                  e.target.style.color = 'black';
+                  (e.target as HTMLElement).style.backgroundColor = 'transparent';
+                  (e.target as HTMLElement).style.color = 'black';
                 }}
               >
                 <i className="fas fa-football-ball" style={{ marginRight: '8px' }}></i>
@@ -288,12 +288,12 @@ export default function Landing() {
                   transition: 'all 200ms ease-in-out'
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = '#fef2f2';
-                  e.target.style.color = '#dc2626';
+                  (e.target as HTMLElement).style.backgroundColor = '#fef2f2';
+                  (e.target as HTMLElement).style.color = '#dc2626';
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = 'transparent';
-                  e.target.style.color = 'black';
+                  (e.target as HTMLElement).style.backgroundColor = 'transparent';
+                  (e.target as HTMLElement).style.color = 'black';
                 }}
               >
                 <i className="fas fa-basketball-ball" style={{ marginRight: '8px' }}></i>
@@ -310,12 +310,12 @@ export default function Landing() {
                   transition: 'all 200ms ease-in-out'
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = '#fef2f2';
-                  e.target.style.color = '#dc2626';
+                  (e.target as HTMLElement).style.backgroundColor = '#fef2f2';
+                  (e.target as HTMLElement).style.color = '#dc2626';
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = 'transparent';
-                  e.target.style.color = 'black';
+                  (e.target as HTMLElement).style.backgroundColor = 'transparent';
+                  (e.target as HTMLElement).style.color = 'black';
                 }}
               >
                 <i className="fas fa-list" style={{ marginRight: '8px' }}></i>
@@ -340,7 +340,7 @@ export default function Landing() {
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-5px)';
               e.currentTarget.style.boxShadow = '0 5px 15px rgba(160,0,0,0.2)';
-              const dropdown = e.currentTarget.querySelector('.sports-dropdown');
+              const dropdown = e.currentTarget.querySelector('.sports-dropdown') as HTMLElement;
               if (dropdown) {
                 dropdown.style.opacity = '1';
                 dropdown.style.visibility = 'visible';
@@ -349,7 +349,7 @@ export default function Landing() {
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
               e.currentTarget.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
-              const dropdown = e.currentTarget.querySelector('.sports-dropdown');
+              const dropdown = e.currentTarget.querySelector('.sports-dropdown') as HTMLElement;
               if (dropdown) {
                 dropdown.style.opacity = '0';
                 dropdown.style.visibility = 'hidden';
@@ -393,12 +393,12 @@ export default function Landing() {
                   transition: 'all 200ms ease-in-out'
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = '#fef2f2';
-                  e.target.style.color = '#dc2626';
+                  (e.target as HTMLElement).style.backgroundColor = '#fef2f2';
+                  (e.target as HTMLElement).style.color = '#dc2626';
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = 'transparent';
-                  e.target.style.color = 'black';
+                  (e.target as HTMLElement).style.backgroundColor = 'transparent';
+                  (e.target as HTMLElement).style.color = 'black';
                 }}
               >
                 <i className="fas fa-football-ball" style={{ marginRight: '8px' }}></i>
@@ -416,12 +416,12 @@ export default function Landing() {
                   transition: 'all 200ms ease-in-out'
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = '#fef2f2';
-                  e.target.style.color = '#dc2626';
+                  (e.target as HTMLElement).style.backgroundColor = '#fef2f2';
+                  (e.target as HTMLElement).style.color = '#dc2626';
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = 'transparent';
-                  e.target.style.color = 'black';
+                  (e.target as HTMLElement).style.backgroundColor = 'transparent';
+                  (e.target as HTMLElement).style.color = 'black';
                 }}
               >
                 <i className="fas fa-basketball-ball" style={{ marginRight: '8px' }}></i>
@@ -439,12 +439,12 @@ export default function Landing() {
                   transition: 'all 200ms ease-in-out'
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = '#fef2f2';
-                  e.target.style.color = '#dc2626';
+                  (e.target as HTMLElement).style.backgroundColor = '#fef2f2';
+                  (e.target as HTMLElement).style.color = '#dc2626';
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = 'transparent';
-                  e.target.style.color = 'black';
+                  (e.target as HTMLElement).style.backgroundColor = 'transparent';
+                  (e.target as HTMLElement).style.color = 'black';
                 }}
               >
                 <i className="fas fa-trophy" style={{ marginRight: '8px' }}></i>
@@ -461,12 +461,12 @@ export default function Landing() {
                   transition: 'all 200ms ease-in-out'
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = '#fef2f2';
-                  e.target.style.color = '#dc2626';
+                  (e.target as HTMLElement).style.backgroundColor = '#fef2f2';
+                  (e.target as HTMLElement).style.color = '#dc2626';
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = 'transparent';
-                  e.target.style.color = 'black';
+                  (e.target as HTMLElement).style.backgroundColor = 'transparent';
+                  (e.target as HTMLElement).style.color = 'black';
                 }}
               >
                 <i className="fas fa-newspaper" style={{ marginRight: '8px' }}></i>
@@ -491,7 +491,7 @@ export default function Landing() {
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-5px)';
               e.currentTarget.style.boxShadow = '0 5px 15px rgba(160,0,0,0.2)';
-              const dropdown = e.currentTarget.querySelector('.community-dropdown');
+              const dropdown = e.currentTarget.querySelector('.community-dropdown') as HTMLElement;
               if (dropdown) {
                 dropdown.style.opacity = '1';
                 dropdown.style.visibility = 'visible';
@@ -500,7 +500,7 @@ export default function Landing() {
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
               e.currentTarget.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
-              const dropdown = e.currentTarget.querySelector('.community-dropdown');
+              const dropdown = e.currentTarget.querySelector('.community-dropdown') as HTMLElement;
               if (dropdown) {
                 dropdown.style.opacity = '0';
                 dropdown.style.visibility = 'hidden';
