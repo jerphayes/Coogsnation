@@ -77,12 +77,67 @@ export default function Landing() {
           fontWeight: 'bold',
           color: '#000'
         }}>Members</a>
-        <a href="/life-happens" style={{
-          margin: '0 15px',
-          textDecoration: 'none',
-          fontWeight: 'bold',
-          color: '#000'
-        }}>Life Resources</a>
+        <div style={{ position: 'relative', display: 'inline-block' }}>
+          <button style={{
+            margin: '0 15px',
+            background: 'none',
+            border: 'none',
+            fontWeight: 'bold',
+            color: '#000',
+            cursor: 'pointer',
+            fontSize: '1.1em'
+          }}>
+            Community ▼
+          </button>
+          <div style={{
+            position: 'absolute',
+            top: '100%',
+            left: '0',
+            backgroundColor: 'white',
+            border: '1px solid #ccc',
+            borderRadius: '5px',
+            padding: '10px',
+            minWidth: '200px',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+            display: 'none',
+            zIndex: 1000
+          }} className="community-dropdown">
+            <a href="/forums/categories/24" style={{
+              display: 'block',
+              padding: '8px 12px',
+              textDecoration: 'none',
+              color: '#000',
+              borderBottom: '1px solid #eee'
+            }}>💖 Heartbeats (Dating)</a>
+            <a href="/forums/categories/23" style={{
+              display: 'block',
+              padding: '8px 12px',
+              textDecoration: 'none',
+              color: '#000',
+              borderBottom: '1px solid #eee'
+            }}>☕ Water Cooler Talk</a>
+            <div style={{
+              padding: '8px 12px',
+              fontSize: '0.9em',
+              fontWeight: 'bold',
+              color: '#666',
+              borderBottom: '1px solid #eee'
+            }}>RESOURCES</div>
+            <a href="/life-happens" style={{
+              display: 'block',
+              padding: '8px 12px',
+              textDecoration: 'none',
+              color: '#000',
+              borderBottom: '1px solid #eee'
+            }}>💸 Life Happens</a>
+            <a href="/life-solutions" style={{
+              display: 'block',
+              padding: '8px 12px',
+              textDecoration: 'none',
+              color: '#000'
+            }}>🛠️ Life Solutions</a>
+          </div>
+        </div>
         <a href="/api/login" style={{
           margin: '0 15px',
           textDecoration: 'none',
@@ -246,6 +301,16 @@ export default function Landing() {
           </div>
         </div>
       </div>
+      
+      {/* Add hover functionality for dropdown */}
+      <style>{`
+        .community-dropdown {
+          display: none !important;
+        }
+        div:hover .community-dropdown {
+          display: block !important;
+        }
+      `}</style>
     </div>
   );
 }
