@@ -161,9 +161,7 @@ export function Header() {
               </div>
             </div>
             
-            <Link href="/community" className="text-uh-black hover:text-uh-red font-medium transition-colors">
-              Community
-            </Link>
+
             {isAuthenticated && (
               <>
                 <Link href="/dashboard" className="text-uh-black hover:text-uh-red font-medium transition-colors">
