@@ -36,18 +36,109 @@ export function Header() {
             <Link href="/" className="text-uh-black hover:text-uh-red font-medium transition-colors">
               Home
             </Link>
-            <Link href="/forums" className="text-uh-black hover:text-uh-red font-medium transition-colors">
-              Forums
-            </Link>
-            <Link href="/news" className="text-uh-black hover:text-uh-red font-medium transition-colors">
-              News
-            </Link>
-            <Link href="/store" className="text-uh-black hover:text-uh-red font-medium transition-colors">
-              Store
-            </Link>
-            <Link href="/events" className="text-uh-black hover:text-uh-red font-medium transition-colors">
-              Events
-            </Link>
+            <div className="relative group">
+              <button className="text-uh-black hover:text-uh-red font-medium transition-colors flex items-center">
+                Forums
+                <i className="fas fa-chevron-down ml-1 text-xs"></i>
+              </button>
+              
+              <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <Link href="/forums/categories/1" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-football-ball mr-2"></i>
+                  Football
+                  <div className="text-xs text-gray-500 mt-1">Cougar Football Discussion</div>
+                </Link>
+                <Link href="/forums/categories/2" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-basketball-ball mr-2"></i>
+                  Basketball
+                  <div className="text-xs text-gray-500 mt-1">Men's & Women's Basketball</div>
+                </Link>
+                <Link href="/forums" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
+                  <i className="fas fa-list mr-2"></i>
+                  All Forums
+                  <div className="text-xs text-gray-500 mt-1">Browse All Categories</div>
+                </Link>
+              </div>
+            </div>
+            
+            <div className="relative group">
+              <button className="text-uh-black hover:text-uh-red font-medium transition-colors flex items-center">
+                Sports News
+                <i className="fas fa-chevron-down ml-1 text-xs"></i>
+              </button>
+              
+              <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <Link href="/news?category=football" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-football-ball mr-2"></i>
+                  Football News
+                  <div className="text-xs text-gray-500 mt-1">Latest Cougar Football Updates</div>
+                </Link>
+                <Link href="/news?category=basketball" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-basketball-ball mr-2"></i>
+                  Basketball News
+                  <div className="text-xs text-gray-500 mt-1">Men's & Women's Basketball</div>
+                </Link>
+                <Link href="/news?category=big12" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-trophy mr-2"></i>
+                  Big 12 News
+                  <div className="text-xs text-gray-500 mt-1">Conference Updates</div>
+                </Link>
+                <Link href="/news" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
+                  <i className="fas fa-newspaper mr-2"></i>
+                  All News
+                  <div className="text-xs text-gray-500 mt-1">Browse All Articles</div>
+                </Link>
+              </div>
+            </div>
+            <div className="relative group">
+              <button className="text-uh-black hover:text-uh-red font-medium transition-colors flex items-center">
+                Store
+                <i className="fas fa-chevron-down ml-1 text-xs"></i>
+              </button>
+              
+              <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <Link href="/store?category=apparel" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-tshirt mr-2"></i>
+                  Apparel
+                  <div className="text-xs text-gray-500 mt-1">T-shirts, Hoodies & More</div>
+                </Link>
+                <Link href="/store?category=accessories" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-hat-cowboy mr-2"></i>
+                  Accessories
+                  <div className="text-xs text-gray-500 mt-1">Hats, Bags & Gear</div>
+                </Link>
+                <Link href="/store" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
+                  <i className="fas fa-shopping-bag mr-2"></i>
+                  All Products
+                  <div className="text-xs text-gray-500 mt-1">Browse Full Store</div>
+                </Link>
+              </div>
+            </div>
+            
+            <div className="relative group">
+              <button className="text-uh-black hover:text-uh-red font-medium transition-colors flex items-center">
+                Events
+                <i className="fas fa-chevron-down ml-1 text-xs"></i>
+              </button>
+              
+              <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <Link href="/events?category=games" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-calendar-alt mr-2"></i>
+                  Game Schedule
+                  <div className="text-xs text-gray-500 mt-1">Upcoming Cougar Games</div>
+                </Link>
+                <Link href="/events?category=social" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-users mr-2"></i>
+                  Social Events
+                  <div className="text-xs text-gray-500 mt-1">Fan Meetups & Activities</div>
+                </Link>
+                <Link href="/events" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
+                  <i className="fas fa-calendar mr-2"></i>
+                  All Events
+                  <div className="text-xs text-gray-500 mt-1">Browse Full Calendar</div>
+                </Link>
+              </div>
+            </div>
             
             <div className="relative group">
               <button className="text-uh-black hover:text-uh-red font-medium transition-colors flex items-center">
