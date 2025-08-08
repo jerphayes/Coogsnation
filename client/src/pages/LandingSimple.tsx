@@ -216,7 +216,7 @@ export default function Landing() {
           </div>
           
           <div 
-            onClick={() => window.location.href = '/home'}
+            onClick={() => window.location.href = '/forums/categories/4'}
             style={{ 
               textAlign: 'center', 
               flex: '1', 
@@ -242,7 +242,7 @@ export default function Landing() {
               marginBottom: '10px'
             }}>👥</div>
             <h4 style={{ color: '#a00000', margin: '0 0 10px 0' }}>Community</h4>
-            <p style={{ margin: 0, fontSize: '0.9em' }}>Join groups, make friends, and show your Cougar pride</p>
+            <p style={{ margin: 0, fontSize: '0.9em' }}>Heartbeats dating, Water Cooler Talk, and community resources</p>
           </div>
         </div>
       </div>

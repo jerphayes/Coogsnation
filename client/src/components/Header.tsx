@@ -49,15 +49,28 @@ export function Header() {
               Events
             </Link>
             
-            {/* Life Resources Dropdown */}
+            {/* Community Dropdown */}
             <div className="relative group">
               <button className="text-uh-black hover:text-uh-red font-medium transition-colors flex items-center">
-                Life Resources
+                Community
                 <i className="fas fa-chevron-down ml-1 text-xs"></i>
               </button>
               
               {/* Dropdown Menu */}
-              <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <Link href="/forums/categories/4" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-heart mr-2"></i>
+                  Heartbeats
+                  <div className="text-xs text-gray-500 mt-1">Dating & Relationships</div>
+                </Link>
+                <Link href="/forums/categories/5" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-coffee mr-2"></i>
+                  Water Cooler Talk
+                  <div className="text-xs text-gray-500 mt-1">General Discussions</div>
+                </Link>
+                <div className="px-4 py-2 bg-gray-50 border-b border-gray-100">
+                  <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Resources</div>
+                </div>
                 <Link href="/life-happens" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
                   <i className="fas fa-wallet mr-2"></i>
                   Life Happens
@@ -66,7 +79,7 @@ export function Header() {
                 <Link href="/life-solutions" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
                   <i className="fas fa-tools mr-2"></i>
                   Life Solutions
-                  <div className="text-xs text-gray-500 mt-1">Resources & Support</div>
+                  <div className="text-xs text-gray-500 mt-1">Houston Resources & Support</div>
                 </Link>
               </div>
             </div>
@@ -162,12 +175,22 @@ export function Header() {
               <Link href="/events" className="text-uh-black hover:text-uh-red font-medium">
                 Events
               </Link>
-              <Link href="/life-happens" className="text-uh-black hover:text-uh-red font-medium">
-                Life Happens
-              </Link>
-              <Link href="/life-solutions" className="text-uh-black hover:text-uh-red font-medium">
-                Life Solutions
-              </Link>
+              <div className="border-t border-gray-200 pt-2 mt-2">
+                <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Community</div>
+                <Link href="/forums/categories/4" className="text-uh-black hover:text-uh-red font-medium block mb-2">
+                  Heartbeats (Dating)
+                </Link>
+                <Link href="/forums/categories/5" className="text-uh-black hover:text-uh-red font-medium block mb-2">
+                  Water Cooler Talk
+                </Link>
+                <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2 mt-3">Resources</div>
+                <Link href="/life-happens" className="text-uh-black hover:text-uh-red font-medium block mb-2">
+                  Life Happens
+                </Link>
+                <Link href="/life-solutions" className="text-uh-black hover:text-uh-red font-medium block">
+                  Life Solutions
+                </Link>
+              </div>
               <div className="pt-4 border-t border-gray-200">
                 <Input 
                   type="search" 
