@@ -58,12 +58,12 @@ export function Header() {
               
               {/* Dropdown Menu */}
               <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                <Link href="/forums/categories/9" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                <Link href="/forums/categories/24" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
                   <i className="fas fa-heart mr-2"></i>
                   Heartbeats
                   <div className="text-xs text-gray-500 mt-1">Dating & Relationships</div>
                 </Link>
-                <Link href="/forums/categories/8" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                <Link href="/forums/categories/23" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
                   <i className="fas fa-coffee mr-2"></i>
                   Water Cooler Talk
                   <div className="text-xs text-gray-500 mt-1">General Discussions</div>
@@ -177,10 +177,10 @@ export function Header() {
               </Link>
               <div className="border-t border-gray-200 pt-2 mt-2">
                 <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Community</div>
-                <Link href="/forums/categories/9" className="text-uh-black hover:text-uh-red font-medium block mb-2">
+                <Link href="/forums/categories/24" className="text-uh-black hover:text-uh-red font-medium block mb-2">
                   Heartbeats (Dating)
                 </Link>
-                <Link href="/forums/categories/8" className="text-uh-black hover:text-uh-red font-medium block mb-2">
+                <Link href="/forums/categories/23" className="text-uh-black hover:text-uh-red font-medium block mb-2">
                   Water Cooler Talk
                 </Link>
                 <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2 mt-3">Resources</div>
