@@ -250,7 +250,7 @@ export default function Landing() {
                 opacity: '0',
                 visibility: 'hidden',
                 transition: 'all 200ms ease-in-out',
-                zIndex: '50',
+                zIndex: '1000',
                 textAlign: 'left'
               }}
             >
@@ -378,7 +378,7 @@ export default function Landing() {
                 opacity: '0',
                 visibility: 'hidden',
                 transition: 'all 200ms ease-in-out',
-                zIndex: '50',
+                zIndex: '1000',
                 textAlign: 'left'
               }}
             >
@@ -529,7 +529,7 @@ export default function Landing() {
                 opacity: '0',
                 visibility: 'hidden',
                 transition: 'all 200ms ease-in-out',
-                zIndex: '50',
+                zIndex: '1000',
                 textAlign: 'left'
               }}
             >
