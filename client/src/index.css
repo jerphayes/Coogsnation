@@ -5,7 +5,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Community Dropdown CSS Fix */
+/* Header Dropdown CSS Fix - Force hover states to work */
 .group:hover .group-hover\:opacity-100 {
   opacity: 1 !important;
   visibility: visible !important;
@@ -15,8 +15,15 @@
   visibility: visible !important;
 }
 
-/* Ensure dropdown is above other elements */
-.community-dropdown {
+/* Force all header dropdowns to show on hover */
+.relative.group:hover div[class*="absolute"] {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Ensure dropdowns are above other elements */
+.community-dropdown,
+div[class*="absolute"][class*="opacity-0"] {
   z-index: 9999 !important;
 }
 

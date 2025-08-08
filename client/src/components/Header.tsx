@@ -36,13 +36,27 @@ export function Header() {
             <Link href="/" className="text-uh-black hover:text-uh-red font-medium transition-colors">
               Home
             </Link>
-            <div className="relative group">
+            <div className="relative group"
+                 onMouseEnter={(e) => {
+                   const dropdown = e.currentTarget.querySelector('.forums-header-dropdown') as HTMLElement;
+                   if (dropdown) {
+                     dropdown.style.opacity = '1';
+                     dropdown.style.visibility = 'visible';
+                   }
+                 }}
+                 onMouseLeave={(e) => {
+                   const dropdown = e.currentTarget.querySelector('.forums-header-dropdown') as HTMLElement;
+                   if (dropdown) {
+                     dropdown.style.opacity = '0';
+                     dropdown.style.visibility = 'hidden';
+                   }
+                 }}>
               <button className="text-uh-black hover:text-uh-red font-medium transition-colors flex items-center">
                 Forums
                 <i className="fas fa-chevron-down ml-1 text-xs"></i>
               </button>
               
-              <div className="absolute top-full left-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 max-h-96 overflow-y-auto">
+              <div className="forums-header-dropdown absolute top-full left-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible transition-all duration-200 z-50 max-h-96 overflow-y-auto">
                 <Link href="/forums/categories/1" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
                   <i className="fas fa-football-ball mr-2"></i>
                   Football
@@ -156,13 +170,27 @@ export function Header() {
               </div>
             </div>
             
-            <div className="relative group">
+            <div className="relative group"
+                 onMouseEnter={(e) => {
+                   const dropdown = e.currentTarget.querySelector('.sports-header-dropdown') as HTMLElement;
+                   if (dropdown) {
+                     dropdown.style.opacity = '1';
+                     dropdown.style.visibility = 'visible';
+                   }
+                 }}
+                 onMouseLeave={(e) => {
+                   const dropdown = e.currentTarget.querySelector('.sports-header-dropdown') as HTMLElement;
+                   if (dropdown) {
+                     dropdown.style.opacity = '0';
+                     dropdown.style.visibility = 'hidden';
+                   }
+                 }}>
               <button className="text-uh-black hover:text-uh-red font-medium transition-colors flex items-center">
                 Sports News
                 <i className="fas fa-chevron-down ml-1 text-xs"></i>
               </button>
               
-              <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              <div className="sports-header-dropdown absolute top-full left-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible transition-all duration-200 z-50">
                 <Link href="/news?category=football" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
                   <i className="fas fa-football-ball mr-2"></i>
                   Football News
@@ -185,13 +213,27 @@ export function Header() {
                 </Link>
               </div>
             </div>
-            <div className="relative group">
+            <div className="relative group"
+                 onMouseEnter={(e) => {
+                   const dropdown = e.currentTarget.querySelector('.store-header-dropdown') as HTMLElement;
+                   if (dropdown) {
+                     dropdown.style.opacity = '1';
+                     dropdown.style.visibility = 'visible';
+                   }
+                 }}
+                 onMouseLeave={(e) => {
+                   const dropdown = e.currentTarget.querySelector('.store-header-dropdown') as HTMLElement;
+                   if (dropdown) {
+                     dropdown.style.opacity = '0';
+                     dropdown.style.visibility = 'hidden';
+                   }
+                 }}>
               <button className="text-uh-black hover:text-uh-red font-medium transition-colors flex items-center">
                 Store
                 <i className="fas fa-chevron-down ml-1 text-xs"></i>
               </button>
               
-              <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              <div className="store-header-dropdown absolute top-full left-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible transition-all duration-200 z-50">
                 <Link href="/store?category=apparel" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
                   <i className="fas fa-tshirt mr-2"></i>
                   Apparel
@@ -210,13 +252,27 @@ export function Header() {
               </div>
             </div>
             
-            <div className="relative group">
+            <div className="relative group"
+                 onMouseEnter={(e) => {
+                   const dropdown = e.currentTarget.querySelector('.events-header-dropdown') as HTMLElement;
+                   if (dropdown) {
+                     dropdown.style.opacity = '1';
+                     dropdown.style.visibility = 'visible';
+                   }
+                 }}
+                 onMouseLeave={(e) => {
+                   const dropdown = e.currentTarget.querySelector('.events-header-dropdown') as HTMLElement;
+                   if (dropdown) {
+                     dropdown.style.opacity = '0';
+                     dropdown.style.visibility = 'hidden';
+                   }
+                 }}>
               <button className="text-uh-black hover:text-uh-red font-medium transition-colors flex items-center">
                 Events
                 <i className="fas fa-chevron-down ml-1 text-xs"></i>
               </button>
               
-              <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              <div className="events-header-dropdown absolute top-full left-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible transition-all duration-200 z-50">
                 <Link href="/events?category=games" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
                   <i className="fas fa-calendar-alt mr-2"></i>
                   Game Schedule
@@ -235,13 +291,27 @@ export function Header() {
               </div>
             </div>
             
-            <div className="relative group">
+            <div className="relative group"
+                 onMouseEnter={(e) => {
+                   const dropdown = e.currentTarget.querySelector('.community-header-dropdown') as HTMLElement;
+                   if (dropdown) {
+                     dropdown.style.opacity = '1';
+                     dropdown.style.visibility = 'visible';
+                   }
+                 }}
+                 onMouseLeave={(e) => {
+                   const dropdown = e.currentTarget.querySelector('.community-header-dropdown') as HTMLElement;
+                   if (dropdown) {
+                     dropdown.style.opacity = '0';
+                     dropdown.style.visibility = 'hidden';
+                   }
+                 }}>
               <button className="text-uh-black hover:text-uh-red font-medium transition-colors flex items-center">
                 Community
                 <i className="fas fa-chevron-down ml-1 text-xs"></i>
               </button>
               
-              <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              <div className="community-header-dropdown absolute top-full left-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible transition-all duration-200 z-50">
                 <Link href="/forums/categories/24" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
                   <i className="fas fa-heart mr-2"></i>
                   Heartbeats
@@ -267,7 +337,7 @@ export function Header() {
                 </Link>
               </div>
             </div>
-{user && (
+            {user && (
               <>
                 <Link href="/dashboard" className="text-uh-black hover:text-uh-red font-medium transition-colors">
                   Dashboard
