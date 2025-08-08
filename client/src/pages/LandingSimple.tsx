@@ -153,7 +153,7 @@ export default function Landing() {
       </div>
 
       {/* Hero Section */}
-      <div style={{ position: 'relative', zIndex: '1' }}>
+      <div>
         <div style={{
           margin: '30px 0',
           display: 'flex',
@@ -182,9 +182,7 @@ export default function Landing() {
         margin: '50px 0',
         padding: '30px 20px',
         backgroundColor: '#f8f8f8',
-        overflow: 'visible',
-        position: 'relative',
-        zIndex: '10'
+        overflow: 'visible'
       }}>
         <h3 style={{
           fontSize: '1.8em',
@@ -242,20 +240,19 @@ export default function Landing() {
             <div 
               className="forums-dropdown"
               style={{
-                position: 'fixed',
-                top: 'auto',
+                position: 'absolute',
+                top: '100%',
                 left: '0',
                 marginTop: '8px',
                 width: '100%',
-                maxWidth: '300px',
                 backgroundColor: 'white',
                 border: '1px solid #d1d5db',
                 borderRadius: '8px',
-                boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
+                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
                 opacity: '0',
                 visibility: 'hidden',
                 transition: 'all 200ms ease-in-out',
-                zIndex: '99999',
+                zIndex: '1000',
                 textAlign: 'left'
               }}
             >
@@ -463,20 +460,19 @@ export default function Landing() {
             <div 
               className="sports-dropdown"
               style={{
-                position: 'fixed',
-                top: 'auto',
+                position: 'absolute',
+                top: '100%',
                 left: '0',
                 marginTop: '8px',
                 width: '100%',
-                maxWidth: '300px',
                 backgroundColor: 'white',
                 border: '1px solid #d1d5db',
                 borderRadius: '8px',
-                boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
+                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
                 opacity: '0',
                 visibility: 'hidden',
                 transition: 'all 200ms ease-in-out',
-                zIndex: '99999',
+                zIndex: '1000',
                 textAlign: 'left'
               }}
             >
@@ -615,20 +611,19 @@ export default function Landing() {
             <div 
               className="community-dropdown"
               style={{
-                position: 'fixed',
-                top: 'auto',
+                position: 'absolute',
+                top: '100%',
                 left: '0',
                 marginTop: '8px',
                 width: '100%',
-                maxWidth: '300px',
                 backgroundColor: 'white',
                 border: '1px solid #d1d5db',
                 borderRadius: '8px',
-                boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
+                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
                 opacity: '0',
                 visibility: 'hidden',
                 transition: 'all 200ms ease-in-out',
-                zIndex: '99999',
+                zIndex: '1000',
                 textAlign: 'left'
               }}
             >
