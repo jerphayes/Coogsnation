@@ -254,22 +254,7 @@ export function Header() {
               <Link href="/events" className="text-uh-black hover:text-uh-red font-medium">
                 Events
               </Link>
-              <div className="border-t border-gray-200 pt-2 mt-2">
-                <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Community</div>
-                <Link href="/forums/categories/24" className="text-uh-black hover:text-uh-red font-medium block mb-2">
-                  Heartbeats (Dating)
-                </Link>
-                <Link href="/forums/categories/23" className="text-uh-black hover:text-uh-red font-medium block mb-2">
-                  Water Cooler Talk
-                </Link>
-                <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2 mt-3">Resources</div>
-                <Link href="/life-happens" className="text-uh-black hover:text-uh-red font-medium block mb-2">
-                  Life Happens
-                </Link>
-                <Link href="/life-solutions" className="text-uh-black hover:text-uh-red font-medium block">
-                  Life Solutions
-                </Link>
-              </div>
+
               <div className="pt-4 border-t border-gray-200">
                 <Input 
                   type="search" 
