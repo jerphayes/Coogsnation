@@ -77,6 +77,12 @@ export default function Landing() {
           fontWeight: 'bold',
           color: '#000'
         }}>Members</a>
+        <a href="/life-happens" style={{
+          margin: '0 15px',
+          textDecoration: 'none',
+          fontWeight: 'bold',
+          color: '#000'
+        }}>Life Resources</a>
         <a href="/api/login" style={{
           margin: '0 15px',
           textDecoration: 'none',

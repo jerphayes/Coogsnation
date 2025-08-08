@@ -48,9 +48,28 @@ export function Header() {
             <Link href="/events" className="text-uh-black hover:text-uh-red font-medium transition-colors">
               Events
             </Link>
-            <Link href="/life-happens" className="text-uh-black hover:text-uh-red font-medium transition-colors">
-              Life Happens
-            </Link>
+            
+            {/* Life Resources Dropdown */}
+            <div className="relative group">
+              <button className="text-uh-black hover:text-uh-red font-medium transition-colors flex items-center">
+                Life Resources
+                <i className="fas fa-chevron-down ml-1 text-xs"></i>
+              </button>
+              
+              {/* Dropdown Menu */}
+              <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <Link href="/life-happens" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors border-b border-gray-100">
+                  <i className="fas fa-wallet mr-2"></i>
+                  Life Happens
+                  <div className="text-xs text-gray-500 mt-1">Bills & Payments</div>
+                </Link>
+                <Link href="/life-solutions" className="block px-4 py-3 text-uh-black hover:bg-red-50 hover:text-uh-red transition-colors">
+                  <i className="fas fa-tools mr-2"></i>
+                  Life Solutions
+                  <div className="text-xs text-gray-500 mt-1">Resources & Support</div>
+                </Link>
+              </div>
+            </div>
             {user && (
               <>
                 <Link href="/dashboard" className="text-uh-black hover:text-uh-red font-medium transition-colors">
@@ -145,6 +164,9 @@ export function Header() {
               </Link>
               <Link href="/life-happens" className="text-uh-black hover:text-uh-red font-medium">
                 Life Happens
+              </Link>
+              <Link href="/life-solutions" className="text-uh-black hover:text-uh-red font-medium">
+                Life Solutions
               </Link>
               <div className="pt-4 border-t border-gray-200">
                 <Input 
