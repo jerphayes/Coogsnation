@@ -5,15 +5,15 @@ export default function Landing() {
   const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
-    // Play growl sound once when component mounts
+    // Play growl sound once when component mounts - shortened to 1 second
     const playGrowl = async () => {
       if (audioRef.current) {
         try {
-          // Set max duration to 3 seconds
+          // Set max duration to 1 second only - much shorter growl
           audioRef.current.addEventListener('loadedmetadata', () => {
-            if (audioRef.current && audioRef.current.duration > 3) {
+            if (audioRef.current) {
               audioRef.current.addEventListener('timeupdate', () => {
-                if (audioRef.current && audioRef.current.currentTime >= 3) {
+                if (audioRef.current && audioRef.current.currentTime >= 1) {
                   audioRef.current.pause();
                 }
               });
@@ -149,7 +149,28 @@ export default function Landing() {
           maxWidth: '800px',
           margin: '0 auto'
         }}>
-          <div style={{ textAlign: 'center', flex: '1', minWidth: '200px' }}>
+          <div 
+            onClick={() => window.location.href = '/forums'}
+            style={{ 
+              textAlign: 'center', 
+              flex: '1', 
+              minWidth: '200px',
+              cursor: 'pointer',
+              padding: '20px',
+              borderRadius: '10px',
+              transition: 'all 0.3s ease',
+              backgroundColor: 'white',
+              boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-5px)';
+              e.currentTarget.style.boxShadow = '0 5px 15px rgba(160,0,0,0.2)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
+            }}
+          >
             <div style={{
               fontSize: '2em',
               marginBottom: '10px'
@@ -158,7 +179,28 @@ export default function Landing() {
             <p style={{ margin: 0, fontSize: '0.9em' }}>Discuss Coogs sports, share news, and connect with fellow fans</p>
           </div>
           
-          <div style={{ textAlign: 'center', flex: '1', minWidth: '200px' }}>
+          <div 
+            onClick={() => window.location.href = '/news'}
+            style={{ 
+              textAlign: 'center', 
+              flex: '1', 
+              minWidth: '200px',
+              cursor: 'pointer',
+              padding: '20px',
+              borderRadius: '10px',
+              transition: 'all 0.3s ease',
+              backgroundColor: 'white',
+              boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-5px)';
+              e.currentTarget.style.boxShadow = '0 5px 15px rgba(160,0,0,0.2)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
+            }}
+          >
             <div style={{
               fontSize: '2em',
               marginBottom: '10px'
@@ -167,7 +209,28 @@ export default function Landing() {
             <p style={{ margin: 0, fontSize: '0.9em' }}>Stay updated on Cougar athletics and Big 12 action</p>
           </div>
           
-          <div style={{ textAlign: 'center', flex: '1', minWidth: '200px' }}>
+          <div 
+            onClick={() => window.location.href = '/home'}
+            style={{ 
+              textAlign: 'center', 
+              flex: '1', 
+              minWidth: '200px',
+              cursor: 'pointer',
+              padding: '20px',
+              borderRadius: '10px',
+              transition: 'all 0.3s ease',
+              backgroundColor: 'white',
+              boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-5px)';
+              e.currentTarget.style.boxShadow = '0 5px 15px rgba(160,0,0,0.2)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
+            }}
+          >
             <div style={{
               fontSize: '2em',
               marginBottom: '10px'
