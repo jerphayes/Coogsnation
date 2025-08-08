@@ -175,163 +175,6 @@ export default function Landing() {
           margin: '20px auto',
           maxWidth: '600px'
         }}>Welcome to CoogsNation.com — the online community for University of Houston fans.</p>
-        <div 
-          style={{ 
-            position: 'relative', 
-            marginTop: '15px',
-            display: 'inline-block'
-          }}
-          onMouseEnter={(e) => {
-            const dropdown = e.currentTarget.querySelector('.dropdown-menu');
-            if (dropdown) {
-              dropdown.style.opacity = '1';
-              dropdown.style.visibility = 'visible';
-            }
-          }}
-          onMouseLeave={(e) => {
-            const dropdown = e.currentTarget.querySelector('.dropdown-menu');
-            if (dropdown) {
-              dropdown.style.opacity = '0';
-              dropdown.style.visibility = 'hidden';
-            }
-          }}
-        >
-          <button 
-            style={{
-              padding: '12px 25px',
-              fontSize: '1em',
-              backgroundColor: '#a00000',
-              color: 'white',
-              border: 'none',
-              borderRadius: '5px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-          >
-            Community
-            <i className="fas fa-chevron-down"></i>
-          </button>
-          
-          <div 
-            className="dropdown-menu"
-            style={{
-              position: 'absolute',
-              top: '100%',
-              left: '0',
-              marginTop: '8px',
-              width: '288px',
-              backgroundColor: 'white',
-              border: '1px solid #d1d5db',
-              borderRadius: '8px',
-              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-              opacity: '0',
-              visibility: 'hidden',
-              transition: 'all 200ms ease-in-out',
-              zIndex: '50'
-            }}
-          >
-            <div 
-              onClick={() => window.location.href = '/forums/categories/24'} 
-              style={{
-                display: 'block',
-                padding: '12px 16px',
-                color: 'black',
-                borderBottom: '1px solid #e5e7eb',
-                cursor: 'pointer',
-                transition: 'all 200ms ease-in-out'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.backgroundColor = '#fef2f2';
-                e.target.style.color = '#dc2626';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.backgroundColor = 'transparent';
-                e.target.style.color = 'black';
-              }}
-            >
-              <i className="fas fa-heart" style={{ marginRight: '8px' }}></i>
-              Heartbeats
-              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Dating & Relationships</div>
-            </div>
-            <div 
-              onClick={() => window.location.href = '/forums/categories/23'} 
-              style={{
-                display: 'block',
-                padding: '12px 16px',
-                color: 'black',
-                borderBottom: '1px solid #e5e7eb',
-                cursor: 'pointer',
-                transition: 'all 200ms ease-in-out'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.backgroundColor = '#fef2f2';
-                e.target.style.color = '#dc2626';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.backgroundColor = 'transparent';
-                e.target.style.color = 'black';
-              }}
-            >
-              <i className="fas fa-coffee" style={{ marginRight: '8px' }}></i>
-              Water Cooler Talk
-              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>General Discussions</div>
-            </div>
-            <div style={{
-              padding: '8px 16px',
-              backgroundColor: '#f9fafb',
-              borderBottom: '1px solid #e5e7eb'
-            }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Resources</div>
-            </div>
-            <div 
-              onClick={() => window.location.href = '/life-happens'} 
-              style={{
-                display: 'block',
-                padding: '12px 16px',
-                color: 'black',
-                borderBottom: '1px solid #e5e7eb',
-                cursor: 'pointer',
-                transition: 'all 200ms ease-in-out'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.backgroundColor = '#fef2f2';
-                e.target.style.color = '#dc2626';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.backgroundColor = 'transparent';
-                e.target.style.color = 'black';
-              }}
-            >
-              <i className="fas fa-wallet" style={{ marginRight: '8px' }}></i>
-              Life Happens
-              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Bills & Payments</div>
-            </div>
-            <div 
-              onClick={() => window.location.href = '/life-solutions'} 
-              style={{
-                display: 'block',
-                padding: '12px 16px',
-                color: 'black',
-                cursor: 'pointer',
-                transition: 'all 200ms ease-in-out'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.backgroundColor = '#fef2f2';
-                e.target.style.color = '#dc2626';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.backgroundColor = 'transparent';
-                e.target.style.color = 'black';
-              }}
-            >
-              <i className="fas fa-tools" style={{ marginRight: '8px' }}></i>
-              Life Solutions
-              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Houston Resources & Support</div>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Community Features Section */}
@@ -415,25 +258,34 @@ export default function Landing() {
           </div>
           
           <div 
-            onClick={() => window.location.href = '/forums/categories/24'}
             style={{ 
               textAlign: 'center', 
               flex: '1', 
               minWidth: '200px',
-              cursor: 'pointer',
               padding: '20px',
               borderRadius: '10px',
               transition: 'all 0.3s ease',
               backgroundColor: 'white',
-              boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+              boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
+              position: 'relative'
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-5px)';
               e.currentTarget.style.boxShadow = '0 5px 15px rgba(160,0,0,0.2)';
+              const dropdown = e.currentTarget.querySelector('.community-dropdown');
+              if (dropdown) {
+                dropdown.style.opacity = '1';
+                dropdown.style.visibility = 'visible';
+              }
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
               e.currentTarget.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
+              const dropdown = e.currentTarget.querySelector('.community-dropdown');
+              if (dropdown) {
+                dropdown.style.opacity = '0';
+                dropdown.style.visibility = 'hidden';
+              }
             }}
           >
             <div style={{
@@ -442,19 +294,130 @@ export default function Landing() {
             }}>👥</div>
             <h4 style={{ color: '#a00000', margin: '0 0 10px 0' }}>Community</h4>
             <p style={{ margin: 0, fontSize: '0.9em' }}>Heartbeats dating, Water Cooler Talk, and community resources</p>
+            
+            <div 
+              className="community-dropdown"
+              style={{
+                position: 'absolute',
+                top: '100%',
+                left: '0',
+                marginTop: '8px',
+                width: '100%',
+                backgroundColor: 'white',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
+                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                opacity: '0',
+                visibility: 'hidden',
+                transition: 'all 200ms ease-in-out',
+                zIndex: '50',
+                textAlign: 'left'
+              }}
+            >
+              <div 
+                onClick={() => window.location.href = '/forums/categories/24'} 
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  color: 'black',
+                  borderBottom: '1px solid #e5e7eb',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease-in-out'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#fef2f2';
+                  e.target.style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = 'transparent';
+                  e.target.style.color = 'black';
+                }}
+              >
+                <i className="fas fa-heart" style={{ marginRight: '8px' }}></i>
+                Heartbeats
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Dating & Relationships</div>
+              </div>
+              <div 
+                onClick={() => window.location.href = '/forums/categories/23'} 
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  color: 'black',
+                  borderBottom: '1px solid #e5e7eb',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease-in-out'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#fef2f2';
+                  e.target.style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = 'transparent';
+                  e.target.style.color = 'black';
+                }}
+              >
+                <i className="fas fa-coffee" style={{ marginRight: '8px' }}></i>
+                Water Cooler Talk
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>General Discussions</div>
+              </div>
+              <div style={{
+                padding: '8px 16px',
+                backgroundColor: '#f9fafb',
+                borderBottom: '1px solid #e5e7eb'
+              }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Resources</div>
+              </div>
+              <div 
+                onClick={() => window.location.href = '/life-happens'} 
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  color: 'black',
+                  borderBottom: '1px solid #e5e7eb',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease-in-out'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#fef2f2';
+                  e.target.style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = 'transparent';
+                  e.target.style.color = 'black';
+                }}
+              >
+                <i className="fas fa-wallet" style={{ marginRight: '8px' }}></i>
+                Life Happens
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Bills & Payments</div>
+              </div>
+              <div 
+                onClick={() => window.location.href = '/life-solutions'} 
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  color: 'black',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease-in-out'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#fef2f2';
+                  e.target.style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = 'transparent';
+                  e.target.style.color = 'black';
+                }}
+              >
+                <i className="fas fa-tools" style={{ marginRight: '8px' }}></i>
+                Life Solutions
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Houston Resources & Support</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
       
-      {/* Add hover functionality for dropdown */}
-      <style>{`
-        .community-dropdown {
-          display: none !important;
-        }
-        div:hover .community-dropdown {
-          display: block !important;
-        }
-      `}</style>
+
     </div>
   );
 }
