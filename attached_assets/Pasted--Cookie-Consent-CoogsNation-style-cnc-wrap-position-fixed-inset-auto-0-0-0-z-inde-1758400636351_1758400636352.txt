@@ -1,0 +1,142 @@
+<!-- ✅ Cookie Consent (CoogsNation) -->
+<style>
+  .cnc-wrap{position:fixed;inset:auto 0 0 0;z-index:99999;display:none}
+  .cnc-bar{margin:12px;padding:14px 16px;border-radius:12px;background:#111;color:#fff;
+           box-shadow:0 8px 30px rgba(0,0,0,.25);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .cnc-text{flex:1;min-width:240px;font:14px/1.45 system-ui,Segoe UI,Roboto,Inter,Arial}
+  .cnc-text a{color:#9dd1ff;text-decoration:underline}
+  .cnc-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .cnc-btn{cursor:pointer;border:0;border-radius:10px;padding:10px 14px;font:600 14px/1 system-ui;
+           background:#2a2a2a;color:#fff}
+  .cnc-btn.primary{background:#0a7cff}
+  .cnc-btn.outline{background:transparent;box-shadow:inset 0 0 0 2px #3b3b3b}
+  .cnc-btn:hover{filter:brightness(1.05)}
+  /* Modal */
+  .cnc-modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;z-index:100000}
+  .cnc-modal{position:fixed;inset:50% auto auto 50%;transform:translate(-50%,-50%);
+             width:min(560px,92vw);background:#111;color:#fff;border-radius:14px;padding:18px;
+             box-shadow:0 20px 60px rgba(0,0,0,.35);display:none}
+  .cnc-modal h3{margin:0 0 8px 0;font:700 18px/1.2 system-ui}
+  .cnc-modal p{margin:0 0 12px 0;font:14px/1.45 system-ui;color:#d6d6d6}
+  .cnc-row{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #262626;
+           padding:12px 0}
+  .cnc-row:first-of-type{border-top:0}
+  .cnc-switch{position:relative;width:46px;height:28px;background:#2a2a2a;border-radius:999px;flex:0 0 auto}
+  .cnc-switch input{opacity:0;position:absolute;inset:0;margin:0;width:100%;height:100%;cursor:pointer}
+  .cnc-knob{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.18s}
+  .cnc-switch input:checked + .cnc-knob{left:21px;background:#cfe6ff}
+  .cnc-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+  /* Footer link */
+  #cookie-prefs-link{display:block;text-align:center;margin:16px;font:13px system-ui;color:#888;cursor:pointer}
+  #cookie-prefs-link:hover{text-decoration:underline;color:#0a7cff}
+  @media (prefers-color-scheme:light){
+    .cnc-bar,.cnc-modal{background:#ffffff;color:#111;box-shadow:0 8px 30px rgba(0,0,0,.12)}
+    .cnc-text a{color:#0a7cff}
+    .cnc-btn.outline{box-shadow:inset 0 0 0 2px #e5e5e5;color:#111}
+    #cookie-prefs-link{color:#555}
+  }
+</style>
+
+<div id="cnc" class="cnc-wrap" role="region" aria-label="Cookie consent">
+  <div class="cnc-bar" role="dialog" aria-live="polite">
+    <div class="cnc-text">
+      We use essential cookies to run this site and optional cookies to improve your experience (analytics).
+      See our <a href="PRIVACY_POLICY_URL_HERE" target="_blank" rel="noopener">Privacy Policy</a>.
+    </div>
+    <div class="cnc-actions">
+      <button class="cnc-btn outline" id="cnc-pref">Preferences</button>
+      <button class="cnc-btn" id="cnc-reject">Reject non-essential</button>
+      <button class="cnc-btn primary" id="cnc-accept">Accept all</button>
+    </div>
+  </div>
+</div>
+
+<div id="cnc-backdrop" class="cnc-modal-backdrop" aria-hidden="true"></div>
+<div id="cnc-modal" class="cnc-modal" role="dialog" aria-modal="true" aria-labelledby="cnc-title">
+  <h3 id="cnc-title">Cookie Preferences</h3>
+  <p>Enable categories below. Essential cookies are always on to keep the site working.</p>
+  <div class="cnc-row" aria-live="polite">
+    <div>
+      <strong>Essential</strong><br><span style="font-size:13px;color:#9aa0a6">Required for core functionality.</span>
+    </div>
+    <div style="opacity:.5">Always on</div>
+  </div>
+  <div class="cnc-row">
+    <div>
+      <strong>Analytics</strong><br><span style="font-size:13px;color:#9aa0a6">Helps us improve CoogsNation.</span>
+    </div>
+    <label class="cnc-switch" aria-label="Toggle analytics cookies">
+      <input id="cnc-analytics" type="checkbox" />
+      <span class="cnc-knob"></span>
+    </label>
+  </div>
+  <div class="cnc-foot">
+    <button class="cnc-btn outline" id="cnc-cancel">Cancel</button>
+    <button class="cnc-btn" id="cnc-save">Save preferences</button>
+  </div>
+</div>
+
+<!-- 🔗 Footer link to reopen preferences -->
+<div id="cookie-prefs-link">Cookie Preferences</div>
+
+<script>
+(function(){
+  const KEY = "cn_cookie_prefs_v1";
+  const $ = (id)=>document.getElementById(id);
+  const cnc = $("cnc"), modal = $("cnc-modal"), back = $("cnc-backdrop");
+  const chkAnalytics = $("cnc-analytics");
+
+  function getPrefs(){
+    try{ return JSON.parse(localStorage.getItem(KEY)) || null; }catch(e){ return null; }
+  }
+  function setPrefs(p){
+    localStorage.setItem(KEY, JSON.stringify({...p, ts: Date.now()}));
+    apply(p);
+    window.dispatchEvent(new CustomEvent("cookie-consent-changed",{detail:p}));
+  }
+  function showBar(){ cnc.style.display = "block"; }
+  function hideBar(){ cnc.style.display = "none"; }
+  function openModal(){
+    modal.style.display="block"; back.style.display="block"; back.setAttribute("aria-hidden","false");
+  }
+  function closeModal(){
+    modal.style.display="none"; back.style.display="none"; back.setAttribute("aria-hidden","true");
+  }
+  function apply(prefs){
+    document.documentElement.setAttribute("data-consent", JSON.stringify(prefs));
+    if(prefs.analytics && !window.__gaLoaded){
+      // Example GA (replace GA_MEASUREMENT_ID)
+      const s1=document.createElement("script");
+      s1.async=true; s1.src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID";
+      const s2=document.createElement("script");
+      s2.text=`
+        window.dataLayer=window.dataLayer||[];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date()); gtag('config','GA_MEASUREMENT_ID',{ anonymize_ip:true });
+      `;
+      document.head.appendChild(s1); document.head.appendChild(s2);
+      window.__gaLoaded=true;
+    }
+  }
+
+  // Button handlers
+  $("cnc-accept").onclick = ()=>{ setPrefs({essential:true,analytics:true}); hideBar(); };
+  $("cnc-reject").onclick = ()=>{ setPrefs({essential:true,analytics:false}); hideBar(); };
+  $("cnc-pref").onclick = ()=>{
+    const saved=getPrefs(); chkAnalytics.checked=!!(saved && saved.analytics); openModal();
+  };
+  $("cnc-save").onclick = ()=>{ setPrefs({essential:true,analytics:chkAnalytics.checked}); closeModal(); hideBar(); };
+  $("cnc-cancel").onclick = closeModal;
+  back.onclick = closeModal;
+
+  // Footer link always reopens modal
+  $("cookie-prefs-link").onclick = ()=>{
+    const saved=getPrefs(); chkAnalytics.checked=!!(saved && saved.analytics); openModal();
+  };
+
+  // Init
+  const saved=getPrefs();
+  if(saved){ apply(saved); } else { showBar(); }
+})();
+</script>
+<!-- ✅ End Cookie Consent -->

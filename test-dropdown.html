@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dropdown Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="p-8">
+    <div class="relative group">
+        <button class="bg-red-600 text-white px-4 py-2 rounded flex items-center">
+            Community
+            <i class="fas fa-chevron-down ml-1 text-xs"></i>
+        </button>
+        
+        <div class="absolute top-full left-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+            <!-- Heartbeats Section -->
+            <div class="border-b border-gray-100">
+                <div class="px-4 py-2 bg-red-50">
+                    <div class="text-sm font-semibold text-red-600 flex items-center">
+                        <i class="fas fa-heart mr-2"></i>
+                        HEARTBEATS
+                    </div>
+                </div>
+                <a href="#" class="block px-6 py-2 text-sm text-black hover:bg-red-50 hover:text-red-600 transition-colors">
+                    Dating & Relationships
+                </a>
+            </div>
+
+            <!-- Water Cooler Talk Section -->
+            <div class="border-b border-gray-100">
+                <div class="px-4 py-2 bg-gray-50">
+                    <div class="text-sm font-semibold text-gray-700 flex items-center">
+                        <i class="fas fa-coffee mr-2"></i>
+                        WATER COOLER TALK
+                    </div>
+                </div>
+                <a href="#" class="block px-6 py-2 text-sm text-black hover:bg-red-50 hover:text-red-600 transition-colors">
+                    General Discussion
+                </a>
+            </div>
+
+            <!-- Resources Section -->
+            <div>
+                <div class="px-4 py-2 bg-purple-50">
+                    <div class="text-sm font-semibold text-purple-700 flex items-center">
+                        <i class="fas fa-toolbox mr-2"></i>
+                        RESOURCES
+                    </div>
+                </div>
+                
+                <!-- Life Happens -->
+                <div class="bg-blue-50">
+                    <div class="px-6 py-1 bg-blue-100">
+                        <div class="text-xs font-semibold text-blue-700 flex items-center">
+                            <i class="fas fa-wallet mr-2"></i>
+                            Life Happens
+                        </div>
+                    </div>
+                    <a href="#" class="block px-8 py-1 text-xs text-black hover:bg-red-50 hover:text-red-600 transition-colors">
+                        Utility Payments
+                    </a>
+                </div>
+                
+                <!-- Life Solutions -->
+                <div class="bg-green-50">
+                    <div class="px-6 py-1 bg-green-100">
+                        <div class="text-xs font-semibold text-green-700 flex items-center">
+                            <i class="fas fa-tools mr-2"></i>
+                            Life Solutions
+                        </div>
+                    </div>
+                    <a href="#" class="block px-8 py-1 text-xs text-black hover:bg-red-50 hover:text-red-600 transition-colors">
+                        Housing & Apartments
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <p class="mt-8 text-gray-600">Hover over the Community button to test the dropdown.</p>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Life Happens – CoogsNation</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f7f7f7; margin: 0; padding: 0; }
+    header { background: #c8102e; color: white; padding: 20px; text-align: center; }
+    h1 { margin: 0; }
+    nav { background: #333; padding: 10px; display: flex; justify-content: center; }
+    nav ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 20px; }
+    nav li { position: relative; }
+    nav a, nav span { color: white; text-decoration: none; cursor: pointer; padding: 5px 10px; display: block; }
+    nav ul ul { display: none; position: absolute; background: #fff; top: 30px; left: 0; padding: 10px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+    nav ul ul li a { color: #333; }
+    nav li:hover > ul { display: block; }.section { padding: 20px; background: white; margin: 20px; border-radius: 10px; }
+.accordion { cursor: pointer; padding: 15px; border: none; text-align: left; outline: none; font-size: 16px; background-color: #eee; border-radius: 5px; width: 100%; margin-top: 10px; }
+.accordion:hover { background-color: #ddd; }
+.panel { padding: 0 15px; display: none; background-color: #fff; overflow: hidden; margin-top: 10px; border-left: 3px solid #c8102e; border-radius: 5px; }
+
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Life Happens 🐾</h1>
+    <p>All your Houston-area bills & backup plans, Cougar-style.</p>
+  </header>  <nav>
+    <ul>
+      <li><span>Life Happens ▾</span>
+        <ul>
+          <li><a href="/life-happens.html">💸 Life Happens</a></li>
+          <li><a href="/life-solutions.html">🛠️ Life Solutions</a></li>
+        </ul>
+      </li>
+    </ul>
+  </nav>  <div class="section">
+    <h2>💡 Utility Payment Links</h2>
+    <button class="accordion">Electricity, Gas, Water & Internet</button>
+    <div class="panel">
+      <ul>
+        <li><a href="https://www.reliant.com" target="_blank">Reliant – Pay Electricity</a></li>
+        <li><a href="https://www.centerpointenergy.com" target="_blank">CenterPoint – Pay Gas</a></li>
+        <li><a href="https://houstonwaterbills.houstontx.gov" target="_blank">City of Houston – Water & Trash</a></li>
+        <li><a href="https://www.xfinity.com" target="_blank">Xfinity – Internet Service</a></li>
+      </ul>
+    </div>
+  </div>  <div class="section">
+    <h2>📍 In-Person Payment Centers</h2>
+    <button class="accordion">Find Local Stores for Cash Payments</button>
+    <div class="panel">
+      <p>Prefer to pay with cash? Visit your local H-E-B, Fiesta, or Kroger customer service counter.</p>
+      <p><a href="https://www.paynearme.com/locations" target="_blank">🔎 Find a PayNearMe location</a></p>
+    </div>
+  </div>  <div class="section">
+    <h2>💸 In a Pinch? Cougar Cash Lifeline</h2>
+    <button class="accordion">Show Emergency Cash Options</button>
+    <div class="panel">
+      <ul>
+        <li><strong>Brigit</strong> – Get up to $250 instantly. No credit check. <a href="#">Apply Now</a></li>
+        <li><strong>Possible Finance</strong> – Low APR installment loans. <a href="#">Learn More</a></li>
+        <li><strong>Empower</strong> – Advance your paycheck. <a href="#">Get Started</a></li>
+      </ul>
+    </div>
+  </div>  <script>
+    const accordions = document.querySelectorAll(".accordion");
+    accordions.forEach(btn => {
+      btn.addEventListener("click", function () {
+        this.classList.toggle("active");
+        const panel = this.nextElementSibling;
+        panel.style.display = panel.style.display === "block" ? "none" : "block";
+      });
+    });
+  </script></body>
+</html>

@@ -1,0 +1,86 @@
+import { Link, NavLink, useNavigate } from "react-router-dom";
+import { useState } from "react";
+
+export default function NavBar() {
+  const [openForums, setOpenForums] = useState(false);
+  const navigate = useNavigate();
+
+  const item = (to: string, label: string) => (
+    <NavLink
+      to={to}
+      className={({ isActive }) =>
+        "px-3 py-2 rounded-md font-semibold " +
+        (isActive ? "text-[#c8102e]" : "text-[#a31329] hover:text-[#c8102e]")
+      }
+    >
+      {label}
+    </NavLink>
+  );
+
+  return (
+    <header className="navbar">
+      <div className="mx-auto max-w-7xl px-4 py-2 flex items-center gap-4">
+        <Link to="/" className="flex items-center gap-2">
+          <img src="/logo192.png" alt="CoogsNation" style={{ width: 36, height: 36, borderRadius: "50%" }} />
+          <div className="leading-4">
+            <div className="font-bold text-[#c8102e]">CoogsNation</div>
+            <div className="text-xs text-[#a31329]">Houston Cougar Community</div>
+          </div>
+        </Link>
+
+        {/* LEFT NAV */}
+        <nav className="flex items-center gap-2">
+          {item("/", "Home")}
+
+          {/* Forums dropdown */}
+          <div className="relative">
+            <button
+              className="px-3 py-2 rounded-md font-semibold text-[#a31329] hover:text-[#c8102e]"
+              onClick={() => setOpenForums(v => !v)}
+              onBlur={() => setTimeout(() => setOpenForums(false), 150)}
+            >
+              Forums ▾
+            </button>
+            {openForums && (
+              <div
+                className="absolute mt-2 w-52 rounded-md bg-white/95 shadow z-[2000]"
+                style={{ border: "1px solid #e5e7eb" }}
+              >
+                <button
+                  onMouseDown={() => navigate("/forums")}
+                  className="block w-full text-left px-3 py-2 hover:bg-[#fff1f2] text-[#a31329]"
+                >
+                  All Forums
+                </button>
+                <button
+                  onMouseDown={() => navigate("/community")}
+                  className="block w-full text-left px-3 py-2 hover:bg-[#fff1f2] text-[#a31329]"
+                >
+                  Community
+                </button>
+              </div>
+            )}
+          </div>
+
+          {item("/sports", "Sports News")}
+          {item("/alumni", "Alumni Store")}
+          {item("/events", "Events")}
+          {item("/community", "Community")}
+          {item("/terms", "Terms")}
+          {item("/coogpaws", "CoogPaws Chat")}
+        </nav>
+
+        {/* RIGHT SIDE */}
+        <div className="ml-auto flex items-center gap-3">
+          {item("/login", "Log In")}
+          <NavLink
+            to="/join"
+            className="px-3 py-2 rounded-md font-semibold bg-[#c8102e] text-white hover:opacity-90"
+          >
+            Join ▾
+          </NavLink>
+        </div>
+      </div>
+    </header>
+  );
+}

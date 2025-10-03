@@ -1,0 +1,97 @@
+// Task: Clean up login system and add X (Twitter) support
+
+1. In login/join dropdown React component:
+   - Delete buttons for Facebook, LinkedIn, and Apple login.
+   - Keep Google login button → onClick redirect /auth/google
+   - Keep Email login button → open email/password form (/auth/login)
+   - Add "Login with X" button → onClick redirect /auth/x
+
+Example React JSX:
+----------------------------------
+import React from "react";
+
+const LoginDropdown = () => {
+  const handleLogin = (provider) => {
+    window.location.href = `/auth/${provider}`;
+  };
+
+  return (
+    <div className="login-dropdown">
+      <button onClick={() => handleLogin("google")}>Login with Google</button>
+      <button onClick={() => handleLogin("x")}>Login with X (Twitter)</button>
+      <button onClick={() => handleLogin("email")}>Login with Email</button>
+    </div>
+  );
+};
+
+export default LoginDropdown;
+----------------------------------
+
+2. Backend setup (Express + Passport):
+   - Install `passport-google-oauth20` and `passport-twitter-oauth2`
+   - Remove Facebook/LinkedIn/Apple strategies if present.
+   - Keep GoogleStrategy (already configured).
+   - Add XStrategy:
+
+Example Passport config:
+----------------------------------
+const passport = require("passport");
+const GoogleStrategy = require("passport-google-oauth20").Strategy;
+const TwitterStrategy = require("passport-twitter-oauth2").Strategy;
+
+passport.use(new GoogleStrategy({
+  clientID: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  callbackURL: "/auth/google/callback"
+}, (accessToken, refreshToken, profile, done) => {
+  return done(null, profile);
+}));
+
+passport.use(new TwitterStrategy({
+  clientID: process.env.X_CLIENT_ID,
+  clientSecret: process.env.X_CLIENT_SECRET,
+  callbackURL: "/auth/x/callback"
+}, (accessToken, refreshToken, profile, done) => {
+  return done(null, profile);
+}));
+----------------------------------
+
+3. Routes setup:
+----------------------------------
+const express = require("express");
+const router = express.Router();
+const passport = require("passport");
+
+// Google
+router.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+router.get("/auth/google/callback",
+  passport.authenticate("google", { failureRedirect: "/" }),
+  (req, res) => res.redirect("/dashboard")
+);
+
+// X (Twitter)
+router.get("/auth/x", passport.authenticate("twitter"));
+router.get("/auth/x/callback",
+  passport.authenticate("twitter", { failureRedirect: "/" }),
+  (req, res) => res.redirect("/dashboard")
+);
+
+// Email fallback (basic form route)
+router.get("/auth/email", (req, res) => {
+  res.send("Email login form here");
+});
+
+module.exports = router;
+----------------------------------
+
+4. Environment variables required in Replit secrets:
+   GOOGLE_CLIENT_ID=xxxx
+   GOOGLE_CLIENT_SECRET=yyyy
+   X_CLIENT_ID=zzzz
+   X_CLIENT_SECRET=aaaa
+   (redirect URLs must match your repl.co project path)
+
+5. Test:
+   - Dropdown should now show only: Google, X (Twitter), Email.
+   - Facebook, LinkedIn, Apple removed.
+   - Logging in with Google or X should redirect user back to /dashboard.

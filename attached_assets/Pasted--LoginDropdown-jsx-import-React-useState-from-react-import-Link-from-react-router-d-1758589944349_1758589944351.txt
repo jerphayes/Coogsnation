@@ -1,0 +1,80 @@
+// LoginDropdown.jsx
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
+
+export default function LoginDropdown() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="dropdown" style={{ position: "relative", display: "inline-block" }}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="dropdown-button"
+        style={{
+          background: "none",
+          border: "none",
+          color: "white",
+          fontWeight: "bold",
+          cursor: "pointer"
+        }}
+      >
+        Log In ▼
+      </button>
+
+      {open && (
+        <div
+          className="dropdown-content"
+          style={{
+            position: "absolute",
+            backgroundColor: "#fff",
+            minWidth: "180px",
+            boxShadow: "0px 8px 16px rgba(0,0,0,0.2)",
+            zIndex: 1,
+            borderRadius: "6px",
+            overflow: "hidden"
+          }}
+        >
+          {/* Email Login */}
+          <Link
+            to="/login/email"
+            style={{ display: "block", padding: "10px", color: "#333", textDecoration: "none" }}
+          >
+            ✉️ Email Login
+          </Link>
+
+          {/* Google */}
+          <a
+            href="/api/auth/google"
+            style={{ display: "block", padding: "10px", color: "#db4437", textDecoration: "none" }}
+          >
+            🔴 Google
+          </a>
+
+          {/* Facebook */}
+          <a
+            href="/api/auth/facebook"
+            style={{ display: "block", padding: "10px", color: "#4267B2", textDecoration: "none" }}
+          >
+            🔵 Facebook
+          </a>
+
+          {/* Apple */}
+          <a
+            href="/api/auth/apple"
+            style={{ display: "block", padding: "10px", color: "#000", textDecoration: "none" }}
+          >
+            ⚫ Apple
+          </a>
+
+          {/* LinkedIn */}
+          <a
+            href="/api/auth/linkedin"
+            style={{ display: "block", padding: "10px", color: "#0077B5", textDecoration: "none" }}
+          >
+            🔷 LinkedIn
+          </a>
+        </div>
+      )}
+    </div>
+  );
+}

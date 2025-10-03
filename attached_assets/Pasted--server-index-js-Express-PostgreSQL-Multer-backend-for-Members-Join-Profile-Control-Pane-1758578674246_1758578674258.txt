@@ -1,0 +1,404 @@
+// server/index.js
+// Express + PostgreSQL + Multer backend for Members Join & Profile Control Panel
+// ENV: DATABASE_URL=postgres://user:pass@host:5432/dbname
+// Run: node server/index.js (or your PM2/Dev script)
+// Frontend should POST/PUT multipart/form-data with field "avatar" for image.
+
+import express from "express";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import crypto from "crypto";
+import cors from "cors";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+import pkg from "pg";
+
+const { Pool } = pkg;
+
+// ---------- Config ----------
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const app = express();
+const port = process.env.PORT || 3000;
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  // ssl: { rejectUnauthorized: false }, // uncomment if your PG requires SSL (e.g., some managed hosts)
+});
+
+const AVATAR_DIR = path.join(__dirname, "uploads", "avatars");
+fs.mkdirSync(AVATAR_DIR, { recursive: true });
+
+// Serve uploaded avatars
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// Parse JSON for non-multipart routes (not used for create/update which are multipart)
+app.use(express.json());
+app.use(cors());
+
+// ---------- Domain Rules ----------
+const ALLOWED_CATEGORIES = [
+  "Student",
+  "Ex-Student",
+  "Graduate",
+  "Post Graduate",
+  "Faculty",
+  "Staff",
+  "Coog Crazy Fan",
+  "Friend",
+  "Foe",
+];
+
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/gif"]);
+
+// Multer storage + filter
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, AVATAR_DIR),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname || "").toLowerCase();
+    const safeName =
+      crypto.randomBytes(8).toString("hex") +
+      "-" +
+      Date.now().toString() +
+      ext;
+    cb(null, safeName);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: MAX_FILE_SIZE },
+  fileFilter: (req, file, cb) => {
+    if (!file) return cb(null, true);
+    if (!ALLOWED_MIME.has(file.mimetype)) {
+      return cb(new Error("Only JPG, PNG, or GIF images are allowed."));
+    }
+    cb(null, true);
+  },
+});
+
+// ---------- DB Bootstrap ----------
+async function createTableIfNotExists() {
+  const sql = `
+  CREATE TABLE IF NOT EXISTS members (
+    id SERIAL PRIMARY KEY,
+    handle TEXT UNIQUE NOT NULL,
+    dob DATE NULL,
+    address TEXT NULL,
+    category TEXT NULL,
+    suggestion TEXT NULL,
+    two_fa BOOLEAN DEFAULT FALSE,
+    notifications JSONB DEFAULT '{}'::jsonb,
+    code_of_conduct BOOLEAN DEFAULT FALSE,
+    beta_opt_in BOOLEAN DEFAULT FALSE,
+    clubs JSONB DEFAULT '{}'::jsonb,
+    referral_code TEXT NULL,
+    volunteer BOOLEAN DEFAULT FALSE,
+    avatar_url TEXT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  );
+  `;
+  await pool.query(sql);
+}
+createTableIfNotExists().catch((e) => {
+  console.error("DB init error:", e);
+  process.exit(1);
+});
+
+// ---------- Helpers ----------
+function parseMaybeJSON(value, fallback) {
+  if (value == null) return fallback;
+  if (typeof value === "object") return value; // already parsed
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return fallback;
+    }
+  }
+  return fallback;
+}
+
+function coerceBool(v, def = false) {
+  if (typeof v === "boolean") return v;
+  if (typeof v === "string") {
+    const s = v.toLowerCase().trim();
+    return ["true", "1", "yes", "on"].includes(s);
+  }
+  return def;
+}
+
+function sanitizeCategory(cat) {
+  if (!cat) return null;
+  return ALLOWED_CATEGORIES.includes(cat) ? cat : null;
+}
+
+function publicAvatarUrl(filename) {
+  if (!filename) return null;
+  return `/uploads/avatars/${filename}`;
+}
+
+// Simulated 2FA setup trigger (stub – integrate with Twilio/Email later)
+async function trigger2FASetupIfEnabled(prev, next) {
+  if (!prev && next) {
+    // TODO: send setup instructions via email/SMS
+    console.log("[2FA] Enabled - send setup instructions");
+  }
+}
+
+// ---------- Routes ----------
+// Create (Join)
+app.post("/api/members", upload.single("avatar"), async (req, res) => {
+  try {
+    // Multer file (optional)
+    const avatarFile = req.file;
+    const avatarUrl = avatarFile ? publicAvatarUrl(avatarFile.filename) : null;
+
+    // Fields (multipart -> strings)
+    const {
+      handle,
+      dob, // optional
+      address, // optional
+      category,
+      suggestion,
+      twoFA,
+      notifications, // JSON string or checkboxes collapsed by frontend
+      codeOfConduct,
+      betaOptIn,
+      clubs, // JSON string or checkboxes collapsed by frontend
+      referralCode,
+      volunteer,
+    } = req.body;
+
+    if (!handle || handle.trim().length === 0) {
+      return res.status(400).json({ error: "Handle is required." });
+    }
+
+    // enforce category list (or null)
+    const safeCategory = sanitizeCategory(category);
+
+    // Enforce Code of Conduct required
+    const coc = coerceBool(codeOfConduct, false);
+    if (!coc) {
+      return res
+        .status(400)
+        .json({ error: "Code of Conduct agreement is required." });
+    }
+
+    const two_fa = coerceBool(twoFA, false);
+    const beta_opt_in = coerceBool(betaOptIn, false);
+    const volunteerBool = coerceBool(volunteer, false);
+
+    // Robust parse notifications/clubs
+    const parsedNotifications = parseMaybeJSON(notifications, {
+      email: false,
+      sms: false,
+      push: false,
+    });
+    const parsedClubs = parseMaybeJSON(clubs, {
+      alumni: false,
+      sports: false,
+      tailgaters: false,
+    });
+
+    // Insert
+    const sql = `
+      INSERT INTO members
+        (handle, dob, address, category, suggestion, two_fa, notifications, code_of_conduct, beta_opt_in, clubs, referral_code, volunteer, avatar_url, created_at, updated_at)
+      VALUES
+        ($1,     $2,  $3,      $4,       $5,         $6,     $7,            $8,               $9,          $10,  $11,          $12,      $13,        NOW(),     NOW())
+      RETURNING *;
+    `;
+    const values = [
+      handle.trim(),
+      dob || null,
+      address || null,
+      safeCategory,
+      suggestion || null,
+      two_fa,
+      parsedNotifications,
+      true, // code_of_conduct (already required)
+      beta_opt_in,
+      parsedClubs,
+      referralCode || null,
+      volunteerBool,
+      avatarUrl,
+    ];
+
+    const { rows } = await pool.query(sql, values);
+    await trigger2FASetupIfEnabled(false, two_fa);
+
+    return res.status(201).json({ ok: true, member: rows[0] });
+  } catch (err) {
+    console.error("POST /api/members error:", err);
+    if (err.message && err.message.includes("Only JPG")) {
+      return res.status(400).json({ error: err.message });
+    }
+    if (err.code === "23505") {
+      return res
+        .status(409)
+        .json({ error: "Handle already exists. Choose another." });
+    }
+    return res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Read (Profile)
+app.get("/api/members/:handle", async (req, res) => {
+  try {
+    const { handle } = req.params;
+    const { rows } = await pool.query(
+      `SELECT * FROM members WHERE handle = $1`,
+      [handle]
+    );
+    if (!rows.length) return res.status(404).json({ error: "Not found" });
+    return res.json({ ok: true, member: rows[0] });
+  } catch (err) {
+    console.error("GET /api/members/:handle error:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Update (Profile Control Panel)
+app.put(
+  "/api/members/:handle",
+  upload.single("avatar"),
+  async (req, res) => {
+    try {
+      const currentHandle = req.params.handle;
+
+      // Fetch existing for diff
+      const existingRes = await pool.query(
+        `SELECT * FROM members WHERE handle = $1`,
+        [currentHandle]
+      );
+      if (!existingRes.rows.length)
+        return res.status(404).json({ error: "Not found" });
+      const existing = existingRes.rows[0];
+
+      const avatarFile = req.file;
+      const newAvatarUrl = avatarFile
+        ? publicAvatarUrl(avatarFile.filename)
+        : existing.avatar_url;
+
+      const {
+        handle, // allow handle change
+        dob,
+        address,
+        category,
+        suggestion,
+        twoFA,
+        notifications,
+        codeOfConduct,
+        betaOptIn,
+        clubs,
+        referralCode,
+        volunteer,
+      } = req.body;
+
+      const safeCategory = sanitizeCategory(category) ?? existing.category;
+
+      // Code of Conduct must remain true; allow setting if previously false
+      const coc = existing.code_of_conduct
+        ? true
+        : coerceBool(codeOfConduct, false);
+      if (!coc) {
+        return res
+          .status(400)
+          .json({ error: "Code of Conduct agreement is required." });
+      }
+
+      const two_fa = coerceBool(
+        typeof twoFA !== "undefined" ? twoFA : existing.two_fa,
+        existing.two_fa
+      );
+
+      const nextNotifications =
+        typeof notifications !== "undefined"
+          ? parseMaybeJSON(notifications, existing.notifications || {})
+          : existing.notifications || {};
+
+      const nextClubs =
+        typeof clubs !== "undefined"
+          ? parseMaybeJSON(clubs, existing.clubs || {})
+          : existing.clubs || {};
+
+      const beta_opt_in = coerceBool(
+        typeof betaOptIn !== "undefined" ? betaOptIn : existing.beta_opt_in,
+        existing.beta_opt_in
+      );
+
+      const volunteerBool = coerceBool(
+        typeof volunteer !== "undefined" ? volunteer : existing.volunteer,
+        existing.volunteer
+      );
+
+      const nextHandle = handle && handle.trim().length ? handle.trim() : existing.handle;
+
+      // Update
+      const sql = `
+        UPDATE members SET
+          handle = $1,
+          dob = $2,
+          address = $3,
+          category = $4,
+          suggestion = $5,
+          two_fa = $6,
+          notifications = $7,
+          code_of_conduct = $8,
+          beta_opt_in = $9,
+          clubs = $10,
+          referral_code = $11,
+          volunteer = $12,
+          avatar_url = $13,
+          updated_at = NOW()
+        WHERE id = $14
+        RETURNING *;
+      `;
+      const values = [
+        nextHandle,
+        typeof dob !== "undefined" ? (dob || null) : existing.dob,
+        typeof address !== "undefined" ? (address || null) : existing.address,
+        safeCategory,
+        typeof suggestion !== "undefined" ? (suggestion || null) : existing.suggestion,
+        two_fa,
+        nextNotifications,
+        true, // must remain true
+        beta_opt_in,
+        nextClubs,
+        typeof referralCode !== "undefined" ? (referralCode || null) : existing.referral_code,
+        volunteerBool,
+        newAvatarUrl,
+        existing.id,
+      ];
+
+      const { rows } = await pool.query(sql, values);
+
+      await trigger2FASetupIfEnabled(existing.two_fa, two_fa);
+      return res.json({ ok: true, member: rows[0] });
+    } catch (err) {
+      console.error("PUT /api/members/:handle error:", err);
+      if (err.message && err.message.includes("Only JPG")) {
+        return res.status(400).json({ error: err.message });
+      }
+      if (err.code === "23505") {
+        return res
+          .status(409)
+          .json({ error: "Handle already exists. Choose another." });
+      }
+      return res.status(500).json({ error: "Server error" });
+    }
+  }
+);
+
+// Health
+app.get("/health", (_req, res) => res.json({ ok: true }));
+
+// Start server
+app.listen(port, () => {
+  console.log(`Members API running on http://localhost:${port}`);
+});

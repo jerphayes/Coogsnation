@@ -1,0 +1,261 @@
+/**
+ * coogpaws-membership.js
+ * ONE FILE to paste into Replit and run.
+ *
+ * Features:
+ * - Join (signup) with strong password enforcement
+ * - Login / Logout
+ * - View & update profile
+ * - Delete profile (permanent, with warning)
+ * - Reset password (with strength check)
+ *
+ * Password Policy:
+ *   - At least 9 characters
+ *   - At least 1 uppercase letter
+ *   - At least 1 number
+ *   - At least 1 special character
+ *
+ * Setup:
+ * 1) Replit Secrets:
+ *    - DATABASE_URL=postgresql://user:pass@host:port/db
+ *    - SESSION_SECRET=some-long-random-string
+ * 2) Run: node coogpaws-membership.js
+ */
+
+import express from "express";
+import session from "express-session";
+import crypto from "crypto";
+import { Pool } from "pg";
+import bcrypt from "bcrypt";
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+// ---------- DB ----------
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+// Create members table if not exists
+await pool.query(`
+CREATE TABLE IF NOT EXISTS members (
+  id SERIAL PRIMARY KEY,
+  first_name TEXT,
+  last_name TEXT,
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  username TEXT UNIQUE NOT NULL,
+  about_me TEXT,
+  interests TEXT,
+  affiliation TEXT CHECK (affiliation IN (
+    'Current Student','Ex-Student','Graduate','Faculty','Staff','Coog Crazy Fan'
+  )),
+  profile_image_url TEXT,
+  default_avatar_choice INT,
+  location TEXT,
+  graduation_year INT,
+  major_or_department TEXT,
+  social_links JSONB,
+  address_line1 TEXT,
+  address_line2 TEXT,
+  city TEXT,
+  state TEXT,
+  zip_code TEXT,
+  country TEXT DEFAULT 'USA',
+  opt_in_offers BOOLEAN DEFAULT false,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  last_login TIMESTAMP,
+  status TEXT DEFAULT 'active'
+);
+`);
+
+// ---------- Sessions ----------
+app.use(
+  session({
+    name: "coogpaws.sid",
+    secret:
+      process.env.SESSION_SECRET ||
+      crypto.randomBytes(32).toString("hex"),
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+    },
+  })
+);
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// ---------- Helpers ----------
+function requireAuth(req, res, next) {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: "Not logged in" });
+  }
+  next();
+}
+
+function sanitizeString(x, max = 2000) {
+  if (typeof x !== "string") return null;
+  return x.trim().slice(0, max);
+}
+
+const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{9,}$/;
+
+async function getMemberByEmail(email) {
+  const q = await pool.query(
+    "SELECT * FROM members WHERE email=$1 LIMIT 1",
+    [email]
+  );
+  return q.rows[0] || null;
+}
+
+async function getMemberById(id) {
+  const q = await pool.query("SELECT * FROM members WHERE id=$1 LIMIT 1", [
+    id,
+  ]);
+  return q.rows[0] || null;
+}
+
+function publicMember(m) {
+  if (!m) return null;
+  const { password_hash, ...safe } = m;
+  return safe;
+}
+
+// ---------- API Routes ----------
+
+// SIGNUP
+app.post("/api/signup", async (req, res) => {
+  try {
+    const { email, password, username } = req.body || {};
+    const _email = sanitizeString(email, 320);
+    const _username = sanitizeString(username, 40);
+    const _password = password;
+
+    if (!_email || !_username || !_password) {
+      return res.status(400).json({ error: "email, username, password required" });
+    }
+    if (!passwordRegex.test(_password)) {
+      return res.status(400).json({
+        error:
+          "Password must be at least 9 chars, include 1 uppercase, 1 number, and 1 special character."
+      });
+    }
+
+    if (await getMemberByEmail(_email)) {
+      return res.status(409).json({ error: "Email already in use" });
+    }
+
+    const passHash = await bcrypt.hash(_password, 12);
+
+    const q = await pool.query(
+      `INSERT INTO members (email, username, password_hash, last_login)
+       VALUES ($1, $2, $3, NOW())
+       RETURNING *`,
+      [_email, _username, passHash]
+    );
+    const member = q.rows[0];
+
+    req.session.userId = member.id;
+    res.json({ member: publicMember(member) });
+  } catch (e) {
+    console.error("Signup error:", e);
+    res.status(500).json({ error: "Internal error" });
+  }
+});
+
+// LOGIN
+app.post("/api/login", async (req, res) => {
+  try {
+    const { email, password } = req.body || {};
+    const m = await getMemberByEmail(email);
+    if (!m) return res.status(401).json({ error: "Invalid credentials" });
+    const ok = await bcrypt.compare(password, m.password_hash);
+    if (!ok) return res.status(401).json({ error: "Invalid credentials" });
+    await pool.query("UPDATE members SET last_login=NOW() WHERE id=$1", [m.id]);
+    req.session.userId = m.id;
+    res.json({ member: publicMember(m) });
+  } catch (e) {
+    console.error("Login error:", e);
+    res.status(500).json({ error: "Internal error" });
+  }
+});
+
+// LOGOUT
+app.post("/api/logout", (req, res) => {
+  req.session.destroy(() => res.json({ status: "ok" }));
+});
+
+// CURRENT USER
+app.get("/api/me", async (req, res) => {
+  if (!req.session.userId) return res.json({ member: null });
+  const m = await getMemberById(req.session.userId);
+  res.json({ member: publicMember(m) });
+});
+
+// UPDATE PROFILE
+app.put("/api/profile", requireAuth, async (req, res) => {
+  try {
+    const id = req.session.userId;
+    const keys = Object.keys(req.body);
+    if (!keys.length) return res.json({ error: "Nothing to update" });
+
+    const sets = keys.map((k, i) => `${k}=$${i + 1}`).join(", ");
+    const vals = keys.map((k) => req.body[k]);
+    const q = await pool.query(
+      `UPDATE members SET ${sets} WHERE id=$${keys.length + 1} RETURNING *`,
+      [...vals, id]
+    );
+    res.json({ member: publicMember(q.rows[0]) });
+  } catch (e) {
+    console.error("Update error:", e);
+    res.status(500).json({ error: "Internal error" });
+  }
+});
+
+// DELETE PROFILE
+app.delete("/api/profile", requireAuth, async (req, res) => {
+  try {
+    const id = req.session.userId;
+    await pool.query("DELETE FROM members WHERE id=$1", [id]);
+    req.session.destroy(() =>
+      res.json({
+        status: "deleted",
+        message:
+          "Your profile has been permanently deleted. To rejoin, you must sign up again."
+      })
+    );
+  } catch (e) {
+    console.error("Delete error:", e);
+    res.status(500).json({ error: "Internal error" });
+  }
+});
+
+// RESET PASSWORD
+app.post("/api/reset-password", requireAuth, async (req, res) => {
+  try {
+    const { new_password } = req.body || {};
+    if (!new_password || !passwordRegex.test(new_password)) {
+      return res.status(400).json({
+        error:
+          "Password must be at least 9 chars, include 1 uppercase, 1 number, and 1 special character."
+      });
+    }
+    const passHash = await bcrypt.hash(new_password, 12);
+    await pool.query("UPDATE members SET password_hash=$1 WHERE id=$2", [
+      passHash,
+      req.session.userId,
+    ]);
+    res.json({ status: "ok", message: "Password reset successful ✅" });
+  } catch (e) {
+    console.error("Reset error:", e);
+    res.status(500).json({ error: "Internal error" });
+  }
+});
+
+// ---------- Start ----------
+app.listen(PORT, () => {
+  console.log(`🐾 Coogpaws Membership running on http://localhost:${PORT}`);
+  console.log("APIs: /api/signup, /api/login, /api/logout, /api/me, /api/profile (PUT, DELETE), /api/reset-password");
+});

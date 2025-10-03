@@ -1,0 +1,52 @@
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { Menu, X } from "lucide-react"; // icon library
+
+export default function MobileHeader() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <header className="mobile-header">
+      <div className="flex items-center justify-between px-4 py-2">
+        {/* Logo + Title */}
+        <Link to="/" className="flex items-center gap-2">
+          <img
+            src="/logo192.png"
+            alt="CoogsNation"
+            style={{ width: 36, height: 36, borderRadius: "50%" }}
+          />
+          <div className="leading-4">
+            <div className="font-bold text-white">CoogsNation</div>
+            <div className="text-xs text-white opacity-80">
+              Houston Cougar Community
+            </div>
+          </div>
+        </Link>
+
+        {/* Hamburger / Close */}
+        <button
+          className="text-white focus:outline-none"
+          onClick={() => setOpen(!open)}
+        >
+          {open ? <X size={28} /> : <Menu size={28} />}
+        </button>
+      </div>
+
+      {/* Dropdown Menu */}
+      {open && (
+        <nav className="bg-[#c8102e] text-white px-4 py-3 space-y-2">
+          <Link to="/" onClick={() => setOpen(false)} className="block">Home</Link>
+          <Link to="/forums" onClick={() => setOpen(false)} className="block">Forums</Link>
+          <Link to="/sports" onClick={() => setOpen(false)} className="block">Sports News</Link>
+          <Link to="/alumni" onClick={() => setOpen(false)} className="block">Alumni Store</Link>
+          <Link to="/events" onClick={() => setOpen(false)} className="block">Events</Link>
+          <Link to="/community" onClick={() => setOpen(false)} className="block">Community</Link>
+          <Link to="/terms" onClick={() => setOpen(false)} className="block">Terms</Link>
+          <Link to="/coogpaws" onClick={() => setOpen(false)} className="block">CoogPaws Chat</Link>
+          <Link to="/login" onClick={() => setOpen(false)} className="block">Log In</Link>
+          <Link to="/join" onClick={() => setOpen(false)} className="block font-bold">Join</Link>
+        </nav>
+      )}
+    </header>
+  );
+}
