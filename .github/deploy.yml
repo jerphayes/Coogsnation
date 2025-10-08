@@ -1,0 +1,28 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main   # Trigger when code is pushed to main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+      - name: Deploy to VPS
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "
+            cd /var/www/coogsnation || exit 1
+            git pull origin main
+            npm install --production || true
+            pm2 restart all || true
+          "
