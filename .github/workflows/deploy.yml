@@ -21,4 +21,4 @@ jobs:
           password: ${{ secrets.VPS_PASSWORD }}
           server-dir: /home/coogarqd/public_html/
           protocol: ftp
-          port: 21
+          port: 22
