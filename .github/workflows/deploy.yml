@@ -1,24 +1,24 @@
-name: Deploy Website
+name: 🚀 Deploy to cPanel via FTP
 
 on:
   push:
     branches:
-      - main   # change if your branch is different
+      - main   # Change if your branch is not 'main'
 
 jobs:
-  deploy:
+  ftp-deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Deploy via FTPS
+      - name: 📂 Sync files via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
-          server: ${{ secrets.VPS_HOST }}        # coogsnation.com OR 66.29.155.208
-          username: ${{ secrets.VPS_USER }}      # coogarqd
-          password: ${{ secrets.VPS_PASSWORD }}  # your cPanel password
-          protocol: ftps
+          server: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          protocol: ftp
           port: 21
           server-dir: /home/coogarqd/public_html/
+          dangerous-clean-slate: true
