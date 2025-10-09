@@ -1,24 +1,9 @@
-name: Deploy via SFTP
-
-on:
-  push:
-    branches:
-      - main   # deploy only when pushing to main
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Deploy to VPS via SFTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-        with:
-          server: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          password: ${{ secrets.VPS_PASSWORD }}
-          server-dir: /home/coogarqd/public_html/
-          protocol: ftp
-          port: 22
+- name: Deploy to VPS via SFTP
+  uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+  with:
+    server: ${{ secrets.VPS_HOST }}
+    username: ${{ secrets.VPS_USER }}
+    password: ${{ secrets.VPS_PASSWORD }}
+    server-dir: /home/coogarqd/public_html/
+    protocol: sftp
+    port: 50022   # use 22 if your host runs SFTP on the default port
