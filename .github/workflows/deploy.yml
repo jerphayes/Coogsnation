@@ -3,26 +3,24 @@ name: Deploy to VPS
 on:
   push:
     branches:
-      - main   # Trigger when code is pushed to main
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up SSH
-        uses: webfactory/ssh-agent@v0.7.0
-        with:
-          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
-
-      - name: Deploy to VPS
+      - name: Setup SSH
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "
-            cd /var/www/coogsnation || exit 1
-            git pull origin main
-            npm install --production || true
-            pm2 restart all || true
-          "
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy files to VPS
+        run: |
+          rsync -avz --delete ./ \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/home/coogarqd/public_html/
