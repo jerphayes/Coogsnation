@@ -1,24 +1,27 @@
-name: 🚀 Deploy to cPanel via FTP
+name: Deploy Website via FTP
 
 on:
   push:
     branches:
-      - main   # Change if your branch is not 'main'
+      - main   # Change if you use a different branch
 
 jobs:
   ftp-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: 📂 Sync files via FTP
+      - name: Deploy to FTP Server
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
           server: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
-          protocol: ftp
+          protocol: ftps
           port: 21
-          server-dir: /home/coogarqd/public_html/
-          dangerous-clean-slate: true
+          server-dir: /public_html/
+          local-dir: ./   # change if your build files live in subfolder like "dist" or "build"
+          state-name: .ftp-deploy-sync-state.json
+          dangerous-clean-slate: false
+
