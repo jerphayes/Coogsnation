@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link } from "wouter";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -20,6 +20,9 @@ import { insertForumTopicSchema } from "@shared/schema";
 import { formatDistance } from "date-fns";
 import type { ForumTopic, ForumCategory } from "@shared/schema";
 import { z } from "zod";
+import { RichTextEditor } from "@/components/RichTextEditor";
+import { RichContentRenderer } from "@/components/RichContentRenderer";
+import CoogpawsApp from "@/components/CoogpawsApp";
 
 const createTopicSchema = insertForumTopicSchema.omit({ authorId: true, slug: true });
 
@@ -27,6 +30,8 @@ export default function ForumCategory() {
   const { categoryId } = useParams<{ categoryId: string }>();
   const { user, isAuthenticated } = useAuth();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingTopic, setEditingTopic] = useState<ForumTopic | null>(null);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof createTopicSchema>>({
@@ -43,18 +48,17 @@ export default function ForumCategory() {
     queryKey: ["/api/forums/categories"],
   });
 
-  const currentCategory = categories?.find((cat: ForumCategory) => cat.id === parseInt(categoryId || "1"));
+  const currentCategory = (categories as ForumCategory[])?.find((cat: ForumCategory) => cat.id === parseInt(categoryId || "1"));
 
   // Topics in category
   const { data: topics, isLoading } = useQuery({
     queryKey: ["/api/forums/categories", categoryId, "topics"],
-    queryFn: () => apiRequest(`/api/forums/categories/${categoryId}/topics`, "GET"),
   });
 
   // Create topic mutation
   const createTopicMutation = useMutation({
     mutationFn: (data: z.infer<typeof createTopicSchema>) =>
-      apiRequest("/api/forums/topics", "POST", data),
+      apiRequest("POST", "/api/forums/topics", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/forums/categories", categoryId, "topics"] });
       setIsCreateDialogOpen(false);
@@ -70,6 +74,61 @@ export default function ForumCategory() {
     createTopicMutation.mutate(data);
   };
 
+  // Edit topic mutation
+  const editTopicMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<z.infer<typeof createTopicSchema>> }) =>
+      apiRequest("PATCH", `/api/forums/topics/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/forums/categories", categoryId, "topics"] });
+      setIsEditDialogOpen(false);
+      setEditingTopic(null);
+      toast({ title: "Topic updated successfully!" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update topic", variant: "destructive" });
+    },
+  });
+
+  // Delete topic mutation
+  const deleteTopicMutation = useMutation({
+    mutationFn: (topicId: number) =>
+      apiRequest("DELETE", `/api/forums/topics/${topicId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/forums/categories", categoryId, "topics"] });
+      toast({ title: "Topic deleted successfully!" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete topic", variant: "destructive" });
+    },
+  });
+
+  // Edit form
+  const editForm = useForm<z.infer<typeof createTopicSchema>>({
+    resolver: zodResolver(createTopicSchema),
+    defaultValues: {
+      title: "",
+      content: "",
+      categoryId: parseInt(categoryId || "1"),
+    },
+  });
+
+  const onEditSubmit = (data: z.infer<typeof createTopicSchema>) => {
+    if (editingTopic) {
+      editTopicMutation.mutate({ id: editingTopic.id, data });
+    }
+  };
+
+  // Set edit form values when editing topic changes
+  useEffect(() => {
+    if (editingTopic) {
+      editForm.reset({
+        title: editingTopic.title,
+        content: editingTopic.content || "",
+        categoryId: editingTopic.categoryId,
+      });
+    }
+  }, [editingTopic, editForm]);
+
   const getCategoryIcon = (name: string) => {
     const iconMap: { [key: string]: string } = {
       'Football': 'football-ball',
@@ -78,7 +137,7 @@ export default function ForumCategory() {
       'Track & Field': 'running',
       'Golf': 'golf-ball',
       'Water Cooler Talk': 'coffee',
-      'Heartbeats': 'heart',
+      'Coog Paws Chat': 'heart',
       'UH Hall of Fame': 'trophy',
       'Academic Discussion': 'graduation-cap',
       'Student Life': 'university',
@@ -94,7 +153,7 @@ export default function ForumCategory() {
       'Track & Field': 'Track and field events, athlete achievements, and meet results',
       'Golf': 'Golf team discussions, tournament results, and course talk',
       'Water Cooler Talk': 'General discussions, off-topic conversations, and community chat',
-      'Heartbeats': 'Dating, relationships, and connections within the Coogs community',
+      'Coog Paws Chat': 'Real-time chat for meaningful connections in the Cougar community',
       'UH Hall of Fame': 'Celebrating notable UH alumni, achievements, and university history',
       'Academic Discussion': 'Course discussions, study groups, and academic support',
       'Student Life': 'Campus events, student organizations, and university life',
@@ -175,10 +234,10 @@ export default function ForumCategory() {
                           <FormItem>
                             <FormLabel>Content</FormLabel>
                             <FormControl>
-                              <Textarea 
-                                placeholder="What would you like to discuss?" 
-                                className="min-h-[200px]"
-                                {...field} 
+                              <RichTextEditor
+                                value={field.value || ""}
+                                onChange={field.onChange}
+                                placeholder="What would you like to discuss? Use the toolbar to add images, videos, and links!"
                               />
                             </FormControl>
                             <FormMessage />
@@ -217,6 +276,83 @@ export default function ForumCategory() {
                 </DialogContent>
               </Dialog>
             )}
+            
+            {/* Edit Topic Dialog */}
+            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Edit Topic</DialogTitle>
+                </DialogHeader>
+                <Form {...editForm}>
+                  <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-6">
+                    <FormField
+                      control={editForm.control}
+                      name="title"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Topic Title</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="Enter a descriptive title for your topic" 
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={editForm.control}
+                      name="content"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Content</FormLabel>
+                          <FormControl>
+                            <RichTextEditor
+                              value={field.value || ""}
+                              onChange={field.onChange}
+                              placeholder="What would you like to discuss? Use the toolbar to add images, videos, and links!"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <div className="flex justify-end space-x-4">
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={() => {
+                          setIsEditDialogOpen(false);
+                          setEditingTopic(null);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        type="submit" 
+                        className="bg-uh-red hover:bg-red-700"
+                        disabled={editTopicMutation.isPending}
+                      >
+                        {editTopicMutation.isPending ? (
+                          <>
+                            <i className="fas fa-spinner fa-spin mr-2"></i>
+                            Updating...
+                          </>
+                        ) : (
+                          <>
+                            <i className="fas fa-save mr-2"></i>
+                            Update Topic
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 
@@ -257,14 +393,17 @@ export default function ForumCategory() {
                               {topic.title}
                             </h3>
                           </Link>
-                          <p className="text-gray-600 text-sm mt-1 line-clamp-2">
-                            {topic.content?.substring(0, 200)}...
-                          </p>
+                          <div className="text-gray-600 text-sm mt-1 line-clamp-3">
+                            <RichContentRenderer 
+                              content={topic.content?.substring(0, 300) || ""} 
+                              className="text-sm"
+                            />
+                          </div>
                           
                           <div className="flex items-center space-x-4 mt-3 text-sm text-gray-500">
                             <span>by {topic.authorId}</span>
                             <span>•</span>
-                            <span>{formatDistance(new Date(topic.createdAt), new Date(), { addSuffix: true })}</span>
+                            <span>{topic.createdAt ? formatDistance(new Date(topic.createdAt), new Date(), { addSuffix: true }) : 'Unknown'}</span>
                             {topic.isPinned && (
                               <>
                                 <span>•</span>
@@ -289,10 +428,48 @@ export default function ForumCategory() {
                             </div>
                           </div>
                           
+                          {/* Owner actions */}
+                          {user && topic.authorId === user.id && (
+                            <div className="flex space-x-2 mt-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-xs h-8 px-2"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setEditingTopic(topic);
+                                  setIsEditDialogOpen(true);
+                                }}
+                                data-testid={`button-edit-topic-${topic.id}`}
+                              >
+                                <i className="fas fa-edit mr-1"></i>
+                                Edit
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-xs h-8 px-2 text-red-600 hover:bg-red-50"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  if (confirm('Are you sure you want to delete this topic?')) {
+                                    deleteTopicMutation.mutate(topic.id);
+                                  }
+                                }}
+                                disabled={deleteTopicMutation.isPending}
+                                data-testid={`button-delete-topic-${topic.id}`}
+                              >
+                                <i className="fas fa-trash mr-1"></i>
+                                Delete
+                              </Button>
+                            </div>
+                          )}
+                          
                           {topic.lastReplyAt && (
                             <div className="text-xs text-gray-400 text-right">
                               Last reply<br />
-                              {formatDistance(new Date(topic.lastReplyAt), new Date(), { addSuffix: true })}
+                              {topic.lastReplyAt ? formatDistance(new Date(topic.lastReplyAt), new Date(), { addSuffix: true }) : 'Unknown'}
                             </div>
                           )}
                         </div>
@@ -303,6 +480,7 @@ export default function ForumCategory() {
               </Card>
             ))
           ) : (
+            // Show regular forum empty state for all categories
             <Card>
               <CardContent className="p-12 text-center">
                 <div className="mb-4">
@@ -333,20 +511,20 @@ export default function ForumCategory() {
         </div>
 
         {/* Category Guidelines */}
-        {currentCategory?.name === "Heartbeats" && (
-          <Card className="mt-8 border-pink-200 bg-pink-50">
+        {currentCategory?.name === "Coogs Lounge" && (
+          <Card className="mt-8 border-purple-200 bg-purple-50">
             <CardHeader>
-              <CardTitle className="flex items-center text-pink-800">
-                <i className="fas fa-heart mr-2"></i>
-                Heartbeats Community Guidelines
+              <CardTitle className="flex items-center text-purple-800">
+                <i className="fas fa-users mr-2"></i>
+                Coogs Lounge Community Guidelines
               </CardTitle>
             </CardHeader>
-            <CardContent className="text-pink-700">
+            <CardContent className="text-purple-700">
               <ul className="space-y-2 text-sm">
                 <li>• Be respectful and kind in all interactions</li>
-                <li>• No inappropriate content or harassment</li>
-                <li>• Keep personal information private</li>
-                <li>• This is for genuine connections within the UH community</li>
+                <li>• Keep discussions on-topic within each subcategory</li>
+                <li>• Share knowledge and learn from fellow Coogs</li>
+                <li>• This is for community connection and meaningful discussions</li>
               </ul>
             </CardContent>
           </Card>

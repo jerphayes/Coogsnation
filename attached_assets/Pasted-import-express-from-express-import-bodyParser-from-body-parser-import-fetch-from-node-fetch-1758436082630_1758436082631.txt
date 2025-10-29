@@ -1,0 +1,163 @@
+import express from "express";
+import bodyParser from "body-parser";
+import fetch from "node-fetch";
+import rateLimit from "express-rate-limit";
+import { createServer } from "http";
+import { Server } from "socket.io";
+import sqlite3 from "sqlite3";
+import { open } from "sqlite";
+
+const PORT = process.env.PORT || 3000;
+const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer);
+
+// --- Database Setup ---
+let db;
+(async () => {
+  db = await open({
+    filename: "./coogsnation_ai.db",
+    driver: sqlite3.Database
+  });
+
+  // Table for learned Q&A
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS learned (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      question TEXT,
+      answer TEXT,
+      votes INTEGER DEFAULT 0
+    )
+  `);
+})();
+
+// --- reCAPTCHA ---
+const RECAPTCHA_SITE_KEY = "6LfqD9ArAAAAAA0JB90vvbin8uptMtrwC9-mOo0";
+const RECAPTCHA_SECRET   = process.env.RECAPTCHA_SECRET || "6LfqD9ArAAAAANCDMVkNfv-U9cfv9s3PYSAB6cj8";
+
+// --- OpenAI ---
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
+const OPENAI_CHAT_MODEL = "gpt-4o-mini";
+const OPENAI_MODERATION_MODEL = "omni-moderation-latest";
+
+// --- FAQs (seeded) ---
+let FAQS = [
+  { q: "How do I create an account?", a: "Fill out the signup form, complete the reCAPTCHA, and submit." },
+  { q: "What are the community rules?", a: "Be respectful, no spam, and keep posts on UH and sports topics." },
+  { q: "How do I reset my password?", a: "Use the 'Forgot password' link or contact support." },
+  { q: "Can I promote my business?", a: "Only in the Marketplace/Promotions area." },
+  { q: "How do I report a post?", a: "Click 'Report' on the post. AI triages, then admin reviews." }
+];
+
+function findBestFAQMatch(question = "") {
+  const q = question.toLowerCase();
+  let best = null, score = 0;
+  for (const f of FAQS) {
+    const text = (f.q + " " + f.a).toLowerCase();
+    let s = 0;
+    for (const w of q.split(/\W+/)) if (text.includes(w)) s++;
+    if (s > score) { score = s; best = f; }
+  }
+  return score >= 2 ? best : null;
+}
+
+// --- Middleware ---
+const limiter = rateLimit({ windowMs: 60*1000, max: 60 });
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+app.use(limiter);
+
+// --- AI Ask Endpoint (learning version) ---
+app.post("/api/ask", async (req,res)=>{
+  const q = req.body.question||"";
+
+  // 1. Check FAQ
+  const best = findBestFAQMatch(q);
+  if(best) return res.json({answer:best.a,source:"faq"});
+
+  // 2. Check Learned DB
+  const row = await db.get("SELECT * FROM learned WHERE question LIKE ?", [`%${q}%`]);
+  if(row) return res.json({answer:row.answer,source:"learned"});
+
+  // 3. Fallback → OpenAI
+  if(!OPENAI_API_KEY) return res.json({answer:"AI not enabled."});
+  const r = await fetch("https://api.openai.com/v1/chat/completions",{
+    method:"POST",
+    headers:{Authorization:`Bearer ${OPENAI_API_KEY}`,"Content-Type":"application/json"},
+    body:JSON.stringify({model:OPENAI_CHAT_MODEL,messages:[{role:"system",content:"You are CoogsNation AI Assistant"},{role:"user",content:q}]})
+  });
+  const d = await r.json();
+  const text = d.choices?.[0]?.message?.content?.trim()||"No answer";
+
+  // 4. Save unanswered Q&A to DB for future learning
+  await db.run("INSERT INTO learned (question, answer) VALUES (?,?)",[q,text]);
+
+  return res.json({answer:text,source:"openai"});
+});
+
+// --- Feedback: upvote/downvote ---
+app.post("/api/vote", async (req,res)=>{
+  const { id, delta } = req.body; // delta = +1 or -1
+  await db.run("UPDATE learned SET votes = votes + ? WHERE id = ?", [delta, id]);
+  res.json({ok:true});
+});
+
+// --- Simple routes ---
+app.get("/", (req,res)=>res.send(`<html><body><h1>Signup</h1>
+<form action="/api/signup" method="POST"><input name="username" placeholder="Username"><br><input name="email"><br><input name="password" type="password"><br><div class="g-recaptcha" data-sitekey="${RECAPTCHA_SITE_KEY}"></div><button>Sign Up</button></form><script src="https://www.google.com/recaptcha/api.js" async defer></script></body></html>`));
+
+app.get("/heartbeats",(req,res)=>res.send(`
+<html>
+  <head><title>🐾 Coog Paws Chat</title></head>
+  <body>
+    <h1>🐾 Coog Paws Chat</h1>
+    <div id="messages" style="border:1px solid #ccc; height:300px; overflow:auto; padding:10px;"></div>
+    <input id="msg" placeholder="Type a message">
+    <button onclick="send()">Send</button>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const socket = io();
+      const messages = document.getElementById("messages");
+      const input = document.getElementById("msg");
+
+      socket.on("chat", data => {
+        const div = document.createElement("div");
+        div.textContent = data;
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+      });
+
+      function send() {
+        socket.emit("chat", input.value);
+        input.value = "";
+      }
+    </script>
+  </body>
+</html>
+`));
+
+// --- APIs for signup/moderation ---
+app.post("/api/signup",async(req,res)=>{
+  const c=req.body["g-recaptcha-response"];
+  if(!c)return res.status(400).send("Captcha required.");
+  const v=await fetch("https://www.google.com/recaptcha/api/siteverify",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({secret:RECAPTCHA_SECRET,response:c})});
+  const d=await v.json();if(!d.success)return res.status(400).send("Captcha failed.");res.send("Signup success ✅");
+});
+
+app.post("/api/moderate-post",async(req,res)=>{
+  const {title="",content=""}=req.body||{};const t=`${title}\n${content}`;
+  if(!OPENAI_API_KEY)return res.json({ok:true,message:"Accepted (no key set)"});
+  const r=await fetch("https://api.openai.com/v1/moderations",{method:"POST",headers:{Authorization:`Bearer ${OPENAI_API_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({model:OPENAI_MODERATION_MODEL,input:t})});
+  const data=await r.json();if(data.results?.[0]?.flagged)return res.json({ok:false,message:"Blocked by AI moderation"});res.json({ok:true,message:"Approved"});
+});
+
+// --- Socket.IO Handling ---
+io.on("connection",(socket)=>{
+  console.log("A user connected");
+  socket.on("chat",(msg)=>{
+    io.emit("chat",msg);
+  });
+});
+
+httpServer.listen(PORT,"0.0.0.0",()=>console.log(`✅ Running with AI learning on http://0.0.0.0:${PORT}`));

@@ -57,7 +57,7 @@ export default function EnhancedDashboard() {
         <Header />
         <div className="max-w-4xl mx-auto px-4 py-16 text-center">
           <h1 className="text-2xl font-bold text-uh-black mb-4">Please Log In</h1>
-          <p className="text-gray-600">Access your personalized CoogsNation dashboard.</p>
+          <p className="text-gray-800 font-medium">Access your personalized CoogsNation dashboard.</p>
         </div>
         <Footer />
       </div>
@@ -69,7 +69,7 @@ export default function EnhancedDashboard() {
     if (score >= 500) return { level: "Veteran", color: "text-blue-600", progress: 80 };
     if (score >= 100) return { level: "Active", color: "text-green-600", progress: 60 };
     if (score >= 25) return { level: "Member", color: "text-yellow-600", progress: 40 };
-    return { level: "Newcomer", color: "text-gray-600", progress: 20 };
+    return { level: "Newcomer", color: "text-uh-red font-bold", progress: 20 };
   };
 
   const engagement = getEngagementLevel(dashboardData.reputationScore || 0);
@@ -84,7 +84,7 @@ export default function EnhancedDashboard() {
         <div className="bg-gradient-to-r from-uh-red to-red-700 rounded-lg p-8 mb-8 text-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-6">
-              <Avatar className="w-20 h-20 border-4 border-white">
+              <Avatar className="w-20 h-20 border-4 border-black">
                 <AvatarImage src={user?.avatar} alt={user?.name} />
                 <AvatarFallback className="bg-white text-uh-red text-2xl font-bold">
                   {(user?.name || "U").charAt(0).toUpperCase()}
@@ -95,10 +95,10 @@ export default function EnhancedDashboard() {
                 <h1 className="text-3xl font-bold mb-2">
                   Welcome back, {user?.name?.split(' ')[0] || 'Coogs Fan'}! 🐾
                 </h1>
-                <p className="text-red-100 mb-2">
+                <p className="text-black text-lg font-semibold mb-2">
                   Ready to Go Coogs! Here's what's happening in your community.
                 </p>
-                <div className="flex items-center space-x-4 text-sm">
+                <div className="flex items-center space-x-4 text-base text-black font-semibold">
                   <span className="flex items-center">
                     <i className="fas fa-trophy mr-2"></i>
                     {dashboardData.reputationScore || 0} Reputation
@@ -132,7 +132,7 @@ export default function EnhancedDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-2xl font-bold text-uh-black">{unreadMessages}</h3>
-                  <p className="text-gray-600">Unread Messages</p>
+                  <p className="text-gray-800 font-semibold">Unread Messages</p>
                 </div>
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                   <i className="fas fa-envelope text-2xl text-blue-600"></i>
@@ -151,7 +151,7 @@ export default function EnhancedDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-2xl font-bold text-uh-black">{upcomingEvents.length}</h3>
-                  <p className="text-gray-600">Upcoming Events</p>
+                  <p className="text-gray-800 font-semibold">Upcoming Events</p>
                 </div>
                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                   <i className="fas fa-calendar text-2xl text-green-600"></i>
@@ -170,7 +170,7 @@ export default function EnhancedDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-2xl font-bold text-uh-black">{communityStats.totalMembers || 0}</h3>
-                  <p className="text-gray-600">Community Members</p>
+                  <p className="text-gray-800 font-semibold">Community Members</p>
                 </div>
                 <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
                   <i className="fas fa-users text-2xl text-purple-600"></i>
@@ -189,7 +189,7 @@ export default function EnhancedDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-2xl font-bold text-uh-black">{dashboardData.achievementBadges || 0}</h3>
-                  <p className="text-gray-600">Achievement Badges</p>
+                  <p className="text-gray-800 font-semibold">Achievement Badges</p>
                 </div>
                 <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
                   <i className="fas fa-medal text-2xl text-yellow-600"></i>
@@ -197,7 +197,7 @@ export default function EnhancedDashboard() {
               </div>
               <Link href="/profile/advanced">
                 <Button size="sm" className="w-full mt-4 bg-yellow-600 hover:bg-yellow-700">
-                  View Profile
+                  Create/View Profile
                 </Button>
               </Link>
             </CardContent>
@@ -242,7 +242,7 @@ export default function EnhancedDashboard() {
                   <div className="text-center py-8">
                     <i className="fas fa-clock text-4xl text-gray-400 mb-4"></i>
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No recent activity</h3>
-                    <p className="text-gray-600">Start participating to see your activity here!</p>
+                    <p className="text-gray-800 font-medium">Start participating to see your activity here!</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -255,7 +255,7 @@ export default function EnhancedDashboard() {
                           <p className="text-sm text-gray-900">
                             {activity.description}
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-gray-800 font-medium">
                             {formatDistance(new Date(activity.createdAt || new Date()), new Date(), { addSuffix: true })}
                           </p>
                         </div>
@@ -283,10 +283,10 @@ export default function EnhancedDashboard() {
                       <h4 className="font-semibold text-uh-black mb-2 hover:text-uh-red cursor-pointer">
                         {article.title}
                       </h4>
-                      <p className="text-gray-600 text-sm mb-2 line-clamp-2">
+                      <p className="text-gray-800 text-sm mb-2 line-clamp-2 font-medium">
                         {article.excerpt}
                       </p>
-                      <div className="flex items-center space-x-2 text-xs text-gray-500">
+                      <div className="flex items-center space-x-2 text-xs text-gray-800 font-medium">
                         <Badge className="bg-blue-100 text-blue-800">
                           {article.category}
                         </Badge>
@@ -352,14 +352,14 @@ export default function EnhancedDashboard() {
                 {upcomingEvents.length === 0 ? (
                   <div className="text-center py-6">
                     <i className="fas fa-calendar-times text-3xl text-gray-400 mb-2"></i>
-                    <p className="text-gray-600 text-sm">No upcoming events</p>
+                    <p className="text-gray-800 text-sm font-medium">No upcoming events</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     {upcomingEvents.slice(0, 3).map((event: any) => (
                       <div key={event.id} className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow">
                         <h4 className="font-semibold text-uh-black text-sm mb-1">{event.title}</h4>
-                        <div className="flex items-center text-xs text-gray-500 mb-2">
+                        <div className="flex items-center text-xs text-gray-800 font-medium mb-2">
                           <i className="fas fa-calendar-alt mr-1"></i>
                           {new Date(event.eventDate).toLocaleDateString()}
                         </div>
@@ -367,7 +367,7 @@ export default function EnhancedDashboard() {
                           <Badge className="bg-green-100 text-green-800 text-xs">
                             {event.category}
                           </Badge>
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-gray-800 font-medium">
                             {event.attendeeCount || 0} attending
                           </span>
                         </div>
@@ -392,7 +392,7 @@ export default function EnhancedDashboard() {
                         <h5 className="text-sm font-medium text-uh-black truncate">
                           {topic.title || `Popular discussion in ${topic.category}`}
                         </h5>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-800">
                           {topic.replies || Math.floor(Math.random() * 50)} replies • {topic.category || 'General'}
                         </p>
                       </div>
@@ -409,19 +409,19 @@ export default function EnhancedDashboard() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Active Today</span>
+                  <span className="text-sm text-gray-800 font-semibold">Active Today</span>
                   <span className="font-semibold text-uh-black">{communityStats.onlineMembers || 0}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">This Week's Posts</span>
+                  <span className="text-sm text-gray-800 font-semibold">This Week's Posts</span>
                   <span className="font-semibold text-uh-black">{communityStats.weeklyPosts || 0}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">New Members</span>
+                  <span className="text-sm text-gray-800 font-semibold">New Members</span>
                   <span className="font-semibold text-uh-black">{communityStats.newMembers || 0}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Events This Month</span>
+                  <span className="text-sm text-gray-800 font-semibold">Events This Month</span>
                   <span className="font-semibold text-uh-black">{communityStats.monthlyEvents || 0}</span>
                 </div>
               </CardContent>

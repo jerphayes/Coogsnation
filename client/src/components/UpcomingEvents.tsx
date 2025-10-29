@@ -55,7 +55,7 @@ export function UpcomingEvents() {
               <div className="flex justify-between items-start">
                 <div>
                   <h4 className="font-semibold text-uh-black">{event.title}</h4>
-                  <p className="text-sm text-gray-600">{event.location}</p>
+                  <p className="text-sm text-gray-800 font-medium">{event.location}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-semibold text-uh-red">
@@ -64,7 +64,7 @@ export function UpcomingEvents() {
                       day: 'numeric' 
                     })}
                   </p>
-                  <p className="text-xs text-gray-600">
+                  <p className="text-xs text-gray-800 font-medium">
                     {new Date(event.eventDate).toLocaleTimeString('en-US', { 
                       hour: 'numeric', 
                       minute: '2-digit' 
@@ -75,7 +75,7 @@ export function UpcomingEvents() {
             </div>
           ))
         ) : (
-          <div className="text-center py-4 text-gray-500">
+          <div className="text-center py-4 text-gray-800">
             <i className="fas fa-calendar text-2xl mb-2"></i>
             <p>No upcoming events</p>
           </div>

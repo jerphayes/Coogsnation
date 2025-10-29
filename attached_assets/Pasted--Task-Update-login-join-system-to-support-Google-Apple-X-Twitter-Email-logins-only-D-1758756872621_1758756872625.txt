@@ -1,0 +1,131 @@
+// Task: Update login/join system to support Google + Apple + X (Twitter) + Email logins only.
+// Delete Facebook and LinkedIn options entirely.
+
+1. Frontend (React dropdown component):
+   - Remove generic "Continue with Social Login".
+   - Add four buttons:
+       • Google → /auth/google
+       • Apple → /auth/apple
+       • X (Twitter) → /auth/x
+       • Email → /auth/email
+
+Example JSX:
+----------------------------------
+import React from "react";
+
+const LoginDropdown = () => {
+  const handleLogin = (provider) => {
+    window.location.href = `/auth/${provider}`;
+  };
+
+  return (
+    <div className="login-dropdown">
+      <button onClick={() => handleLogin("google")}>
+        Continue with Google
+      </button>
+      <button onClick={() => handleLogin("apple")}>
+        Continue with Apple
+      </button>
+      <button onClick={() => handleLogin("x")}>
+        Continue with X (Twitter)
+      </button>
+      <button onClick={() => handleLogin("email")}>
+        Email Login
+      </button>
+    </div>
+  );
+};
+
+export default LoginDropdown;
+----------------------------------
+
+2. Backend (Express + Passport strategies):
+   - Keep GoogleStrategy.
+   - Add TwitterStrategy.
+   - Add AppleStrategy.
+   - Remove Facebook/LinkedIn strategies if present.
+
+Example config (config/passport.js):
+----------------------------------
+const passport = require("passport");
+const GoogleStrategy = require("passport-google-oauth20").Strategy;
+const TwitterStrategy = require("passport-twitter-oauth2").Strategy;
+const AppleStrategy = require("passport-apple").Strategy;
+
+passport.use(new GoogleStrategy({
+  clientID: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  callbackURL: "/auth/google/callback"
+}, (accessToken, refreshToken, profile, done) => {
+  return done(null, profile);
+}));
+
+passport.use(new TwitterStrategy({
+  clientID: process.env.X_CLIENT_ID,
+  clientSecret: process.env.X_CLIENT_SECRET,
+  callbackURL: "/auth/x/callback"
+}, (accessToken, refreshToken, profile, done) => {
+  return done(null, profile);
+}));
+
+passport.use(new AppleStrategy({
+  clientID: process.env.APPLE_CLIENT_ID,
+  teamID: process.env.APPLE_TEAM_ID,
+  keyID: process.env.APPLE_KEY_ID,
+  privateKey: process.env.APPLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+  callbackURL: "/auth/apple/callback",
+  scope: ["name", "email"]
+}, (accessToken, refreshToken, profile, done) => {
+  return done(null, profile);
+}));
+----------------------------------
+
+3. Routes (routes/auth.js):
+----------------------------------
+const express = require("express");
+const passport = require("passport");
+const router = express.Router();
+
+// Google
+router.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+router.get("/auth/google/callback",
+  passport.authenticate("google", { failureRedirect: "/" }),
+  (req, res) => res.redirect("/dashboard")
+);
+
+// X (Twitter)
+router.get("/auth/x", passport.authenticate("twitter"));
+router.get("/auth/x/callback",
+  passport.authenticate("twitter", { failureRedirect: "/" }),
+  (req, res) => res.redirect("/dashboard")
+);
+
+// Apple
+router.get("/auth/apple", passport.authenticate("apple"));
+router.post("/auth/apple/callback",
+  passport.authenticate("apple", { failureRedirect: "/" }),
+  (req, res) => res.redirect("/dashboard")
+);
+
+// Email fallback
+router.get("/auth/email", (req, res) => {
+  res.send("Email login form goes here");
+});
+
+module.exports = router;
+----------------------------------
+
+4. Replit Secrets (Environment Variables required):
+   GOOGLE_CLIENT_ID=xxxx
+   GOOGLE_CLIENT_SECRET=yyyy
+   X_CLIENT_ID=zzzz
+   X_CLIENT_SECRET=aaaa
+   APPLE_CLIENT_ID=bbbb
+   APPLE_TEAM_ID=cccc
+   APPLE_KEY_ID=dddd
+   APPLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n....\n-----END PRIVATE KEY-----"
+
+5. Test:
+   - Login/Join dropdown now shows: Google, Apple, X (Twitter), Email.
+   - Facebook and LinkedIn completely removed.
+   - Each provider should redirect to its OAuth page and back to /dashboard on success.

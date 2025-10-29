@@ -1,0 +1,63 @@
+import express from "express";
+import bodyParser from "body-parser";
+import fetch from "node-fetch";
+
+const app = express();
+app.use(bodyParser.urlencoded({ extended: true }));
+
+// Serve signup page
+app.get("/", (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Signup Page</title>
+      <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    </head>
+    <body>
+      <h2>Create Account</h2>
+      <form action="/signup" method="POST">
+        <input type="text" name="username" placeholder="Username" required><br><br>
+        <input type="email" name="email" placeholder="Email" required><br><br>
+        <input type="password" name="password" placeholder="Password" required><br><br>
+        <div class="g-recaptcha" data-sitekey="6LfqD9ArAAAAAA0JB90vvbin8uptMtrwC9-mOo0"></div><br>
+        <button type="submit">Sign Up</button>
+      </form>
+    </body>
+    </html>
+  `);
+});
+
+// Handle signup + captcha verification
+app.post("/signup", async (req, res) => {
+  const captcha = req.body["g-recaptcha-response"];
+  const secretKey = "6LfqD9ArAAAAANCDMVkNfv-U9cfv9s3PYSAB6cj8";
+  const clientIP = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+
+  if (!captcha) {
+    console.log(`[${new Date().toISOString()}] ❌ No captcha submitted from IP: ${clientIP}`);
+    return res.status(400).send("❌ Captcha is required.");
+  }
+
+  try {
+    const verify = await fetch(
+      `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${captcha}`,
+      { method: "POST" }
+    );
+    const data = await verify.json();
+
+    if (!data.success) {
+      console.log(`[${new Date().toISOString()}] 🚫 Failed captcha from IP: ${clientIP}`);
+      return res.status(400).send("❌ Captcha failed. Please try again.");
+    }
+
+    // 🚀 Captcha passed — place signup logic here (save to DB, etc.)
+    console.log(`[${new Date().toISOString()}] ✅ Successful signup from IP: ${clientIP}`);
+    res.send("✅ Signup successful!");
+  } catch (err) {
+    console.log(`[${new Date().toISOString()}] ⚠️ Error verifying captcha for IP: ${clientIP}`);
+    res.status(500).send("⚠️ Captcha verification error.");
+  }
+});
+
+app.listen(3000, () => console.log("Server running on http://localhost:3000"));

@@ -167,7 +167,7 @@ export default function Landing() {
             <li>Sports Discussion</li>
             <li>Academic Forums</li>
             <li>Water Cooler Talk</li>
-            <li>Heartbeats Dating</li>
+            <li>Coog Paws Chat</li>
             <li>UH Hall of Fame</li>
           </ul>
         </div>

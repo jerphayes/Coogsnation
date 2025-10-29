@@ -1,0 +1,295 @@
+/**
+ * coogpaws-fullstack.js
+ * ONE FILE you can paste into Replit and run.
+ * - Backend: Express + Postgres “self-improving” AI memory (/ask, /feedback)
+ * - Realtime group chat: Socket.IO (multi-participant)
+ * - Frontend: Served inline (HTML + Tailwind CDN + Socket.IO client)
+ * 
+ * How to run on Replit:
+ * 1) Create a new file named: coogpaws-fullstack.js
+ * 2) Paste this entire block into it.
+ * 3) In Replit Secrets, set: DATABASE_URL=postgresql://user:pass@host:port/db
+ * 4) Set PORT=5000 (or leave your existing PORT env var)
+ * 5) Run: node coogpaws-fullstack.js
+ * 6) Open the web view — you’ll see the Coogpaws page.
+ */
+
+import express from "express";
+import http from "http";
+import { Server as SocketIOServer } from "socket.io";
+import { Pool } from "pg";
+
+// ---------- Config ----------
+const PORT = process.env.PORT || 5000;
+const app = express();
+const server = http.createServer(app);
+const io = new SocketIOServer(server, { cors: { origin: "*" } });
+
+app.use(express.json());
+
+// ---------- Postgres ----------
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL, // set this in Replit Secrets
+});
+
+// Initialize DB table for “self-improving” memory
+async function initDB() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ai_experience (
+      id SERIAL PRIMARY KEY,
+      user_input TEXT NOT NULL,
+      ai_output TEXT NOT NULL,
+      feedback INTEGER,                 -- 1 = good, -1 = bad, NULL = unrated
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+  console.log("📦 DB ready: ai_experience");
+}
+await initDB();
+
+// ---------- “AI” logic (replace callAI with a real model later) ----------
+async function callAI(prompt) {
+  // Placeholder — swap with a real API call if you want (OpenAI, etc.)
+  // The memory is prepended already; this function can be as simple or advanced as you like.
+  return `☕ Coogpaws thinks: ${prompt}`;
+}
+
+async function storeExperience(input, output) {
+  const res = await pool.query(
+    "INSERT INTO ai_experience (user_input, ai_output) VALUES ($1, $2) RETURNING id",
+    [input, output]
+  );
+  return res.rows[0].id;
+}
+
+async function getMemory(input) {
+  // Pull similar experiences; prefer those with positive feedback
+  const res = await pool.query(
+    `SELECT * FROM ai_experience
+     WHERE user_input ILIKE $1
+     ORDER BY feedback DESC NULLS LAST, created_at DESC
+     LIMIT 5`,
+    [`%${input}%`]
+  );
+  return res.rows;
+}
+
+// ---------- API: ask + feedback ----------
+app.post("/ask", async (req, res) => {
+  try {
+    const { prompt } = req.body ?? {};
+    if (!prompt || typeof prompt !== "string") {
+      return res.status(400).json({ error: "Missing prompt" });
+    }
+
+    // Step 1: fetch memory
+    const memory = await getMemory(prompt);
+
+    // Step 2: build enhanced prompt with weighted memory
+    let memoryPrompt = prompt;
+    if (memory.length > 0) {
+      memoryPrompt += "\n\nPast experiences (feedback-weighted):\n";
+      for (const row of memory) {
+        memoryPrompt += `User: ${row.user_input}\nAI: ${row.ai_output}\nFeedback: ${row.feedback}\n\n`;
+      }
+      console.log("☕ Coffee boost: drew wisdom from past experiences!");
+    }
+
+    // Step 3: generate answer
+    const aiResponse = await callAI(memoryPrompt);
+
+    // Step 4: save experience
+    const id = await storeExperience(prompt, aiResponse);
+
+    res.json({ id, answer: aiResponse, memory });
+  } catch (err) {
+    console.error("ASK error:", err);
+    res.status(500).json({ error: "Internal error" });
+  }
+});
+
+app.post("/feedback", async (req, res) => {
+  try {
+    const { id, feedback } = req.body ?? {};
+    if (!id || ![1, -1].includes(feedback)) {
+      return res
+        .status(400)
+        .json({ error: "Need id and feedback (1 or -1)" });
+    }
+    await pool.query("UPDATE ai_experience SET feedback=$1 WHERE id=$2", [
+      feedback,
+      id,
+    ]);
+    console.log(`📝 Feedback stored: id=${id}, feedback=${feedback}`);
+    res.json({ status: "ok", message: "AI just got smarter ☕" });
+  } catch (err) {
+    console.error("FEEDBACK error:", err);
+    res.status(500).json({ error: "Internal error" });
+  }
+});
+
+// ---------- Realtime group chat (Socket.IO) ----------
+io.on("connection", (socket) => {
+  console.log("👥 User connected:", socket.id);
+
+  socket.on("chat message", (msg) => {
+    // Broadcast to everyone
+    io.emit("chat message", {
+      id: Date.now(),
+      user: socket.id.slice(0, 5),
+      text: msg?.toString().slice(0, 2000) || "",
+      at: new Date().toISOString(),
+    });
+  });
+
+  socket.on("disconnect", () => {
+    console.log("👥 User disconnected:", socket.id);
+  });
+});
+
+// ---------- Frontend (served inline for simplicity) ----------
+app.get("/", (_req, res) => {
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.end(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Coogpaws 🐾</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Tailwind (CDN for simplicity) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Socket.IO client -->
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    .msg{word-break:break-word}
+  </style>
+</head>
+<body class="min-h-screen bg-gray-100 text-gray-900">
+  <header class="bg-white shadow">
+    <div class="mx-auto max-w-5xl p-4 flex items-center justify-between">
+      <h1 class="text-2xl font-bold">🐾 Coogpaws</h1>
+      <nav class="flex gap-4">
+        <a href="#chat" class="hover:underline">Group Chat</a>
+        <a href="#ask-ai" class="hover:underline">Ask AI</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-5xl p-4 grid md:grid-cols-2 gap-6">
+    <!-- Group Chat -->
+    <section id="chat" class="bg-white rounded-xl shadow p-4">
+      <h2 class="text-xl font-semibold mb-3">💬 Group Chat</h2>
+      <div id="chatLog" class="h-80 overflow-y-auto border rounded p-3 bg-gray-50 space-y-2"></div>
+      <form id="chatForm" class="mt-3 flex gap-2">
+        <input id="chatInput" type="text" placeholder="Say something…" class="flex-1 border rounded px-3 py-2" />
+        <button class="px-4 py-2 bg-black text-white rounded">Send</button>
+      </form>
+    </section>
+
+    <!-- Ask AI (with SQL memory) -->
+    <section id="ask-ai" class="bg-white rounded-xl shadow p-4">
+      <h2 class="text-xl font-semibold mb-3">🤖 Ask AI (Self-Improving)</h2>
+      <form id="askForm" class="flex gap-2">
+        <input id="askInput" type="text" placeholder="Ask anything…" class="flex-1 border rounded px-3 py-2" />
+        <button class="px-4 py-2 bg-red-600 text-white rounded">Ask</button>
+      </form>
+      <div id="aiAnswer" class="mt-3 p-3 border rounded bg-gray-50 whitespace-pre-wrap"></div>
+      <div id="feedbackBtns" class="mt-2 hidden gap-2">
+        <button id="goodBtn" class="px-3 py-1 bg-green-600 text-white rounded">👍 Good</button>
+        <button id="badBtn" class="px-3 py-1 bg-rose-600 text-white rounded">👎 Bad</button>
+      </div>
+      <details class="mt-3">
+        <summary class="cursor-pointer select-none">Show memory used</summary>
+        <pre id="memoryBox" class="mt-2 p-2 text-sm bg-gray-100 rounded overflow-x-auto"></pre>
+      </details>
+    </section>
+  </main>
+
+  <footer class="mx-auto max-w-5xl p-4 text-sm text-gray-500">
+    <p>☕ Coffee boosts applied when recalling memory. Over time, good answers rise to the top.</p>
+  </footer>
+
+  <script>
+    // --- Socket.IO group chat ---
+    const socket = io();
+
+    const chatForm = document.getElementById("chatForm");
+    const chatInput = document.getElementById("chatInput");
+    const chatLog = document.getElementById("chatLog");
+
+    socket.on("chat message", (payload) => {
+      const div = document.createElement("div");
+      div.className = "msg p-2 rounded border bg-white";
+      div.textContent = "[" + payload.user + "] " + payload.text;
+      chatLog.appendChild(div);
+      chatLog.scrollTop = chatLog.scrollHeight;
+    });
+
+    chatForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const text = (chatInput.value || "").trim();
+      if (!text) return;
+      socket.emit("chat message", text);
+      chatInput.value = "";
+    });
+
+    // --- Ask AI with SQL memory ---
+    const askForm = document.getElementById("askForm");
+    const askInput = document.getElementById("askInput");
+    const aiAnswer = document.getElementById("aiAnswer");
+    const memoryBox = document.getElementById("memoryBox");
+    const feedbackBtns = document.getElementById("feedbackBtns");
+    const goodBtn = document.getElementById("goodBtn");
+    const badBtn = document.getElementById("badBtn");
+    let lastId = null;
+
+    askForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const prompt = (askInput.value || "").trim();
+      if (!prompt) return;
+
+      aiAnswer.textContent = "Thinking…";
+      feedbackBtns.classList.add("hidden");
+      memoryBox.textContent = "";
+
+      const res = await fetch("/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+      const data = await res.json();
+
+      lastId = data.id;
+      aiAnswer.textContent = data.answer || "(no answer)";
+      feedbackBtns.classList.remove("hidden");
+
+      // show memory used
+      if (Array.isArray(data.memory)) {
+        memoryBox.textContent = JSON.stringify(data.memory, null, 2);
+      }
+    });
+
+    async function sendFeedback(val) {
+      if (!lastId) return;
+      await fetch("/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: lastId, feedback: val }),
+      });
+      // Optional UI cue:
+      aiAnswer.textContent += "\\n\\n(Feedback received.)";
+      feedbackBtns.classList.add("hidden");
+    }
+
+    goodBtn.addEventListener("click", () => sendFeedback(1));
+    badBtn.addEventListener("click", () => sendFeedback(-1));
+  </script>
+</body>
+</html>`);
+});
+
+// ---------- Start ----------
+server.listen(PORT, () => {
+  console.log(`🐾 Coogpaws fullstack running on http://localhost:${PORT}`);
+  console.log("Endpoints: POST /ask, POST /feedback  •  Frontend: /");
+});

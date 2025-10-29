@@ -45,21 +45,21 @@ export function ActiveMembers() {
                   <h4 className="font-semibold text-sm text-uh-black">
                     {member.username || member.firstName || 'Member'}
                   </h4>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-gray-800 font-medium">
                     {member.lastActiveAt 
                       ? new Date(member.lastActiveAt).toLocaleDateString()
                       : 'Online'
                     }
                   </span>
                 </div>
-                <p className="text-xs text-gray-600">
+                <p className="text-xs text-gray-800">
                   {member.title || 'Community Member'}
                 </p>
               </div>
             </div>
           ))
         ) : (
-          <div className="text-center py-4 text-gray-500">
+          <div className="text-center py-4 text-gray-800">
             <p>No active members to display</p>
           </div>
         )}

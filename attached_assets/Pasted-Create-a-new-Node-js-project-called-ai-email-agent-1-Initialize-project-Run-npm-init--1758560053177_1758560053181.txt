@@ -1,0 +1,88 @@
+Create a new Node.js project called `ai-email-agent`.
+
+1. Initialize project:
+   - Run `npm init -y`
+   - Install dependencies:
+     npm install express nodemailer email-validator sqlite3 dns promises winston
+
+2. Create file structure:
+   /src
+     server.js        # main Express app
+     verify.js        # email verification logic
+     send.js          # sending logic with Nodemailer
+     db.js            # SQLite database setup + learning layer
+     monitor.js       # metrics collection, bounce tracking
+     heal.js          # self-healing stubs
+     logger.js        # Winston logger
+   /public
+     index.html       # demo page (email form → verify → send)
+   .env.example       # template for config
+   README.md
+
+3. In `.env.example` define:
+   PORT=3000
+   SMTP_HOST=mail.coogsnation.com
+   SMTP_PORT=465
+   SMTP_SECURE=true
+   SMTP_USER=noreply@coogsnation.com
+   SMTP_PASS=YOUR_PASSWORD
+   DB_FILE=./agent.db
+
+4. In `server.js`:
+   - Import express, verify.js, send.js, db.js, monitor.js, heal.js
+   - Setup routes:
+     POST /verify-email → calls verify.js
+     POST /send-email → calls send.js
+     GET /health → returns {ok:true, uptime, queueDepth}
+     GET /metrics → return stats from db + monitor.js
+   - Start server on process.env.PORT
+
+5. In `verify.js`:
+   - Function verifyEmail(email):
+     * Validate syntax with email-validator
+     * DNS MX lookup for domain
+     * Return {valid:true/false, score:0–1, reasons:[…]}
+   - Save result in SQLite (db.js)
+
+6. In `send.js`:
+   - Configure Nodemailer transport with SMTP creds from `.env`
+   - Queue and send transactional emails
+   - On failure, retry with exponential backoff
+   - Save status in SQLite
+
+7. In `db.js`:
+   - Setup SQLite with tables:
+     * verifications (email, score, reason, ts)
+     * sends (to, status, messageId, ts)
+     * domains (domain, reputationScore, lastSeen, bounces)
+   - Provide helper functions for insert/update/query
+
+8. In `monitor.js`:
+   - Track bounce/error rates from send.js
+   - Update domain reputation in db.js
+   - Provide metrics summary
+
+9. In `heal.js`:
+   - If bounce rate > threshold → reduce send rate
+   - If SMTP failures spike → recycle transporter
+   - If queue > limit → backpressure new requests
+   - Log all actions with logger.js
+
+10. In `logger.js`:
+   - Configure Winston logger (console + file rotation)
+
+11. In `public/index.html`:
+   - Simple form: input email → AJAX call /verify-email
+   - If valid → button to trigger /send-email (welcome message)
+
+12. In README.md:
+   - Setup instructions
+   - Example API usage
+   - Notes on self-healing + learning
+
+When finished:
+- Running `npm start` should launch the server
+- `/verify-email` and `/send-email` APIs work
+- SQLite stores results and improves over time
+- Logs show self-healing actions
+- Demo page in `/public/index.html` lets you test flow

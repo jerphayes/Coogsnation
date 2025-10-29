@@ -1,0 +1,164 @@
+// ==============================
+// DEBUG + FIX: "Joe Hack" login flow
+// Paste/execute in your Replit project (server side). Remove debug endpoints after use.
+// ==============================
+
+/*
+1) Quick checks (do these first via browser DevTools / Replit logs):
+   - On register: is server returning 200 and creating a DB record?
+   - On login: inspect Network tab for POST /auth/login -> payload keys (email vs username vs user)
+   - Check server logs for errors (bcrypt, DB, session)
+   - Confirm cookie/session set in response (Set-Cookie header) and same site/domain
+*/
+
+// ------------------------------
+// A. Inspect DB for Joe Hack (Mongoose example)
+// ------------------------------
+/*
+Run in a node REPL or a debug route to print the Joe record (dev only).
+Replace `User` with your actual user model import path if needed.
+*/
+const express = require('express');
+const bcrypt = require('bcrypt');
+const router = express.Router();
+const mongoose = require('mongoose');
+
+// ---------- Replace this with your actual User model require ----------
+const User = require('./models/User'); // <-- adjust path
+
+// Debug route: inspect user (DEV ONLY — remove after)
+router.get('/dev/debug-user-joehack', async (req, res) => {
+  try {
+    const user = await User.findOne({ email: /joe/i }).lean();
+    if (!user) return res.status(404).send('Joe not found');
+    // show the important fields
+    return res.json({
+      _id: user._id,
+      email: user.email,
+      username: user.username || null,
+      passwordHashPresent: !!user.password,
+      createdAt: user.createdAt || null,
+      provider: user.provider || null // e.g., 'google' or 'local'
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).send('error');
+  }
+});
+
+// ------------------------------
+// B. Ensure registration saves hashed password (fix if necessary)
+// ------------------------------
+/*
+This is a robust register handler — ensure your register route uses this logic.
+*/
+router.post('/auth/register', async (req, res) => {
+  try {
+    const { email, password, username } = req.body;
+    if (!email || !password) return res.status(400).json({ error: 'Missing email or password' });
+
+    const existing = await User.findOne({ email: email.toLowerCase().trim() });
+    if (existing) return res.status(400).json({ error: 'User already exists' });
+
+    const hashed = await bcrypt.hash(password, 12);
+    const newUser = new User({
+      email: email.toLowerCase().trim(),
+      username: username || null,
+      password: hashed,
+      provider: 'local'
+    });
+    await newUser.save();
+    // create session or JWT depending on your auth
+    req.session.userId = newUser._id;
+    return res.json({ ok: true, userId: newUser._id });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'server error' });
+  }
+});
+
+// ------------------------------
+// C. Login handler (ensure bcrypt.compare is used)
+// ------------------------------
+router.post('/auth/login', async (req, res) => {
+  try {
+    // Accept either email or username depending on your UI
+    const { email, username, password } = req.body;
+    const identifier = (email || username || '').toLowerCase().trim();
+    if (!identifier || !password) return res.status(400).json({ error: 'Missing credentials' });
+
+    const user = await User.findOne({ $or: [{ email: identifier }, { username: identifier }] });
+    if (!user) return res.status(400).json({ error: 'User not found' });
+
+    // If user is only an OAuth user (no local password), reject politely
+    if (!user.password) return res.status(400).json({ error: 'No local password set — use social login' });
+
+    const ok = await bcrypt.compare(password, user.password);
+    if (!ok) return res.status(400).json({ error: 'Invalid credentials' });
+
+    // Successful: create session or sign JWT
+    req.session.userId = user._id;
+    return res.json({ ok: true, redirect: '/dashboard' });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'server error' });
+  }
+});
+
+// ------------------------------
+// D. Quick "set known password" helper for Joe Hack (dev only)
+// ------------------------------
+/*
+Use this to force-set Joe's password to a known value. Run once to set a testable password.
+Example: POST /dev/set-joehack-password  with JSON body: { "newPassword": "Password123!" }
+Remove this endpoint after you finish testing.
+*/
+router.post('/dev/set-joehack-password', async (req, res) => {
+  try {
+    const newPassword = req.body.newPassword || 'Password123!';
+    const user = await User.findOne({ email: /joe/i });
+    if (!user) return res.status(404).send('Joe not found');
+
+    const hashed = await bcrypt.hash(newPassword, 12);
+    user.password = hashed;
+    user.provider = 'local';
+    await user.save();
+    return res.json({ ok: true, message: 'Password updated for Joe', password: newPassword });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).send('error');
+  }
+});
+
+// ------------------------------
+// E. Useful troubleshooting tips (run these now)
+// ------------------------------
+/*
+1) Confirm the client sends the right fields:
+   - In browser DevTools -> Network -> find POST /auth/login and check JSON body keys.
+   - If client sends { email: "joe@...", pw: "..." } but server expects { password }, login will fail.
+
+2) Verify DB record:
+   - GET /dev/debug-user-joehack  -> confirm user exists and has passwordHashPresent: true
+
+3) Set known password (if no local password exists):
+   - POST /dev/set-joehack-password  body: { "newPassword": "Password123!" }
+   - Then from client try login with email (joe's email) and Password123!
+
+4) Check server responses:
+   - If login returns 400 with 'No local password set — use social login', then Joe was created by social provider and has no local password.
+   - If login returns 400 'Invalid credentials', inspect bcrypt.compare by logging hashed and compare attempt (temporary logs).
+
+5) Session/Cookie issues:
+   - After successful login check response headers for Set-Cookie.
+   - If Set-Cookie missing, ensure express-session middleware is mounted BEFORE auth routes and session secret is set.
+   - If using cookies across domains (e.g., frontend on different host), set cookie options: { sameSite: 'lax', secure: false } for dev (secure true in prod).
+
+6) If using JWT instead of sessions, ensure frontend stores the token and sends it on subsequent requests.
+
+7) Remove the /dev routes after testing to avoid security risk.
+
+*/
+
+// Export router (if your app uses routers)
+module.exports = router;

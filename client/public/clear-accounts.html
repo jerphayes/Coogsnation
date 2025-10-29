@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accounts Cleared - CoogsNation</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+    }
+    .container {
+      background: white;
+      padding: 50px;
+      border-radius: 15px;
+      text-align: center;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+      max-width: 600px;
+    }
+    h1 {
+      color: #dc2626;
+      margin-bottom: 30px;
+      font-size: 2.5em;
+    }
+    .checkmark {
+      font-size: 80px;
+      color: #059669;
+      margin-bottom: 20px;
+    }
+    p {
+      font-size: 18px;
+      color: #334155;
+      margin: 15px 0;
+    }
+    .btn {
+      display: inline-block;
+      background: #dc2626;
+      color: white;
+      padding: 15px 40px;
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 18px;
+      margin-top: 30px;
+      transition: background 0.3s;
+    }
+    .btn:hover {
+      background: #991b1b;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="checkmark">✅</div>
+    <h1>All Accounts Cleared!</h1>
+    <p><strong>All member accounts have been deleted from localStorage.</strong></p>
+    <p>You can now test the registration and login flow with a fresh start.</p>
+    <a href="/" class="btn">Go to Homepage</a>
+  </div>
+
+  <script>
+    // Clear all CoogsNation localStorage on page load
+    localStorage.removeItem('coogsnationUsers');
+    localStorage.removeItem('currentUser');
+    console.log('✅ All CoogsNation accounts cleared from localStorage');
+  </script>
+</body>
+</html>

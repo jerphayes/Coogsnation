@@ -1,94 +1,148 @@
-import bannerImage from "@assets/file_00000000ed946246b26194ea80eb5e3a_conversation_id=67fb526f-75cc-8001-93e0-7b286caca06c&message_id=f5151dca-9d4a-4d7c-acf1-5e125d01acfb_1754449989402.png";
-import { useEffect, useRef } from "react";
+import bannerImage from "@assets/file_00000000881861f9be677e55822b57a5_1757784057972.png";
+import logoImage from "@assets/webiste master logo_1761671161849.jpg";
+import { useAuth } from "@/hooks/useAuth";
+import LoginComponent from "@/components/LoginComponent";
+import { useEffect } from "react";
 
 export default function Landing() {
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const { isAuthenticated, isLoading } = useAuth();
 
-  useEffect(() => {
-    // Play growl sound once when component mounts - shortened to 1 second
-    const playGrowl = async () => {
-      if (audioRef.current) {
-        try {
-          // Set max duration to 1 second only - much shorter growl
-          audioRef.current.addEventListener('loadedmetadata', () => {
-            if (audioRef.current) {
-              audioRef.current.addEventListener('timeupdate', () => {
-                if (audioRef.current && audioRef.current.currentTime >= 1) {
-                  audioRef.current.pause();
-                }
-              });
-            }
-          });
-          await audioRef.current.play();
-        } catch (error) {
-          console.log("Audio autoplay blocked by browser");
-        }
-      }
-    };
+  // SECURITY: Removed client-side sessionStorage redirect logic
+  // Server now handles all redirects securely via returnTo query parameter
 
-    // Small delay to ensure page is loaded
-    const timer = setTimeout(playGrowl, 500);
-    return () => clearTimeout(timer);
-  }, []);
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div style={{
+        margin: 0,
+        fontFamily: 'Arial, sans-serif',
+        backgroundColor: '#fff',
+        color: '#111',
+        textAlign: 'center',
+        padding: '2rem'
+      }}>
+        <div>Loading...</div>
+      </div>
+    );
+  }
+
+  // Allow both authenticated and non-authenticated users to see hero page
+  // Remove automatic redirect - let users choose where to go
 
   return (
-    <div style={{
-      margin: 0,
-      fontFamily: 'Arial, sans-serif',
-      backgroundColor: '#fff',
-      color: '#111',
-      textAlign: 'center'
-    }}>
-      {/* Hidden audio element for cougar growl */}
-      <audio
-        ref={audioRef}
-        preload="auto"
-        style={{ display: 'none' }}
-      >
-        <source src="https://quicksounds.com/uploads/tracks/1764799707_799379166_2054415044.mp3" type="audio/mpeg" />
-        <source src="https://quicksounds.com/uploads/tracks/295879743_2073341770_1313737317.mp3" type="audio/mpeg" />
-      </audio>
-
-
+    <div 
+      className="landing-hero"
+      style={{
+        margin: 0,
+        fontFamily: 'Arial, sans-serif',
+        backgroundImage: `url(${bannerImage})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed',
+        minHeight: '100vh',
+        width: '100%',
+        color: '#111',
+        textAlign: 'center',
+        position: 'relative'
+      }}>
+      {/* Dark overlay for better text readability */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        zIndex: 1,
+        pointerEvents: 'none'
+      }}></div>
+      
+      {/* Content wrapper */}
+      <div style={{
+        position: 'relative',
+        zIndex: 2
+      }}>
 
       {/* Navigation Menu */}
       <div style={{
         marginTop: '10px',
         marginBottom: '20px',
         padding: '10px 0',
-        borderBottom: '2px solid #ccc',
-        fontSize: '1.1em'
+        borderBottom: '2px solid rgba(255,255,255,0.3)',
+        fontSize: '1.1em',
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '15px'
       }}>
-        <a href="/home" style={{
-          margin: '0 15px',
-          textDecoration: 'none',
-          fontWeight: 'bold',
-          color: '#000'
-        }}>Home</a>
+        <a href="/" style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          marginRight: '20px'
+        }}>
+          <img 
+            src={logoImage} 
+            alt="CoogsNation Logo" 
+            style={{
+              height: '50px',
+              width: '50px',
+              objectFit: 'contain'
+            }}
+          />
+        </a>
         <a href="/forums" style={{
-          margin: '0 15px',
+          margin: '0',
           textDecoration: 'none',
           fontWeight: 'bold',
-          color: '#000'
+          color: '#fff',
+          textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
         }}>Forums</a>
         <a href="/members" style={{
-          margin: '0 15px',
+          margin: '0',
           textDecoration: 'none',
           fontWeight: 'bold',
-          color: '#000'
+          color: '#fff',
+          textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
         }}>Members</a>
-        <div style={{ position: 'relative', display: 'inline-block' }}>
-          <button style={{
-            margin: '0 15px',
+        <a href="/store" style={{
+          margin: '0',
+          textDecoration: 'none',
+          fontWeight: 'bold',
+          color: '#fff',
+          textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
+        }}>Shopping</a>
+        <div style={{ position: 'relative', display: 'inline-block' }}
+             onMouseEnter={(e) => {
+               const dropdown = e.currentTarget.querySelector('.community-dropdown') as HTMLElement;
+               if (dropdown) {
+                 dropdown.style.display = 'block';
+                 dropdown.style.opacity = '1';
+                 dropdown.style.visibility = 'visible';
+               }
+             }}
+             onMouseLeave={(e) => {
+               const dropdown = e.currentTarget.querySelector('.community-dropdown') as HTMLElement;
+               if (dropdown) {
+                 dropdown.style.display = 'none';
+                 dropdown.style.opacity = '0';
+                 dropdown.style.visibility = 'hidden';
+               }
+             }}>
+          <a href="/community" style={{
+            margin: '0',
+            textDecoration: 'none',
             background: 'none',
             border: 'none',
             fontWeight: 'bold',
-            color: '#000',
+            color: '#fff',
+            textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
             cursor: 'pointer',
             fontSize: '1.1em'
           }}>
             Community ▼
-          </button>
+          </a>
           <div style={{
             position: 'absolute',
             top: '100%',
@@ -100,15 +154,18 @@ export default function Landing() {
             minWidth: '200px',
             boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
             display: 'none',
+            opacity: '0',
+            visibility: 'hidden',
+            transition: 'all 0.2s ease',
             zIndex: 1000
           }} className="community-dropdown">
-            <a href="/forums/categories/24" style={{
+            <a href="/coogpaws-chat" style={{
               display: 'block',
               padding: '8px 12px',
               textDecoration: 'none',
               color: '#000',
               borderBottom: '1px solid #eee'
-            }}>💖 Heartbeats (Dating)</a>
+            }}>🐾 Coog Paws Chat</a>
             <a href="/forums/categories/23" style={{
               display: 'block',
               padding: '8px 12px',
@@ -116,13 +173,16 @@ export default function Landing() {
               color: '#000',
               borderBottom: '1px solid #eee'
             }}>☕ Water Cooler Talk</a>
-            <div style={{
+            <a href="/life-happens" style={{
+              display: 'block',
               padding: '8px 12px',
               fontSize: '0.9em',
               fontWeight: 'bold',
               color: '#666',
-              borderBottom: '1px solid #eee'
-            }}>RESOURCES</div>
+              borderBottom: '1px solid #eee',
+              textDecoration: 'none',
+              cursor: 'pointer'
+            }}>RESOURCES</a>
             <a href="/life-happens" style={{
               display: 'block',
               padding: '8px 12px',
@@ -138,59 +198,274 @@ export default function Landing() {
             }}>🛠️ Life Solutions</a>
           </div>
         </div>
-        <a href="/api/login" style={{
+        <div style={{ position: 'relative', display: 'inline-block' }}
+             onMouseEnter={(e) => {
+               const dropdown = e.currentTarget.querySelector('.login-dropdown') as HTMLElement;
+               if (dropdown) {
+                 dropdown.style.display = 'block';
+                 dropdown.style.opacity = '1';
+                 dropdown.style.visibility = 'visible';
+               }
+             }}
+             onMouseLeave={(e) => {
+               const dropdown = e.currentTarget.querySelector('.login-dropdown') as HTMLElement;
+               if (dropdown) {
+                 dropdown.style.display = 'none';
+                 dropdown.style.opacity = '0';
+                 dropdown.style.visibility = 'hidden';
+               }
+             }}>
+          <button style={{
+            margin: '0 15px',
+            background: 'none',
+            border: 'none',
+            fontWeight: 'bold',
+            color: '#fff',
+            textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+            cursor: 'pointer',
+            fontSize: '1.1em'
+          }}>
+            Login ▼
+          </button>
+          <div style={{
+            position: 'absolute',
+            top: '100%',
+            right: '0',
+            backgroundColor: 'white',
+            border: '1px solid #ccc',
+            borderRadius: '5px',
+            padding: '10px',
+            minWidth: '200px',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+            display: 'none',
+            opacity: '0',
+            visibility: 'hidden',
+            transition: 'all 0.2s ease',
+            zIndex: 1000
+          }} className="login-dropdown">
+            <a href="/login/other?redirect=/dashboard" style={{
+              display: 'block',
+              padding: '8px 12px',
+              textDecoration: 'none',
+              color: '#DC2626',
+              fontWeight: 'bold',
+              borderBottom: '1px solid #eee'
+            }}>🔑 Login to Site</a>
+            <a href="/login/email?redirect=/dashboard" style={{
+              display: 'block',
+              padding: '8px 12px',
+              textDecoration: 'none',
+              color: '#DC2626',
+              fontWeight: 'bold',
+              borderBottom: '1px solid #eee'
+            }}>Login with Email</a>
+            <a href="/auth/google?redirect=/dashboard" style={{
+              display: 'block',
+              padding: '8px 12px',
+              textDecoration: 'none',
+              color: '#EF4444',
+              borderBottom: '1px solid #eee'
+            }}>Login with Google</a>
+            <a href="/auth/apple?redirect=/dashboard" style={{
+              display: 'block',
+              padding: '8px 12px',
+              textDecoration: 'none',
+              color: '#1F2937',
+              borderBottom: '1px solid #eee'
+            }}>Login with Apple</a>
+            <a href="/auth/linkedin?redirect=/dashboard" style={{
+              display: 'block',
+              padding: '8px 12px',
+              textDecoration: 'none',
+              color: '#2563EB',
+              borderBottom: '1px solid #eee'
+            }}>Login with LinkedIn</a>
+            <a href="/auth/facebook?redirect=/dashboard" style={{
+              display: 'block',
+              padding: '8px 12px',
+              textDecoration: 'none',
+              color: '#3B82F6',
+              borderBottom: '1px solid #eee'
+            }}>Login with Facebook</a>
+            <a href="/auth/x?redirect=/dashboard" style={{
+              display: 'block',
+              padding: '8px 12px',
+              textDecoration: 'none',
+              color: '#0EA5E9'
+            }}>Login with X (Twitter)</a>
+          </div>
+        </div>
+        <div style={{ position: 'relative', display: 'inline-block' }}
+             onMouseEnter={(e) => {
+               const dropdown = e.currentTarget.querySelector('.join-dropdown') as HTMLElement;
+               if (dropdown) {
+                 dropdown.style.display = 'block';
+                 dropdown.style.opacity = '1';
+                 dropdown.style.visibility = 'visible';
+               }
+             }}
+             onMouseLeave={(e) => {
+               const dropdown = e.currentTarget.querySelector('.join-dropdown') as HTMLElement;
+               if (dropdown) {
+                 dropdown.style.display = 'none';
+                 dropdown.style.opacity = '0';
+                 dropdown.style.visibility = 'hidden';
+               }
+             }}>
+          <button style={{
+            margin: '0 15px',
+            background: 'none',
+            border: 'none',
+            fontWeight: 'bold',
+            color: '#fff',
+            textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+            cursor: 'pointer',
+            fontSize: '1.1em'
+          }}>
+            Join ▼
+          </button>
+          <div style={{
+            position: 'absolute',
+            top: '100%',
+            right: '0',
+            backgroundColor: 'white',
+            border: '1px solid #ccc',
+            borderRadius: '5px',
+            padding: '10px',
+            minWidth: '200px',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+            display: 'none',
+            opacity: '0',
+            visibility: 'hidden',
+            transition: 'all 0.2s ease',
+            zIndex: 1000
+          }} className="join-dropdown">
+            <a href="/join" style={{
+              display: 'block',
+              padding: '8px 12px',
+              textDecoration: 'none',
+              color: '#DC2626',
+              fontWeight: 'bold',
+              borderBottom: '1px solid #eee'
+            }}>Sign Up</a>
+            <a href="/auth/google" style={{
+              display: 'block',
+              padding: '8px 12px',
+              textDecoration: 'none',
+              color: '#EF4444',
+              borderBottom: '1px solid #eee'
+            }}>Continue with Google</a>
+            <a href="/auth/apple" style={{
+              display: 'block',
+              padding: '8px 12px',
+              textDecoration: 'none',
+              color: '#1F2937',
+              borderBottom: '1px solid #eee'
+            }}>Continue with Apple</a>
+            <a href="/auth/linkedin" style={{
+              display: 'block',
+              padding: '8px 12px',
+              textDecoration: 'none',
+              color: '#2563EB',
+              borderBottom: '1px solid #eee'
+            }}>Continue with LinkedIn</a>
+            <a href="/auth/facebook" style={{
+              display: 'block',
+              padding: '8px 12px',
+              textDecoration: 'none',
+              color: '#3B82F6',
+              borderBottom: '1px solid #eee'
+            }}>Continue with Facebook</a>
+            <a href="/auth/x" style={{
+              display: 'block',
+              padding: '8px 12px',
+              textDecoration: 'none',
+              color: '#0EA5E9',
+              borderBottom: '1px solid #eee'
+            }}>Continue with X (Twitter)</a>
+            <a href="/signup/other" style={{
+              display: 'block',
+              padding: '8px 12px',
+              textDecoration: 'none',
+              color: '#4B5563'
+            }}>Continue with Other</a>
+          </div>
+        </div>
+        <a href="/forums" style={{
           margin: '0 15px',
           textDecoration: 'none',
           fontWeight: 'bold',
-          color: '#000'
-        }}>Log In</a>
-        <a href="/api/login" style={{
+          color: '#fff',
+          textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
+        }}>
+          Continue as Guest
+        </a>
+        <button
+          onClick={() => {
+            // Clear localStorage demo auth
+            localStorage.removeItem('currentUser');
+            // Redirect to home page
+            window.location.href = '/';
+          }}
+          style={{
+            margin: '0 15px',
+            background: 'none',
+            border: 'none',
+            textDecoration: 'none',
+            fontWeight: 'bold',
+            color: '#fff',
+            textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+            cursor: 'pointer',
+            fontSize: '1.1em'
+          }}
+        >
+          Logout
+        </button>
+        <a href="/terms" style={{
           margin: '0 15px',
           textDecoration: 'none',
           fontWeight: 'bold',
-          color: '#000'
-        }}>Sign Up</a>
+          color: '#fff',
+          textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
+        }}>Terms</a>
       </div>
 
       {/* Hero Section */}
       <div>
-        <div style={{
-          margin: '30px 0',
-          display: 'flex',
-          justifyContent: 'center'
-        }}>
-          <img 
-            src={bannerImage} 
-            alt="Whose House? Coogs House! Banner" 
-            style={{
-              maxWidth: '1200px',
-              width: '98%',
-              maxHeight: '730px',
-              height: 'auto'
-            }}
-          />
+        <div style={{ paddingTop: '100px', paddingBottom: '50px' }}>
+          <h1 className="hero-text" style={{
+            fontSize: '3em',
+            fontWeight: 'bold',
+            textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
+            margin: '20px 0 10px 0',
+            letterSpacing: '2px'
+          }}>
+            WHOSE HOUSE? COOGS HOUSE!
+          </h1>
         </div>
-        <p style={{
+        <h2 className="hero-text" style={{
           fontSize: '1.1em',
           margin: '20px auto',
           maxWidth: '600px'
-        }}>Welcome to CoogsNation.com — the online community for University of Houston fans.</p>
+        }}>
+          CoogsNation Community — Connect, Share, and Grow with Fellow Fans of the Houston Cougars
+        </h2>
       </div>
+
 
       {/* Community Features Section */}
       <div style={{
         margin: '50px 0',
         padding: '30px 20px',
-        backgroundColor: '#f8f8f8',
         overflow: 'visible',
         position: 'relative',
-        zIndex: 1
+        zIndex: 2
       }}>
-        <h3 style={{
+        <h3 className="hero-text" style={{
           fontSize: '1.8em',
-          color: '#a00000',
           marginBottom: '30px'
-        }}>Join the CoogsNation Community</h3>
+        }}>Coogsnation Community
+Connect, Share Grow with Fellow Fans of the Houston Cougars</h3>
         
         <div style={{
           display: 'flex',
@@ -238,7 +513,8 @@ export default function Landing() {
               fontSize: '2em',
               marginBottom: '10px'
             }}>💬</div>
-            <h4 style={{ color: '#a00000', margin: '0 0 10px 0' }}>Forums</h4>
+            <h4 style={{ color: '#a00000', margin: '0 0 10px 0' }}>CoogsNation Community
+Connect, Share, and Grow with Fellow Houston Cougars</h4>
             <p style={{ margin: 0, fontSize: '0.9em' }}>Discuss Coogs sports, share news, and connect with fellow fans</p>
             
             <div 
@@ -807,7 +1083,7 @@ export default function Landing() {
               fontSize: '2em',
               marginBottom: '10px'
             }}>🏆</div>
-            <h4 style={{ color: '#a00000', margin: '0 0 10px 0' }}>Sports News</h4>
+            <h4 style={{ color: '#a00000', margin: '0 0 10px 0' }}>CoogsNation Community<br/>Connect, Share, and Grow with Fellow Houston Cougars</h4>
             <p style={{ margin: 0, fontSize: '0.9em' }}>Stay updated on Cougar athletics and Big 12 action</p>
             
             <div 
@@ -960,8 +1236,8 @@ export default function Landing() {
               fontSize: '2em',
               marginBottom: '10px'
             }}>👥</div>
-            <h4 style={{ color: '#a00000', margin: '0 0 10px 0' }}>Community</h4>
-            <p style={{ margin: 0, fontSize: '0.9em' }}>Heartbeats dating, Water Cooler Talk, and community resources</p>
+            <h4 style={{ color: '#a00000', margin: '0 0 10px 0' }}>CoogsNation Community<br/>Connect, Share, and Grow with Fellow Houston Cougars</h4>
+            <p style={{ margin: 0, fontSize: '0.9em' }}>Coog Paws Chat, Water Cooler Talk, and community resources</p>
             
             <div 
               className="community-dropdown"
@@ -983,7 +1259,7 @@ export default function Landing() {
               }}
             >
               <div 
-                onClick={() => window.location.href = '/forums/categories/24'} 
+                onClick={() => window.location.href = '/coogpaws-chat'} 
                 style={{
                   display: 'block',
                   padding: '12px 16px',
@@ -1002,7 +1278,7 @@ export default function Landing() {
                 }}
               >
                 <i className="fas fa-heart" style={{ marginRight: '8px' }}></i>
-                Heartbeats
+                Coog Paws Chat
                 <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>Dating & Relationships</div>
               </div>
               <div 
@@ -1085,7 +1361,7 @@ export default function Landing() {
         </div>
       </div>
       
-
+      </div> {/* Close content wrapper */}
     </div>
   );
 }

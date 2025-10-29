@@ -1,0 +1,172 @@
+// server.js
+import express from "express";
+import fetch from "node-fetch";
+import dotenv from "dotenv";
+
+dotenv.config();
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+/**
+ * ==========================
+ * WEAR YOUR PRIDE (Printful)
+ * ==========================
+ * Apparel: Polos, Jackets, Embroidered Hats
+ */
+app.get("/store/wear-your-pride", async (req, res) => {
+  try {
+    const resp = await fetch("https://api.printful.com/products", {
+      headers: { Authorization: `Bearer ${process.env.PRINTFUL_API_KEY}` },
+    });
+    const data = await resp.json();
+
+    const wearYourPride = data.result.filter(
+      (item) => item.main_category === "Apparel"
+    );
+
+    res.json({
+      category: "Wear Your Pride",
+      products: wearYourPride.map((p) => ({
+        id: p.id,
+        name: p.name,
+        type: p.type,
+        image: p.thumbnail_url,
+        url: `/store/wear-your-pride/${p.id}`,
+      })),
+    });
+  } catch (err) {
+    console.error("Error fetching Printful products:", err);
+    res.status(500).json({ error: "Failed to fetch Wear Your Pride items" });
+  }
+});
+
+/**
+ * ==========================
+ * EVERYDAY ALUMNI (Teelaunch)
+ * ==========================
+ * Engraved mugs, tumblers, plaques
+ */
+app.get("/store/everyday-alumni", async (req, res) => {
+  try {
+    const resp = await fetch("https://api.teelaunch.com/v1/products", {
+      headers: { Authorization: `Bearer ${process.env.TEELAUNCH_API_KEY}` },
+    });
+    const data = await resp.json();
+
+    const everyday = data.products.filter((item) =>
+      ["Mug", "Tumbler", "Plaque"].includes(item.category)
+    );
+
+    res.json({
+      category: "Everyday Alumni",
+      products: everyday.map((p) => ({
+        id: p.id,
+        name: p.name,
+        category: p.category,
+        image: p.image,
+        url: `/store/everyday-alumni/${p.id}`,
+      })),
+    });
+  } catch (err) {
+    console.error("Error fetching Teelaunch products:", err);
+    res.status(500).json({ error: "Failed to fetch Everyday Alumni items" });
+  }
+});
+
+/**
+ * ==========================
+ * KEEPSAKES & GIFTS (Trendsi)
+ * ==========================
+ * Premium jewelry and accessories
+ */
+app.get("/store/keepsakes-gifts", async (req, res) => {
+  try {
+    const resp = await fetch("https://api.trendsi.com/v1/products", {
+      headers: { Authorization: `Bearer ${process.env.TRENDSI_API_KEY}` },
+    });
+    const data = await resp.json();
+
+    const keepsakes = data.products.filter((item) =>
+      ["Jewelry", "Bracelet", "Necklace", "Earrings"].includes(item.category)
+    );
+
+    res.json({
+      category: "Keepsakes & Gifts",
+      products: keepsakes.map((p) => ({
+        id: p.id,
+        name: p.name,
+        category: p.category,
+        image: p.image,
+        url: `/store/keepsakes-gifts/${p.id}`,
+      })),
+    });
+  } catch (err) {
+    console.error("Error fetching Trendsi products:", err);
+    res.status(500).json({ error: "Failed to fetch Keepsakes & Gifts items" });
+  }
+});
+
+/**
+ * ==========================
+ * LIMITED EDITIONS (Placeholders)
+ * ==========================
+ * Subcategories ready for future integrations
+ */
+
+// Native Jewelry
+app.get("/store/limited-editions/native-jewelry", (req, res) => {
+  res.json({
+    category: "Limited Editions - Native Jewelry",
+    products: [],
+    note: "Future supplier API integration pending",
+  });
+});
+
+// Neo-Western Boots
+app.get("/store/limited-editions/neo-western-boots", (req, res) => {
+  res.json({
+    category: "Limited Editions - Neo-Western Boots",
+    products: [],
+    note: "Future supplier API integration pending",
+  });
+});
+
+// Navajo Blanket Series
+app.get("/store/limited-editions/navajo-blanket-series", (req, res) => {
+  res.json({
+    category: "Limited Editions - Navajo Blanket Series",
+    products: [],
+    note: "Future supplier API integration pending",
+  });
+});
+
+// Legacy Rings & Pendants
+app.get("/store/limited-editions/legacy-rings", (req, res) => {
+  res.json({
+    category: "Limited Editions - Legacy Rings & Pendants",
+    products: [],
+    note: "Future supplier API integration pending",
+  });
+});
+
+// Alumni Artifacts
+app.get("/store/limited-editions/alumni-artifacts", (req, res) => {
+  res.json({
+    category: "Limited Editions - Alumni Artifacts",
+    products: [],
+    note: "Future supplier API integration pending",
+  });
+});
+
+/**
+ * ==========================
+ * ROOT + SERVER START
+ * ==========================
+ */
+app.get("/", (req, res) => {
+  res.send("🎓 Alumni Store API is running...");
+});
+
+app.listen(PORT, () => {
+  console.log(`✅ Server running at http://localhost:${PORT}`);
+});

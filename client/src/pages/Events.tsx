@@ -147,21 +147,35 @@ export default function Events() {
           <h2 className="text-2xl font-bold text-uh-black mb-6">Event Categories</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {[
-              { name: 'Football', icon: 'fas fa-football-ball', color: 'bg-uh-red' },
-              { name: 'Basketball', icon: 'fas fa-basketball-ball', color: 'bg-orange-500' },
-              { name: 'Baseball', icon: 'fas fa-baseball-ball', color: 'bg-green-500' },
-              { name: 'Alumni', icon: 'fas fa-graduation-cap', color: 'bg-purple-500' },
-              { name: 'Campus', icon: 'fas fa-university', color: 'bg-blue-500' },
+              { name: 'Football', icon: 'fas fa-football-ball', color: 'bg-uh-red', link: 'https://uhcougars.com/sports/football/schedule' },
+              { name: 'Basketball', icon: 'fas fa-basketball-ball', color: 'bg-orange-500', link: 'https://uhcougars.com/sports/mens-basketball/schedule' },
+              { name: 'Baseball', icon: 'fas fa-baseball-ball', color: 'bg-green-500', link: 'https://uhcougars.com/sports/baseball/schedule' },
+              { name: 'Alumni', icon: 'fas fa-graduation-cap', color: 'bg-purple-500', link: 'https://www.linkedin.com/school/university-of-houston/' },
+              { name: 'About UH', icon: 'fas fa-history', color: 'bg-blue-500', link: 'https://en.wikipedia.org/wiki/University_of_Houston' },
+              { name: 'City of Houston', icon: 'fas fa-city', color: 'bg-teal-500', link: 'https://www.houstontx.gov/' },
               { name: 'Other', icon: 'fas fa-calendar', color: 'bg-gray-500' },
             ].map((category) => (
-              <Card key={category.name} className="p-4 cursor-pointer hover:shadow-lg transition-shadow">
-                <div className="text-center">
-                  <div className={`w-12 h-12 ${category.color} rounded-full flex items-center justify-center mx-auto mb-3`}>
-                    <i className={`${category.icon} text-white`}></i>
+              category.link ? (
+                <a key={category.name} href={category.link} target="_blank" rel="noopener noreferrer">
+                  <Card className="p-4 cursor-pointer hover:shadow-lg transition-shadow">
+                    <div className="text-center">
+                      <div className={`w-12 h-12 ${category.color} rounded-full flex items-center justify-center mx-auto mb-3`}>
+                        <i className={`${category.icon} text-white`}></i>
+                      </div>
+                      <h4 className="font-semibold text-uh-black">{category.name}</h4>
+                    </div>
+                  </Card>
+                </a>
+              ) : (
+                <Card key={category.name} className="p-4 cursor-pointer hover:shadow-lg transition-shadow">
+                  <div className="text-center">
+                    <div className={`w-12 h-12 ${category.color} rounded-full flex items-center justify-center mx-auto mb-3`}>
+                      <i className={`${category.icon} text-white`}></i>
+                    </div>
+                    <h4 className="font-semibold text-uh-black">{category.name}</h4>
                   </div>
-                  <h4 className="font-semibold text-uh-black">{category.name}</h4>
-                </div>
-              </Card>
+                </Card>
+              )
             ))}
           </div>
         </div>

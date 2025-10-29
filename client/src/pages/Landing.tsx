@@ -113,12 +113,26 @@ export default function Landing() {
           <h3 className="text-2xl font-semibold mb-4">Welcome to CoogsNation.com</h3>
           <p className="text-xl mb-8 opacity-90">The online community for University of Houston fans.</p>
           
-          <Button 
-            onClick={() => window.location.href = "/api/login"}
-            className="bg-white text-uh-red px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-100 transition-colors shadow-lg"
-          >
-            Get Started
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Button 
+              onClick={() => window.location.href = "/api/login"}
+              className="bg-white text-uh-red px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-100 transition-colors shadow-lg"
+              data-testid="button-get-started"
+            >
+              Get Started
+            </Button>
+            <Button 
+              onClick={() => {
+                localStorage.setItem("guestMode", "true");
+                window.location.href = "/forums";
+              }}
+              variant="outline"
+              className="bg-transparent border-2 border-white text-white px-8 py-4 rounded-lg font-bold text-lg hover:bg-white hover:text-uh-red transition-colors shadow-lg"
+              data-testid="button-browse-guest"
+            >
+              👤 Browse as Guest
+            </Button>
+          </div>
         </div>
       </section>
 

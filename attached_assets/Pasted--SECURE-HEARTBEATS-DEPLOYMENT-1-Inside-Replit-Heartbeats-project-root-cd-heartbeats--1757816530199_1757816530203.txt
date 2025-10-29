@@ -1,0 +1,83 @@
+# === SECURE HEARTBEATS DEPLOYMENT ===
+
+# 1. Inside Replit Heartbeats project root
+cd heartbeats
+
+# 2. Install required deps
+npm install express mongoose dotenv helmet
+
+# 3. Build frontend for production
+cd tinder-clone
+npm run build
+cd ..
+
+# 4. Secure backend server with Helmet + HTTPS redirect
+cat > tinder-backend/server.js << 'EOF'
+const express = require("express");
+const mongoose = require("mongoose");
+const path = require("path");
+const helmet = require("helmet");
+require("dotenv").config();
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+// Security middleware
+app.use(helmet());
+app.enable("trust proxy");
+app.use((req, res, next) => {
+  if (req.secure || req.headers["x-forwarded-proto"] === "https") {
+    next();
+  } else {
+    res.redirect("https://" + req.headers.host + req.url);
+  }
+});
+
+// MongoDB connection
+mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log("✅ MongoDB connected"))
+  .catch(err => console.error("❌ MongoDB error:", err));
+
+// API health check
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", secure: true });
+});
+
+// Serve React frontend
+app.use(express.static(path.join(__dirname, "../tinder-clone/build")));
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "../tinder-clone/build", "index.html"));
+});
+
+// Start server
+app.listen(PORT, () => console.log(`🚀 Secure Heartbeats running on port ${PORT}`));
+EOF
+
+# 5. Root package.json for production
+cat > package.json << 'EOF'
+{
+  "name": "heartbeats",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "cd tinder-backend && node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "mongoose": "^7.0.0",
+    "dotenv": "^16.0.3",
+    "helmet": "^7.0.0"
+  }
+}
+EOF
+
+# 6. Restart secure server
+npm start
+
+# 7. DNS setup in Namecheap (or your registrar):
+#   Create CNAME record:
+#     Host: heartbeats
+#     Value: your-replit-project-url (e.g., heartbeats.username.repl.co)
+#   Save and wait for DNS to propagate.
+#   Replit automatically provisions HTTPS certificates for custom domains.
+
+# ✅ Heartbeats is now live at https://heartbeats.coogsnation.com (SSL secured)

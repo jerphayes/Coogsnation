@@ -1,0 +1,287 @@
+// ===============================
+// server.js (Backend)
+// ===============================
+import express from "express";
+import fetch from "node-fetch";
+import dotenv from "dotenv";
+import path from "path";
+
+dotenv.config();
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Serve frontend build
+app.use(express.static("client/dist"));
+
+/**
+ * WEAR YOUR PRIDE (Printful)
+ */
+app.get("/store/wear-your-pride", async (req, res) => {
+  try {
+    const resp = await fetch("https://api.printful.com/products", {
+      headers: { Authorization: `Bearer ${process.env.PRINTFUL_API_KEY}` },
+    });
+    const data = await resp.json();
+    const wearYourPride = data.result.filter(
+      (item) => item.main_category === "Apparel"
+    );
+    res.json({
+      category: "Wear Your Pride",
+      products: wearYourPride.map((p) => ({
+        id: p.id,
+        name: p.name,
+        type: p.type,
+        image: p.thumbnail_url,
+        url: `/store/wear-your-pride/${p.id}`,
+      })),
+    });
+  } catch (err) {
+    console.error("Printful error:", err);
+    res.status(500).json({ error: "Failed to fetch Wear Your Pride" });
+  }
+});
+
+/**
+ * EVERYDAY ALUMNI (Teelaunch)
+ */
+app.get("/store/everyday-alumni", async (req, res) => {
+  try {
+    const resp = await fetch("https://api.teelaunch.com/v1/products", {
+      headers: { Authorization: `Bearer ${process.env.TEELAUNCH_API_KEY}` },
+    });
+    const data = await resp.json();
+    const everyday = data.products.filter((item) =>
+      ["Mug", "Tumbler", "Plaque"].includes(item.category)
+    );
+    res.json({
+      category: "Everyday Alumni",
+      products: everyday.map((p) => ({
+        id: p.id,
+        name: p.name,
+        category: p.category,
+        image: p.image,
+        url: `/store/everyday-alumni/${p.id}`,
+      })),
+    });
+  } catch (err) {
+    console.error("Teelaunch error:", err);
+    res.status(500).json({ error: "Failed to fetch Everyday Alumni" });
+  }
+});
+
+/**
+ * KEEPSAKES & GIFTS (Trendsi)
+ */
+app.get("/store/keepsakes-gifts", async (req, res) => {
+  try {
+    const resp = await fetch("https://api.trendsi.com/v1/products", {
+      headers: { Authorization: `Bearer ${process.env.TRENDSI_API_KEY}` },
+    });
+    const data = await resp.json();
+    const keepsakes = data.products.filter((item) =>
+      ["Jewelry", "Bracelet", "Necklace", "Earrings"].includes(item.category)
+    );
+    res.json({
+      category: "Keepsakes & Gifts",
+      products: keepsakes.map((p) => ({
+        id: p.id,
+        name: p.name,
+        category: p.category,
+        image: p.image,
+        url: `/store/keepsakes-gifts/${p.id}`,
+      })),
+    });
+  } catch (err) {
+    console.error("Trendsi error:", err);
+    res.status(500).json({ error: "Failed to fetch Keepsakes & Gifts" });
+  }
+});
+
+/**
+ * LIMITED EDITIONS placeholders
+ */
+const limitedRoutes = [
+  { slug: "native-jewelry", label: "Native Jewelry" },
+  { slug: "neo-western-boots", label: "Neo-Western Boots" },
+  { slug: "navajo-blanket-series", label: "Navajo Blanket Series" },
+  { slug: "legacy-rings", label: "Legacy Rings & Pendants" },
+  { slug: "alumni-artifacts", label: "Alumni Artifacts" },
+];
+
+limitedRoutes.forEach((r) => {
+  app.get(`/store/limited-editions/${r.slug}`, (req, res) => {
+    res.json({
+      category: `Limited Editions - ${r.label}`,
+      products: [
+        {
+          id: `${r.slug}-coming-soon`,
+          name: `${r.label} (Coming Soon)`,
+          category: "Limited Edition",
+          image: "https://via.placeholder.com/300x200?text=Coming+Soon",
+          url: "#",
+        },
+      ],
+    });
+  });
+});
+
+// Catch-all for frontend
+app.get("*", (req, res) => {
+  res.sendFile(path.resolve("client/dist/index.html"));
+});
+
+app.listen(PORT, () => {
+  console.log(`✅ Server running at http://localhost:${PORT}`);
+});
+
+// ===============================
+// client/src/components/StoreGrid.jsx (Frontend Component)
+// ===============================
+import React, { useState, useEffect } from "react";
+
+const categories = [
+  { key: "wear-your-pride", label: "Wear Your Pride" },
+  { key: "everyday-alumni", label: "Everyday Alumni" },
+  { key: "keepsakes-gifts", label: "Keepsakes & Gifts" },
+  { key: "limited-editions/native-jewelry", label: "Native Jewelry" },
+  { key: "limited-editions/neo-western-boots", label: "Neo-Western Boots" },
+  { key: "limited-editions/navajo-blanket-series", label: "Navajo Blanket Series" },
+  { key: "limited-editions/legacy-rings", label: "Legacy Rings & Pendants" },
+  { key: "limited-editions/alumni-artifacts", label: "Alumni Artifacts" },
+];
+
+const SHOPIFY_STORE = "yourstore.myshopify.com"; // replace with your Shopify store
+
+export default function StoreGrid() {
+  const [activeCategory, setActiveCategory] = useState("wear-your-pride");
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchProducts() {
+      setLoading(true);
+      try {
+        const resp = await fetch(`/store/${activeCategory}`);
+        const data = await resp.json();
+        setProducts(data.products || []);
+      } catch (err) {
+        console.error("Error loading products:", err);
+        setProducts([]);
+      }
+      setLoading(false);
+    }
+    fetchProducts();
+  }, [activeCategory]);
+
+  const addToCart = (productId) => {
+    window.location.href = `https://${SHOPIFY_STORE}/cart/${productId}:1`;
+  };
+
+  return (
+    <div style={{ padding: "20px" }}>
+      <h2>🎓 Alumni Store</h2>
+      <div style={{ marginBottom: "20px" }}>
+        {categories.map((cat) => (
+          <button
+            key={cat.key}
+            onClick={() => setActiveCategory(cat.key)}
+            style={{
+              marginRight: "10px",
+              padding: "8px 14px",
+              borderRadius: "6px",
+              border: activeCategory === cat.key ? "2px solid #C8102E" : "1px solid #ccc",
+              background: activeCategory === cat.key ? "#C8102E" : "#fff",
+              color: activeCategory === cat.key ? "#fff" : "#000",
+              cursor: "pointer",
+            }}
+          >
+            {cat.label}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <p>Loading products...</p>
+      ) : products.length === 0 ? (
+        <p>No products found in this category.</p>
+      ) : (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+            gap: "20px",
+          }}
+        >
+          {products.map((p) => (
+            <div
+              key={p.id}
+              style={{
+                border: "1px solid #ddd",
+                borderRadius: "8px",
+                padding: "12px",
+                textAlign: "center",
+                background: "#fff",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+              }}
+            >
+              <img
+                src={p.image}
+                alt={p.name}
+                style={{ width: "100%", height: "180px", objectFit: "cover", borderRadius: "6px" }}
+              />
+              <h3 style={{ fontSize: "16px", marginTop: "10px" }}>{p.name}</h3>
+              <p style={{ fontSize: "14px", color: "#555" }}>{p.category || "Product"}</p>
+
+              <div style={{ marginTop: "12px" }}>
+                <a
+                  href={p.url}
+                  style={{
+                    display: "inline-block",
+                    marginRight: "10px",
+                    padding: "8px 14px",
+                    background: "#444",
+                    color: "#fff",
+                    borderRadius: "6px",
+                    textDecoration: "none",
+                  }}
+                >
+                  View Product
+                </a>
+                <button
+                  onClick={() => addToCart(p.id)}
+                  style={{
+                    padding: "8px 14px",
+                    background: "#C8102E",
+                    color: "#fff",
+                    borderRadius: "6px",
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  Add to Cart
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ===============================
+// client/src/App.jsx (Entry)
+// ===============================
+import React from "react";
+import StoreGrid from "./components/StoreGrid";
+
+function App() {
+  return (
+    <div>
+      <h1 style={{ textAlign: "center", color: "#C8102E" }}>University Alumni Shop</h1>
+      <StoreGrid />
+    </div>
+  );
+}
+
+export default App;

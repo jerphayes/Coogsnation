@@ -1,0 +1,77 @@
+// src/App.tsx
+import React, { useState, useEffect } from "react";
+import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import io from "socket.io-client";
+
+// Connect to your backend (Replit / VPS URL)
+const socket = io(import.meta.env.VITE_API_URL || "http://localhost:5000");
+
+// ----------------- Coogpaws Page -----------------
+function CoogpawsPage() {
+  const [messages, setMessages] = useState<string[]>([]);
+  const [inputValue, setInputValue] = useState("");
+
+  useEffect(() => {
+    socket.on("chat message", (msg: string) => {
+      setMessages((prev) => [...prev, msg]);
+    });
+    return () => {
+      socket.off("chat message");
+    };
+  }, []);
+
+  const sendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputValue.trim()) return;
+    socket.emit("chat message", inputValue.trim());
+    setInputValue("");
+  };
+
+  return (
+    <div className="p-6 max-w-xl mx-auto">
+      <h1 className="text-2xl font-bold mb-4">🐾 Coogpaws Chat</h1>
+      <div className="border rounded p-4 h-64 overflow-y-auto bg-gray-50 mb-4">
+        {messages.map((msg, i) => (
+          <div key={i} className="p-1 border-b text-gray-800">
+            {msg}
+          </div>
+        ))}
+      </div>
+      <form onSubmit={sendMessage} className="flex gap-2">
+        <input
+          type="text"
+          className="flex-1 border rounded px-2 py-1"
+          placeholder="Type a message..."
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+        />
+        <button
+          type="submit"
+          className="bg-red-600 text-white px-4 py-1 rounded"
+        >
+          Send
+        </button>
+      </form>
+    </div>
+  );
+}
+
+// ----------------- App with Router -----------------
+function App() {
+  return (
+    <BrowserRouter>
+      <nav className="p-4 bg-gray-200 flex gap-4">
+        <Link to="/">Home</Link>
+        <Link to="/coogpaws">Coogpaws</Link>
+        {/* add other links here */}
+      </nav>
+
+      <Routes>
+        <Route path="/" element={<div className="p-6">🏠 Home Page</div>} />
+        <Route path="/coogpaws" element={<CoogpawsPage />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+export default App;

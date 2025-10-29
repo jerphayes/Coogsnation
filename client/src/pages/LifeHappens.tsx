@@ -84,13 +84,13 @@ export default function LifeHappens() {
                   </a>
                   
                   <a 
-                    href="https://houstonwaterbills.houstontx.gov" 
+                    href="https://www.houstonwaterbills.houstontx.gov/ProdDP/Default/Default" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
                   >
                     <Droplets className="h-4 w-4 text-blue-600" />
-                    <span>City of Houston – Water & Trash</span>
+                    <span>City of Houston Water Bill</span>
                   </a>
                   
                   <a 
@@ -129,7 +129,7 @@ export default function LifeHappens() {
                   href="https://www.paynearme.com/locations" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                  className="inline-flex items-center gap-2 bg-white text-black border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
                 >
                   <MapPin className="h-4 w-4" />
                   Find a PayNearMe location
@@ -144,7 +144,7 @@ export default function LifeHappens() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <DollarSign className="h-6 w-6 text-red-600" />
-              In a Pinch? Cougar Cash Lifeline
+              In a Pinch? Cash Lifelines
             </CardTitle>
           </CardHeader>
           <CardContent>

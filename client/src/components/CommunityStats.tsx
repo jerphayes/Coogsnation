@@ -32,24 +32,24 @@ export function CommunityStats() {
         {stats ? (
           <>
             <div className="flex justify-between items-center">
-              <span className="text-gray-600">Total Members</span>
+              <span className="text-gray-800 font-semibold">Total Members</span>
               <span className="font-bold text-uh-black">{stats.totalMembers.toLocaleString()}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-gray-600">Online Now</span>
+              <span className="text-gray-800 font-semibold">Online Now</span>
               <span className="font-bold text-green-600">{stats.onlineMembers.toLocaleString()}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-gray-600">Posts Today</span>
+              <span className="text-gray-800 font-semibold">Posts Today</span>
               <span className="font-bold text-uh-black">{stats.postsToday.toLocaleString()}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-gray-600">New Members</span>
+              <span className="text-gray-800 font-semibold">New Members</span>
               <span className="font-bold text-blue-600">{stats.newMembersToday.toLocaleString()}</span>
             </div>
           </>
         ) : (
-          <div className="text-center py-4 text-gray-500">
+          <div className="text-center py-4 text-gray-800">
             <p>Unable to load stats</p>
           </div>
         )}

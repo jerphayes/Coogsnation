@@ -28,38 +28,6 @@ export default function Landing() {
             <rect x="70" y="35" width="15" height="50" fill="#B91C1C"/>
           </svg>
         </div>
-        <nav style={{ display: 'flex', gap: '2rem' }}>
-          <a href="/home" style={{
-            textDecoration: 'none',
-            color: '#333333',
-            fontSize: '16px',
-            fontWeight: '500'
-          }}>Home</a>
-          <a href="/forums" style={{
-            textDecoration: 'none',
-            color: '#333333',
-            fontSize: '16px',
-            fontWeight: '500'
-          }}>Forums</a>
-          <a href="/members" style={{
-            textDecoration: 'none',
-            color: '#333333',
-            fontSize: '16px',
-            fontWeight: '500'
-          }}>Members</a>
-          <a href="/api/login" style={{
-            textDecoration: 'none',
-            color: '#333333',
-            fontSize: '16px',
-            fontWeight: '500'
-          }}>Log In</a>
-          <a href="/api/login" style={{
-            textDecoration: 'none',
-            color: '#333333',
-            fontSize: '16px',
-            fontWeight: '500'
-          }}>Sign Up</a>
-        </nav>
       </header>
 
       {/* Main Content */}

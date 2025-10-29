@@ -29,36 +29,12 @@ async function seedDatabase() {
       sortOrder: 2
     },
     {
-      name: "Baseball",
-      description: "Houston Cougar Baseball discussion and updates",
-      slug: "baseball",
-      icon: "fas fa-baseball-ball", 
-      color: "#16A34A",
-      sortOrder: 3
-    },
-    {
-      name: "Track & Field",
-      description: "Houston Cougar Track & Field athletics",
-      slug: "track-field",
-      icon: "fas fa-running",
-      color: "#7C3AED",
-      sortOrder: 4
-    },
-    {
-      name: "Golf",
-      description: "Houston Cougar Golf team discussions",
-      slug: "golf",
-      icon: "fas fa-golf-ball",
-      color: "#059669", 
-      sortOrder: 5
-    },
-    {
-      name: "Other Sports",
-      description: "All other Houston Cougar athletics",
+      name: "Other Sports Men",
+      description: "All other Houston Cougar men's athletics",
       slug: "other-sports",
       icon: "fas fa-trophy",
       color: "#0284C7",
-      sortOrder: 6
+      sortOrder: 3
     },
     {
       name: "Recruiting",
@@ -66,7 +42,7 @@ async function seedDatabase() {
       slug: "recruiting",
       icon: "fas fa-search",
       color: "#DC2626",
-      sortOrder: 7
+      sortOrder: 4
     },
     {
       name: "Water Cooler Talk",
@@ -74,15 +50,15 @@ async function seedDatabase() {
       slug: "water-cooler",
       icon: "fas fa-coffee",
       color: "#6B7280",
-      sortOrder: 8
+      sortOrder: 5
     },
     {
-      name: "Heartbeats",
+      name: "Coogpaws",
       description: "Dating, relationships, and meeting fellow Coogs",
-      slug: "heartbeats",
+      slug: "coogpaws",
       icon: "fas fa-heart",
       color: "#EC4899",
-      sortOrder: 9
+      sortOrder: 6
     },
     {
       name: "UH Hall of Fame",
@@ -90,13 +66,118 @@ async function seedDatabase() {
       slug: "hall-of-fame",
       icon: "fas fa-medal",
       color: "#DC2626",
+      sortOrder: 7
+    },
+    {
+      name: "Baseball",
+      description: "Houston Cougar Baseball discussion and updates",
+      slug: "baseball",
+      icon: "fas fa-baseball-ball",
+      color: "#16A34A",
+      sortOrder: 8
+    },
+    {
+      name: "Golf",
+      description: "Houston Cougar Golf team discussions",
+      slug: "golf",
+      icon: "fas fa-golf-ball",
+      color: "#059669",
+      sortOrder: 9
+    },
+    {
+      name: "Track & Field",
+      description: "Houston Cougar Track & Field athletics",
+      slug: "track-field",
+      icon: "fas fa-running",
+      color: "#7C3AED",
       sortOrder: 10
+    },
+    {
+      name: "Women's Sports",
+      description: "All Houston Cougar women's athletics",
+      slug: "womens-sports",
+      icon: "fas fa-venus",
+      color: "#EC4899",
+      sortOrder: 11
+    },
+    {
+      name: "Women's Basketball",
+      description: "Houston Cougar Women's Basketball team",
+      slug: "womens-basketball",
+      icon: "fas fa-basketball-ball",
+      color: "#F97316",
+      sortOrder: 12
+    },
+    {
+      name: "Women's Golf",
+      description: "Houston Cougar Women's Golf team",
+      slug: "womens-golf",
+      icon: "fas fa-golf-ball",
+      color: "#10B981",
+      sortOrder: 13
+    },
+    {
+      name: "Women's Soccer",
+      description: "Houston Cougar Women's Soccer team",
+      slug: "womens-soccer",
+      icon: "fas fa-futbol",
+      color: "#06B6D4",
+      sortOrder: 14
+    },
+    {
+      name: "Softball",
+      description: "Houston Cougar Softball team",
+      slug: "softball",
+      icon: "fas fa-baseball-ball",
+      color: "#F59E0B",
+      sortOrder: 15
+    },
+    {
+      name: "Women's Tennis",
+      description: "Houston Cougar Women's Tennis team",
+      slug: "womens-tennis",
+      icon: "fas fa-table-tennis",
+      color: "#84CC16",
+      sortOrder: 16
+    },
+    {
+      name: "Women's Track & Field",
+      description: "Houston Cougar Women's Track & Field athletics",
+      slug: "womens-track-field",
+      icon: "fas fa-running",
+      color: "#8B5CF6",
+      sortOrder: 17
+    },
+    {
+      name: "Women's Swimming & Diving",
+      description: "Houston Cougar Women's Swimming & Diving teams",
+      slug: "womens-swimming-diving",
+      icon: "fas fa-swimmer",
+      color: "#14B8A6",
+      sortOrder: 18
+    },
+    {
+      name: "Campus Events",
+      description: "Discuss and share campus events, meetups, and social gatherings",
+      slug: "campus-events",
+      icon: "fas fa-calendar-alt",
+      color: "#0891B2",
+      sortOrder: 19
     }
   ];
 
   console.log("📁 Seeding forum categories...");
   for (const category of categories) {
-    await db.insert(forumCategories).values(category).onConflictDoNothing();
+    await db.insert(forumCategories).values(category).onConflictDoUpdate({
+      target: forumCategories.slug,
+      set: {
+        description: category.description,
+        icon: category.icon,
+        color: category.color,
+        sortOrder: category.sortOrder,
+        isActive: true
+      }
+    });
   }
 
   // Seed Hall of Fame entries

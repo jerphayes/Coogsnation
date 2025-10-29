@@ -185,13 +185,6 @@ export default function Landing() {
       <rect x="50" y="55" width="15" height="30" fill="#B91C1C"/>
       <rect x="70" y="35" width="15" height="50" fill="#B91C1C"/>
     </svg>
-    <nav>
-      <a href="/home">Home</a>
-      <a href="/forums">Forums</a>
-      <a href="/members">Members</a>
-      <a href="/api/login">Log In</a>
-      <a href="/api/login">Sign Up</a>
-    </nav>
   </header>
 
   <div class="hero">

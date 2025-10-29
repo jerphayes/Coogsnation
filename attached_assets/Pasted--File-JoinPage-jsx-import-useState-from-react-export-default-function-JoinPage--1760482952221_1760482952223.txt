@@ -1,0 +1,218 @@
+// File: JoinPage.jsx
+import { useState } from "react";
+
+export default function JoinPage() {
+  const [form, setForm] = useState({
+    username: "",
+    email: "",
+    password: "",
+    avatar: "",
+  });
+  const [message, setMessage] = useState("");
+  const [preview, setPreview] = useState(null);
+
+  const handleChange = (e) =>
+    setForm({ ...form, [e.target.name]: e.target.value });
+
+  const handleAvatar = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreview(reader.result);
+      setForm({ ...form, avatar: reader.result });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Default avatar: first letter
+  const generateDefaultAvatar = (username) => {
+    const letter = username?.charAt(0)?.toUpperCase() || "U";
+    const canvas = document.createElement("canvas");
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#d32f2f";
+    ctx.fillRect(0, 0, 256, 256);
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 120px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(letter, 128, 150);
+    return canvas.toDataURL("image/png");
+  };
+
+  const validatePassword = (pw) =>
+    /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,}$/.test(pw);
+
+  // CREATE ACCOUNT
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    if (!validatePassword(form.password)) {
+      setMessage(
+        "Password must be at least 8 characters long, include one uppercase letter and one number."
+      );
+      return;
+    }
+
+    const users = JSON.parse(localStorage.getItem("coogsnationUsers") || "[]");
+    const exists =
+      users.find((u) => u.email === form.email) ||
+      users.find((u) => u.username === form.username);
+    if (exists) {
+      setMessage("That username or email is already taken.");
+      return;
+    }
+
+    const finalAvatar = form.avatar || generateDefaultAvatar(form.username);
+    const newUser = { ...form, avatar: finalAvatar };
+    users.push(newUser);
+    localStorage.setItem("coogsnationUsers", JSON.stringify(users));
+    localStorage.setItem("currentUser", JSON.stringify(newUser));
+
+    setMessage(`Welcome, ${form.username}! Redirecting to dashboard...`);
+    setTimeout(() => (window.location.href = "/dashboard"), 1500);
+  };
+
+  const handleReset = () => {
+    if (!window.confirm("Clear all fields and start over?")) return;
+    setForm({ username: "", email: "", password: "", avatar: "" });
+    setPreview(null);
+    setMessage("Form cleared.");
+  };
+
+  const handleExit = () => {
+    if (!window.confirm("Exit join page without saving?")) return;
+    setForm({ username: "", email: "", password: "", avatar: "" });
+    setPreview(null);
+    localStorage.removeItem("currentUser");
+    setTimeout(() => (window.location.href = "/"), 800);
+  };
+
+  return (
+    <div className="max-w-md mx-auto mt-10 p-6 border rounded-lg bg-white shadow">
+      <h2 className="text-2xl font-bold text-center mb-1 text-red-700">
+        Join CoogsNation
+      </h2>
+      <p className="text-center text-gray-600 mb-4">
+        Create your account to get started
+      </p>
+
+      <div className="bg-yellow-50 border border-yellow-400 text-yellow-700 px-4 py-2 rounded mb-4 text-sm">
+        ⚠️ Demo Mode: This is a demonstration account stored locally in your
+        browser only.
+      </div>
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div className="flex flex-col items-center">
+          <label className="font-semibold text-gray-700 mb-2">
+            Profile Avatar (Optional)
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleAvatar}
+            className="text-sm text-gray-600"
+          />
+          {preview ? (
+            <img
+              src={preview}
+              alt="Avatar Preview"
+              className="w-24 h-24 rounded-full object-cover border mt-2"
+            />
+          ) : (
+            <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 mt-2">
+              No Avatar
+            </div>
+          )}
+        </div>
+
+        <input
+          name="username"
+          placeholder="Username"
+          className="border p-2 rounded"
+          value={form.username}
+          onChange={handleChange}
+          required
+        />
+        <input
+          name="email"
+          type="email"
+          placeholder="Email Address"
+          className="border p-2 rounded"
+          value={form.email}
+          onChange={handleChange}
+          required
+        />
+        <input
+          name="password"
+          type="password"
+          placeholder="Password (8+ chars, 1 capital & number)"
+          className="border p-2 rounded"
+          value={form.password}
+          onChange={handleChange}
+          required
+        />
+
+        <button
+          type="submit"
+          className="bg-red-600 text-white py-2 rounded hover:bg-red-700"
+        >
+          Create Account
+        </button>
+      </form>
+
+      {message && (
+        <p className="text-center mt-3 text-green-600 transition-all duration-300">
+          {message}
+        </p>
+      )}
+
+      <div className="flex justify-center mt-6 gap-4">
+        <button
+          onClick={handleReset}
+          className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600"
+        >
+          🔄 Reset
+        </button>
+
+        <button
+          onClick={handleExit}
+          className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700"
+        >
+          🚪 Exit
+        </button>
+      </div>
+
+      <p className="text-center text-sm text-gray-600 mt-4">
+        Already a member?{" "}
+        <a href="/login" className="text-red-600 hover:underline">
+          Log in
+        </a>
+      </p>
+
+      {/* Social Login Options */}
+      <div className="border-t mt-6 pt-4 text-center">
+        <p className="text-gray-600 text-sm mb-2">Or join with</p>
+        <div className="flex justify-center gap-3">
+          <a href="/auth/google" className="text-red-600 hover:underline">
+            Google
+          </a>
+          <a href="/auth/apple" className="text-gray-800 hover:underline">
+            Apple
+          </a>
+          <a href="/auth/linkedin" className="text-blue-600 hover:underline">
+            LinkedIn
+          </a>
+          <a href="/auth/twitter" className="text-sky-500 hover:underline">
+            Twitter / X
+          </a>
+          <a href="/auth/other" className="text-gray-600 hover:underline">
+            Other
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -16,6 +16,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertForumPostSchema } from "@shared/schema";
 import { formatDistance } from "date-fns";
+import { RichContentRenderer } from "@/components/RichContentRenderer";
+import { RichTextEditor } from "@/components/RichTextEditor";
+import { CompactAchievementBadge } from "@/components/ui/AchievementBadge";
 import type { ForumTopic, ForumPost } from "@shared/schema";
 import { z } from "zod";
 
@@ -25,6 +28,10 @@ export default function ForumTopic() {
   const { topicId } = useParams<{ topicId: string }>();
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
+  
+  // Check for localStorage demo auth
+  const hasLocalAuth = typeof window !== 'undefined' && localStorage.getItem('currentUser');
+  const canPost = isAuthenticated || hasLocalAuth;
 
   const form = useForm<z.infer<typeof createPostSchema>>({
     resolver: zodResolver(createPostSchema),
@@ -35,15 +42,13 @@ export default function ForumTopic() {
   });
 
   // Topic details
-  const { data: topic, isLoading: topicLoading } = useQuery({
+  const { data: topic, isLoading: topicLoading } = useQuery<ForumTopic>({
     queryKey: ["/api/forums/topics", topicId],
-    queryFn: () => apiRequest(`/api/forums/topics/${topicId}`, "GET"),
   });
 
   // Posts in topic
-  const { data: posts, isLoading: postsLoading } = useQuery({
+  const { data: posts, isLoading: postsLoading } = useQuery<ForumPost[]>({
     queryKey: ["/api/forums/topics", topicId, "posts"],
-    queryFn: () => apiRequest(`/api/forums/topics/${topicId}/posts`, "GET"),
   });
 
   // Create post mutation
@@ -65,19 +70,7 @@ export default function ForumTopic() {
     createPostMutation.mutate(data);
   };
 
-  const formatPostContent = (content: string) => {
-    // Simple formatting: convert line breaks to <br> and wrap in paragraphs
-    return content.split('\n\n').map((paragraph, index) => (
-      <p key={index} className="mb-4 last:mb-0">
-        {paragraph.split('\n').map((line, lineIndex) => (
-          <span key={lineIndex}>
-            {line}
-            {lineIndex < paragraph.split('\n').length - 1 && <br />}
-          </span>
-        ))}
-      </p>
-    ));
-  };
+  // Removed formatPostContent function - now using RichContentRenderer
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -97,11 +90,11 @@ export default function ForumTopic() {
               <nav className="flex text-sm text-gray-600">
                 <Link href="/forums" className="hover:text-uh-red">Forums</Link>
                 <span className="mx-2">/</span>
-                <Link href={`/forums/categories/${(topic as ForumTopic).categoryId}`} className="hover:text-uh-red">
+                <Link href={`/forums/categories/${topic.categoryId}`} className="hover:text-uh-red">
                   Category
                 </Link>
                 <span className="mx-2">/</span>
-                <span className="text-uh-black font-medium">{(topic as ForumTopic).title}</span>
+                <span className="text-uh-black font-medium">{topic.title}</span>
               </nav>
             </div>
 
@@ -111,8 +104,8 @@ export default function ForumTopic() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-2">
-                      <h1 className="text-2xl font-bold text-uh-black">{(topic as ForumTopic).title}</h1>
-                      {(topic as ForumTopic).isPinned && (
+                      <h1 className="text-2xl font-bold text-uh-black">{topic.title}</h1>
+                      {topic.isPinned && (
                         <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
                           <i className="fas fa-thumbtack mr-1"></i>
                           Pinned
@@ -120,13 +113,13 @@ export default function ForumTopic() {
                       )}
                     </div>
                     <div className="flex items-center space-x-4 text-sm text-gray-500">
-                      <span>Started by {(topic as ForumTopic).authorId}</span>
+                      <span>Started by {topic.authorId}</span>
                       <span>•</span>
-                      <span>{formatDistance(new Date((topic as ForumTopic).createdAt), new Date(), { addSuffix: true })}</span>
+                      <span>{topic.createdAt ? formatDistance(new Date(topic.createdAt), new Date(), { addSuffix: true }) : 'Unknown date'}</span>
                       <span>•</span>
-                      <span>{(topic as ForumTopic).replyCount || 0} replies</span>
+                      <span>{topic.replyCount || 0} replies</span>
                       <span>•</span>
-                      <span>{(topic as ForumTopic).viewCount || 0} views</span>
+                      <span>{topic.viewCount || 0} views</span>
                     </div>
                   </div>
                 </div>
@@ -153,8 +146,8 @@ export default function ForumTopic() {
                 </Card>
               ))}
             </div>
-          ) : posts && (posts as ForumPost[]).length > 0 ? (
-            (posts as ForumPost[]).map((post, index) => (
+          ) : posts && posts.length > 0 ? (
+            posts.map((post, index) => (
               <Card key={post.id} className={index === 0 ? "border-uh-red border-2" : ""}>
                 <CardContent className="p-6">
                   <div className="flex space-x-4">
@@ -168,18 +161,26 @@ export default function ForumTopic() {
                         <div className="text-xs text-gray-500 font-medium">
                           {post.authorId}
                         </div>
-                        {index === 0 && (
-                          <Badge variant="outline" className="text-xs mt-1">
-                            Original Post
-                          </Badge>
-                        )}
+                        <div className="flex flex-col items-center gap-1 mt-1">
+                          {/* TODO: Replace with actual user achievement level from post author data */}
+                          <CompactAchievementBadge 
+                            level="Bronze Star" 
+                            postCount={250}
+                            data-testid={`forum-post-badge-${post.id}`}
+                          />
+                          {index === 0 && (
+                            <Badge variant="outline" className="text-xs">
+                              Original Post
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
                     
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-4">
                         <div className="text-sm text-gray-500">
-                          Posted {formatDistance(new Date(post.createdAt), new Date(), { addSuffix: true })}
+                          Posted {post.createdAt ? formatDistance(new Date(post.createdAt), new Date(), { addSuffix: true }) : 'Unknown date'}
                         </div>
                         <div className="flex items-center space-x-2">
                           <Button variant="ghost" size="sm" className="text-gray-500 hover:text-uh-red">
@@ -193,9 +194,10 @@ export default function ForumTopic() {
                         </div>
                       </div>
                       
-                      <div className="prose prose-sm max-w-none text-gray-700">
-                        {formatPostContent(post.content)}
-                      </div>
+                      <RichContentRenderer 
+                        content={post.content} 
+                        className="prose prose-sm max-w-none text-gray-700"
+                      />
                     </div>
                   </div>
                 </CardContent>
@@ -215,7 +217,7 @@ export default function ForumTopic() {
         </div>
 
         {/* Reply Form */}
-        {isAuthenticated ? (
+        {canPost ? (
           <Card className="mt-8">
             <CardHeader>
               <CardTitle className="flex items-center">
@@ -233,10 +235,11 @@ export default function ForumTopic() {
                       <FormItem>
                         <FormLabel>Your Reply</FormLabel>
                         <FormControl>
-                          <Textarea 
-                            placeholder="Share your thoughts on this topic..." 
+                          <RichTextEditor
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder="Share your thoughts on this topic... You can paste images, YouTube videos, and other rich content!"
                             className="min-h-[150px]"
-                            {...field} 
                           />
                         </FormControl>
                         <FormMessage />
@@ -285,13 +288,23 @@ export default function ForumTopic() {
               <p className="text-gray-600 mb-6">
                 You need to be logged in to reply to this topic
               </p>
-              <Button 
-                onClick={() => window.location.href = "/api/login"}
-                className="bg-uh-red hover:bg-red-700"
-              >
-                <i className="fas fa-sign-in-alt mr-2"></i>
-                Log In to Reply
-              </Button>
+              <div className="flex gap-3 justify-center">
+                <Button 
+                  onClick={() => window.location.href = "/join"}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  <i className="fas fa-user-plus mr-2"></i>
+                  Sign Up
+                </Button>
+                <Button 
+                  onClick={() => window.location.href = "/login"}
+                  variant="outline"
+                  className="border-red-600 text-red-600 hover:bg-red-50"
+                >
+                  <i className="fas fa-sign-in-alt mr-2"></i>
+                  Log In
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}

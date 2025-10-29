@@ -31,7 +31,7 @@ div[class*="absolute"][class*="opacity-0"] {
   --background: hsl(0, 0%, 100%);
   --foreground: hsl(20, 14.3%, 4.1%);
   --muted: hsl(60, 4.8%, 95.9%);
-  --muted-foreground: hsl(25, 5.3%, 44.7%);
+  --muted-foreground: hsl(0, 0%, 20%);
   --popover: hsl(0, 0%, 100%);
   --popover-foreground: hsl(20, 14.3%, 4.1%);
   --card: hsl(0, 0%, 100%);
@@ -85,6 +85,17 @@ div[class*="absolute"][class*="opacity-0"] {
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    color: #ffffff;
+    background-color: #000000;
+  }
+}
+
+/* Desktop-only fix for hero page cougar background */
+@media (min-width: 1024px) {
+  .landing-hero {
+    background-attachment: scroll !important;
+    background-position: center center !important;
+    min-height: 150vh !important;
   }
 }
 
@@ -136,4 +147,29 @@ div[class*="absolute"][class*="opacity-0"] {
 
 .animate-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Enhanced Text Contrast Fixes */
+h1, h2, h3, h4, h5, h6 {
+  color: #111 !important; /* almost black for headers */
+  font-weight: 600 !important;
+}
+
+.dashboard-banner, .welcome-text, .subtext {
+  color: #222 !important; /* ensure welcome area is darker */
+}
+
+a, .link {
+  color: #c8102e !important; /* UH red links */
+  text-decoration: none;
+}
+
+a:hover, .link:hover {
+  text-decoration: underline;
+}
+
+.hero-text {
+  color: #ffffff !important;
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.6);
+  font-weight: 600;
 }

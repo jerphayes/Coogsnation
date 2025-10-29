@@ -1,0 +1,45 @@
+<section id="listen-live" style="padding: 2rem; text-align: center; background: #f8f8f8;">
+  <h2>📻 Listen to Houston Cougars Sports</h2>
+  <p>Catch Houston Cougars games on KPRC 950 AM or through the Varsity Network app.</p>
+
+  <!-- Varsity Network -->
+  <div style="margin: 1.5rem 0;">
+    <h3>Varsity Network App</h3>
+    <a href="https://apps.apple.com/us/app/varsity-network/id1574519982" target="_blank" rel="noopener">
+      <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" 
+           alt="Download on the App Store" style="height: 50px; margin: 0.5rem;">
+    </a>
+    <a href="https://play.google.com/store/apps/details?id=com.sidearmsports.varsitynetwork.audio" 
+       target="_blank" rel="noopener">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" 
+           alt="Get it on Google Play" style="height: 50px; margin: 0.5rem;">
+    </a>
+  </div>
+
+  <!-- Houston Cougars Official App -->
+  <div style="margin: 1.5rem 0;">
+    <h3>Houston Cougars Official App</h3>
+    <a href="https://apps.apple.com/us/app/houston-cougars/id1633712600" target="_blank" rel="noopener">
+      <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" 
+           alt="Download on the App Store" style="height: 50px; margin: 0.5rem;">
+    </a>
+    <a href="https://play.google.com/store/apps/details?id=com.sidearmsports.houston" 
+       target="_blank" rel="noopener">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" 
+           alt="Get it on Google Play" style="height: 50px; margin: 0.5rem;">
+    </a>
+  </div>
+
+  <!-- KPRC 950 AM -->
+  <div style="margin: 1.5rem 0;">
+    <h3>KPRC 950 AM Radio</h3>
+    <a href="https://kprcradio.iheart.com/apps/" target="_blank" rel="noopener">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/IHeartRadio_logo.svg/512px-IHeartRadio_logo.svg.png" 
+           alt="Listen on iHeartRadio" style="height: 50px; margin: 0.5rem;">
+    </a>
+    <a href="https://tunein.com/radio/KPRC-950-s34719/" target="_blank" rel="noopener">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/2/2c/TuneIn_logo_2019.svg" 
+           alt="Listen on TuneIn" style="height: 50px; margin: 0.5rem;">
+    </a>
+  </div>
+</section>

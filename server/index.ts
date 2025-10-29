@@ -1,10 +1,22 @@
+import dotenv from "dotenv";
+dotenv.config(); // Load environment variables from .env file
+
 import express, { type Request, Response, NextFunction } from "express";
+import session from "express-session";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Session setup
+app.use(session({
+  secret: "coogsnation-secret-key",   // change this to something strong
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: false } // true only if using HTTPS
+}));
 
 app.use((req, res, next) => {
   const start = Date.now();
