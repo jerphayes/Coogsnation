@@ -116,7 +116,7 @@ export function Header() {
               </span>
               <Link 
                 href="/join" 
-                className="bg-red-600 text-white px-4 py-2 rounded font-bold hover:bg-red-700 transition-colors"
+                className="bg-black text-white px-4 py-2 rounded font-bold hover:bg-gray-800 transition-colors"
                 data-testid="button-join"
               >
                 Sign Up
