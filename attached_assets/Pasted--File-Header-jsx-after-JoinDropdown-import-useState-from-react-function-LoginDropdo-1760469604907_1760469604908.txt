@@ -1,0 +1,58 @@
+// File: Header.jsx  (after JoinDropdown)
+import { useState } from "react";
+
+function LoginDropdown() {
+  const [open, setOpen] = useState(false);
+  const toggle = () => setOpen(!open);
+
+  const items = [
+    { text: "Login with Email", href: "/login/email", color: "text-red-600 font-bold hover:bg-red-50" },
+    { text: "Login with Google", href: "/auth/google?redirect=/dashboard", color: "text-red-500 hover:bg-red-50" },
+    { text: "Login with Apple", href: "/auth/apple?redirect=/dashboard", color: "text-gray-800 hover:bg-gray-100" },
+    { text: "Login with LinkedIn", href: "/auth/linkedin?redirect=/dashboard", color: "text-blue-600 hover:bg-blue-50" },
+    { text: "Login with Facebook", href: "/auth/facebook?redirect=/dashboard", color: "text-blue-500 hover:bg-blue-50" },
+    { text: "Login with X (Twitter)", href: "/auth/twitter?redirect=/dashboard", color: "text-sky-500 hover:bg-sky-50" },
+    { text: "Login with Other", href: "/login/other", color: "text-gray-600 hover:bg-gray-100" },
+  ];
+
+  return (
+    <div className="relative inline-block text-left">
+      <button
+        onClick={toggle}
+        className="px-3 py-2 bg-gray-900 text-white font-semibold rounded-md hover:bg-gray-700"
+      >
+        Login ▾
+      </button>
+
+      {open && (
+        <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-md shadow-lg z-50">
+          <div className="py-1">
+            {items.map((i) => (
+              <a
+                key={i.href}
+                href={i.href}
+                className={`block px-4 py-2 text-sm ${i.color}`}
+              >
+                {i.text}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function Header() {
+  return (
+    <header className="flex justify-between items-center px-4 py-3 bg-white border-b">
+      <a href="/" className="font-bold text-lg text-red-700">CoogsNation</a>
+      <div className="flex items-center gap-4">
+        <a href="/dashboard" className="text-sm font-semibold text-gray-600 hover:text-red-600">
+          Dashboard
+        </a>
+        <LoginDropdown />
+      </div>
+    </header>
+  );
+}

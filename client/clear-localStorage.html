@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clear CoogsNation LocalStorage</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+    }
+    .container {
+      background: white;
+      padding: 40px;
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      max-width: 500px;
+    }
+    h1 {
+      color: #dc2626;
+      margin-bottom: 20px;
+    }
+    button {
+      background: #dc2626;
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      font-size: 16px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 10px;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #991b1b;
+    }
+    .success {
+      color: #059669;
+      font-weight: bold;
+      margin-top: 20px;
+    }
+    .info {
+      color: #64748b;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🗑️ Clear CoogsNation Data</h1>
+    <p>Click the button below to delete all member accounts and reset the localStorage.</p>
+    
+    <button onclick="clearAll()">Clear All Accounts</button>
+    <button onclick="viewAccounts()">View Current Accounts</button>
+    
+    <div id="message"></div>
+    <div id="accountList"></div>
+  </div>
+
+  <script>
+    function clearAll() {
+      // Clear all localStorage items related to CoogsNation
+      localStorage.removeItem('coogsnationUsers');
+      localStorage.removeItem('currentUser');
+      
+      const message = document.getElementById('message');
+      message.innerHTML = '<p class="success">✅ All accounts deleted successfully!</p><p class="info">You can now test with a fresh start.</p>';
+      
+      document.getElementById('accountList').innerHTML = '';
+    }
+
+    function viewAccounts() {
+      const users = JSON.parse(localStorage.getItem('coogsnationUsers') || '[]');
+      const accountList = document.getElementById('accountList');
+      
+      if (users.length === 0) {
+        accountList.innerHTML = '<p class="info">No accounts found in localStorage.</p>';
+      } else {
+        let html = '<div style="margin-top: 20px;"><strong>Current Accounts:</strong><ul style="text-align: left; margin-top: 10px;">';
+        users.forEach((user, index) => {
+          html += `<li>${index + 1}. ${user.username || user.email}</li>`;
+        });
+        html += '</ul></div>';
+        accountList.innerHTML = html;
+      }
+    }
+
+    // Auto-check on load
+    window.onload = viewAccounts;
+  </script>
+</body>
+</html>

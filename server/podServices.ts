@@ -48,7 +48,7 @@ export class PrintfulService {
           'Authorization': `Bearer ${this.API_KEY}`,
           'Content-Type': 'application/json',
         },
-        timeout: 10000, // 10 second timeout
+        signal: AbortSignal.timeout(10_000), // 10 second timeout
       });
 
       if (!response.ok) {
@@ -139,7 +139,7 @@ export class TeelaunchService {
           'Authorization': `Bearer ${this.API_KEY}`,
           'Content-Type': 'application/json',
         },
-        timeout: 10000,
+        signal: AbortSignal.timeout(10_000),
       });
 
       if (!response.ok) {
@@ -227,7 +227,7 @@ export class TrendsiService {
           'Authorization': `Bearer ${this.API_KEY}`,
           'Content-Type': 'application/json',
         },
-        timeout: 10000,
+        signal: AbortSignal.timeout(10_000),
       });
 
       if (!response.ok) {

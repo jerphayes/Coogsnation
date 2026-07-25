@@ -1,0 +1,77 @@
+// File: MemberDashboard.jsx
+import { useState, useEffect } from "react";
+
+export default function MemberDashboard() {
+  const [user, setUser] = useState(null);
+  const [message, setMessage] = useState("");
+
+  // Load current logged-in user
+  useEffect(() => {
+    const current = JSON.parse(localStorage.getItem("currentUser") || "null");
+    setUser(current);
+  }, []);
+
+  // Delete membership permanently
+  const handleDelete = () => {
+    if (
+      !window.confirm(
+        "⚠️ Are you sure you want to permanently delete your CoogsNation membership?"
+      )
+    )
+      return;
+
+    const current = JSON.parse(localStorage.getItem("currentUser") || "null");
+    const users = JSON.parse(localStorage.getItem("coogsnationUsers") || "[]");
+
+    // Filter out current user and update storage
+    const remaining = users.filter((u) => u.email !== current?.email);
+    localStorage.setItem("coogsnationUsers", JSON.stringify(remaining));
+    localStorage.removeItem("currentUser");
+
+    // Confirmation + redirect home
+    setMessage("Your membership has been permanently deleted.");
+    setTimeout(() => (window.location.href = "/"), 1500);
+  };
+
+  // If no user is logged in
+  if (!user) {
+    return (
+      <div className="max-w-md mx-auto mt-10 p-6 border rounded-lg bg-white shadow text-center">
+        <h2 className="text-2xl font-bold mb-3 text-red-700">
+          Member Not Found
+        </h2>
+        <p className="text-gray-600 mb-6">
+          Please log in to access your CoogsNation dashboard.
+        </p>
+        <a
+          href="/login"
+          className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+        >
+          Go to Login
+        </a>
+      </div>
+    );
+  }
+
+  // Member dashboard view
+  return (
+    <div className="max-w-md mx-auto mt-10 p-6 border rounded-lg bg-white shadow text-center">
+      <h2 className="text-2xl font-bold mb-3 text-red-700">
+        Welcome, {user.name}!
+      </h2>
+      <p className="text-gray-600 mb-8">
+        You’re logged in as <strong>{user.email}</strong>.
+      </p>
+
+      {/* Only one delete account button */}
+      <button
+        onClick={handleDelete}
+        className="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700"
+      >
+        ❌ Delete Membership
+      </button>
+
+      {message && <p className="mt-4 text-green-600">{message}</p>}
+    </div>
+  );
+}

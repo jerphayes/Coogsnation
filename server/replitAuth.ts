@@ -63,7 +63,10 @@ function validateReturnToUrl(returnTo: string): string {
 }
 
 if (!process.env.REPLIT_DOMAINS) {
-  throw new Error("Environment variable REPLIT_DOMAINS not provided");
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("Environment variable REPLIT_DOMAINS is required in production");
+  }
+  process.env.REPLIT_DOMAINS = "localhost";
 }
 
 const getOidcConfig = memoize(
@@ -77,6 +80,12 @@ const getOidcConfig = memoize(
 );
 
 export function getSession() {
+  if (!process.env.SESSION_SECRET) {
+    throw new Error("SESSION_SECRET is required");
+  }
+  if (!process.env.DATABASE_URL) {
+    throw new Error("DATABASE_URL is required for session storage");
+  }
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
@@ -92,7 +101,7 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax', // CSRF protection
       maxAge: sessionTtl,
     },
@@ -166,9 +175,10 @@ async function handleUserAuthentication(
   return userId;
 }
 
-export async function setupAuth(app: Express) {
+export async function setupAuth(app: Express): Promise<RequestHandler> {
   app.set("trust proxy", 1);
-  app.use(getSession());
+  const sessionMiddleware = getSession();
+  app.use(sessionMiddleware);
   app.use(passport.initialize());
   app.use(passport.session());
 
@@ -389,6 +399,9 @@ export async function setupAuth(app: Express) {
         return res.redirect("/api/login");
       }
       
+      // Preserve returnTo before session regeneration
+      const savedReturnTo = req.session?.returnTo;
+      
       // Regenerate session to prevent session fixation attacks
       req.session.regenerate((err) => {
         if (err) {
@@ -401,9 +414,8 @@ export async function setupAuth(app: Express) {
             return res.redirect("/api/login?error=login_failed");
           }
           
-          // Get return URL from session or default to dashboard (with validation)
-          const returnTo = validateReturnToUrl(req.session?.returnTo || '/dashboard');
-          delete req.session?.returnTo;
+          // Get return URL from saved value or default to dashboard (with validation)
+          const returnTo = validateReturnToUrl(savedReturnTo || '/dashboard');
           res.redirect(returnTo);
         });
       });
@@ -430,6 +442,9 @@ export async function setupAuth(app: Express) {
           return res.redirect("/?error=facebook_auth_failed");
         }
         
+        // Preserve returnTo before session regeneration
+        const savedReturnTo = req.session?.returnTo;
+        
         // Regenerate session to prevent session fixation attacks
         req.session.regenerate((err) => {
           if (err) {
@@ -442,9 +457,8 @@ export async function setupAuth(app: Express) {
               return res.redirect("/?error=login_failed");
             }
             
-            // Get return URL from session or default to dashboard (with validation)
-            const returnTo = validateReturnToUrl(req.session?.returnTo || '/dashboard');
-            delete req.session?.returnTo;
+            // Get return URL from saved value or default to dashboard (with validation)
+            const returnTo = validateReturnToUrl(savedReturnTo || '/dashboard');
             res.redirect(returnTo);
           });
         });
@@ -481,6 +495,9 @@ export async function setupAuth(app: Express) {
           return res.redirect("/?error=linkedin_auth_failed");
         }
         
+        // Preserve returnTo before session regeneration
+        const savedReturnTo = req.session?.returnTo;
+        
         // Regenerate session to prevent session fixation attacks
         req.session.regenerate((err) => {
           if (err) {
@@ -493,9 +510,8 @@ export async function setupAuth(app: Express) {
               return res.redirect("/?error=login_failed");
             }
             
-            // Get return URL from session or default to dashboard (with validation)
-            const returnTo = validateReturnToUrl(req.session?.returnTo || '/dashboard');
-            delete req.session?.returnTo;
+            // Get return URL from saved value or default to dashboard (with validation)
+            const returnTo = validateReturnToUrl(savedReturnTo || '/dashboard');
             res.redirect(returnTo);
           });
         });
@@ -514,7 +530,7 @@ export async function setupAuth(app: Express) {
 
   // General logout route (works for all providers)
   app.get("/api/logout", (req, res) => {
-    const user = req.user as any;
+    const user = req.user;
     req.logout(() => {
       // For Replit users, use the proper logout URL
       if (user?.provider === 'replit') {
@@ -530,6 +546,8 @@ export async function setupAuth(app: Express) {
       }
     });
   });
+
+  return sessionMiddleware;
 }
 
 // SECURITY: Simplified authentication check without token dependencies
@@ -539,7 +557,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
-  const user = req.user as any;
+  const user = req.user;
   // Verify user still exists in database
   if (!user.id) {
     return res.status(401).json({ message: "Unauthorized" });
@@ -559,9 +577,32 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   }
 };
 
+
+// Authorization middleware for administrative endpoints.
+export const requireAdmin: RequestHandler = async (req, res, next) => {
+  if (!req.isAuthenticated() || !req.user) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  try {
+    const userId = req.user.id;
+    const dbUser = userId ? await storage.getUser(userId) : null;
+    if (!dbUser) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    if (dbUser.role !== "admin") {
+      return res.status(403).json({ message: "Administrator access required" });
+    }
+    return next();
+  } catch (error) {
+    console.error("Admin authorization check failed:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
 // UH Community Verification Middleware
 // Only allow users with UH email domains to access Coog Paws
-export async function isUHCommunityMember(req: any, res: any, next: any) {
+export const isUHCommunityMember: RequestHandler = async (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({ message: "Authentication required" });
   }
@@ -616,7 +657,7 @@ export async function isUHCommunityMember(req: any, res: any, next: any) {
 }
 
 // Combined middleware for Coog Paws routes (authentication + UH verification)
-export function requireUHAuthentication(req: any, res: any, next: any) {
+export const requireUHAuthentication: RequestHandler = (req, res, next) => {
   isAuthenticated(req, res, async (err: any) => {
     if (err) return next(err);
     await isUHCommunityMember(req, res, next);

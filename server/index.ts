@@ -1,39 +1,112 @@
-import express from "express";
-import path from "path";
-import cors from "cors";
-import bodyParser from "body-parser";
-import { fileURLToPath } from "url";
+import dotenv from "dotenv";
+dotenv.config(); // Load environment variables from .env file
+
+import express, { type Request, Response, NextFunction } from "express";
+import { registerRoutes } from "./routes";
+import { setupVite, serveStatic, log } from "./vite";
+import type { Server } from "http";
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+let activeServer: Server | null = null;
+let shuttingDown = false;
 
-app.use(cors());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+function shutdown(reason: string, exitCode = 0) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.error(`[SHUTDOWN] ${reason}`);
 
-// Debug logger
+  const forceTimer = setTimeout(() => {
+    console.error("[SHUTDOWN] Forced exit after timeout");
+    process.exit(exitCode || 1);
+  }, 10_000);
+  forceTimer.unref();
+
+  if (!activeServer) {
+    process.exit(exitCode);
+    return;
+  }
+
+  activeServer.close((error) => {
+    if (error) {
+      console.error("[SHUTDOWN] Server close failed", error);
+      process.exit(1);
+      return;
+    }
+    process.exit(exitCode);
+  });
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM received"));
+process.on("SIGINT", () => shutdown("SIGINT received"));
+process.on("unhandledRejection", (reason) => {
+  console.error("[FATAL] Unhandled promise rejection", reason);
+  shutdown("Unhandled promise rejection", 1);
+});
+process.on("uncaughtException", (error) => {
+  console.error("[FATAL] Uncaught exception", error);
+  shutdown("Uncaught exception", 1);
+});
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+
+app.get("/healthz", (_req, res) => {
+  res.status(shuttingDown ? 503 : 200).json({ status: shuttingDown ? "shutting_down" : "ok" });
+});
+
+// Authentication and the authoritative session middleware are configured in setupAuth().
+
 app.use((req, res, next) => {
-  console.log(`[REQ] ${req.method} ${req.url}`);
+  const start = Date.now();
+  const path = req.path;
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    if (path.startsWith("/api")) {
+      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+      if (logLine.length > 80) {
+        logLine = logLine.slice(0, 79) + "…";
+      }
+
+      log(logLine);
+    }
+  });
+
   next();
 });
 
-// APIs
-app.post("/api/ask", (req, res) => {
-  const { question } = req.body || {};
-  res.json({ answer: `Echo: ${question || ""}` });
-});
+(async () => {
+  const server = await registerRoutes(app);
+  activeServer = server;
 
-// 👇 Point Express to dist/public
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const DIST = path.join(__dirname, "..", "dist", "public");
-app.use(express.static(DIST));
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
 
-// React Router catch-all
-app.get("*", (_req, res) => {
-  res.sendFile(path.join(DIST, "index.html"));
-});
+    console.error(`[ERROR] ${status} ${message}`, err);
+    if (res.headersSent) {
+      return;
+    }
+    res.status(status).json({ message: status >= 500 ? "Internal Server Error" : message });
+  });
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 Server running at http://localhost:${PORT}`);
-});
+  // importantly only setup vite in development and after
+  // setting up all the other routes so the catch-all route
+  // doesn't interfere with the other routes
+  if (app.get("env") === "development") {
+    await setupVite(app, server);
+  } else {
+    serveStatic(app);
+  }
+
+  // ALWAYS serve the app on the port specified in the environment variable PORT
+  // Other ports are firewalled. Default to 5000 if not specified.
+  // this serves both the API and the client.
+  // It is the only port that is not firewalled.
+  const port = parseInt(process.env.PORT || '5000', 10);
+  server.listen({
+    port,
+    host: "0.0.0.0",
+    reusePort: true,
+  }, () => {
+    log(`serving on port ${port}`);
+  });
+})();

@@ -1,0 +1,99 @@
+// 1) Create a drop-in Join dropdown that we control 100%
+/* File: src/components/JoinDropdownDebug.tsx */
+import { useState } from "react";
+
+export default function JoinDropdownDebug() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="relative inline-block text-left">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="px-3 py-2 rounded-md bg-black text-white font-semibold"
+      >
+        Join ▾
+      </button>
+
+      {open && (
+        <div className="absolute right-0 mt-2 w-64 origin-top-right bg-white border border-gray-200 rounded-md shadow-lg z-[9999]">
+          <div className="py-1">
+            <a href="/signup" className="block px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-50">📝 Sign Up</a>
+            <a href="/auth/google" className="block px-4 py-2 text-sm text-red-500 hover:bg-red-50">Continue with Google</a>
+            <a href="/auth/apple" className="block px-4 py-2 text-sm text-gray-800 hover:bg-gray-100">Continue with Apple</a>
+            <a href="/auth/linkedin" className="block px-4 py-2 text-sm text-blue-600 hover:bg-blue-50">Continue with LinkedIn</a>
+            <a href="/auth/facebook" className="block px-4 py-2 text-sm text-blue-500 hover:bg-blue-50">Continue with Facebook</a>
+            <a href="/auth/twitter" className="block px-4 py-2 text-sm text-sky-500 hover:bg-sky-50">Continue with X (Twitter)</a>
+            <a href="/signup/other" className="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-100">Continue with Other</a>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+// 2) FORCE it on screen so we know the bundle you’re viewing includes our component
+/* File: src/components/JoinForceBanner.tsx */
+import JoinDropdownDebug from "./JoinDropdownDebug";
+
+export default function JoinForceBanner() {
+  // Loud, obvious banner so we KNOW we’re editing the right UI
+  return (
+    <div className="fixed inset-x-0 top-0 z-[9998] bg-yellow-300 text-black text-center py-3 border-b-4 border-black">
+      <div className="max-w-5xl mx-auto flex items-center justify-between px-4">
+        <div className="font-extrabold tracking-wide">
+          🔧 JOIN DEBUG BANNER — IF YOU SEE THIS, WE’RE IN THE RIGHT BUNDLE
+        </div>
+        <JoinDropdownDebug />
+      </div>
+    </div>
+  );
+}
+// 3) Render the banner at app root so it appears regardless of header wiring
+/* File: src/App.tsx  (or the main layout component your app renders first) */
+import JoinForceBanner from "@/components/JoinForceBanner";
+// ...existing imports...
+
+export default function App() {
+  return (
+    <>
+      {/* DEBUG: force banner + dropdown always visible */}
+      <JoinForceBanner />
+
+      {/* your existing app layout below */}
+      {/* <Header /> */}
+      {/* <Routes /> */}
+    </>
+  );
+}
+// 4) (After you SEE the banner + dropdown) wire it into your real header
+/* File: src/components/Header.tsx (or Navbar) */
+import JoinDropdownDebug from "@/components/JoinDropdownDebug";
+// ...existing imports...
+
+export default function Header() {
+  return (
+    <header className="w-full bg-white border-b">
+      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+        <a href="/" className="font-bold">CoogsNation</a>
+        <div className="flex items-center gap-4">
+          {/* Replace the old Join element with this */}
+          <JoinDropdownDebug />
+        </div>
+      </div>
+    </header>
+  );
+}
+// 5) CLEANUP (only do this after you confirm the header shows the new dropdown)
+//    Remove the force banner from App so it’s back to normal:
+/* File: src/App.tsx */
+export default function App() {
+  return (
+    <>
+      {/* Remove this line after confirming */}
+      {/* <JoinForceBanner /> */}
+
+      {/* Keep your normal layout */}
+      {/* <Header /> */}
+      {/* <Routes /> */}
+    </>
+  );
+}

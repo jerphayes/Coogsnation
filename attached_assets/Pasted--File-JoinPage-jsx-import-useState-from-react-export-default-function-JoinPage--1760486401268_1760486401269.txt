@@ -1,0 +1,206 @@
+// File: JoinPage.jsx
+import { useState } from "react";
+
+export default function JoinPage() {
+  const [username, setUsername] = useState("");
+  const [email, setEmail]       = useState("");
+  const [password, setPassword] = useState("");
+  const [message, setMessage]   = useState("");
+
+  const validatePassword = (pw) => /^(?=.*[A-Z])(?=.*\d).{8,}$/.test(pw);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    if (!validatePassword(password)) {
+      setMessage("Password must be 8+ chars with one capital letter and one number.");
+      return;
+    }
+
+    const users = JSON.parse(localStorage.getItem("coogsnationUsers") || "[]");
+
+    if (users.some(u => u.username?.toLowerCase() === username.toLowerCase())) {
+      setMessage("That username is already taken.");
+      return;
+    }
+    if (users.some(u => u.email?.toLowerCase() === email.toLowerCase())) {
+      setMessage("That email is already registered.");
+      return;
+    }
+
+    const newUser = { username, email, password, avatar: "" };
+    users.push(newUser);
+    localStorage.setItem("coogsnationUsers", JSON.stringify(users));
+    localStorage.setItem("currentUser", JSON.stringify(newUser));
+
+    setMessage(`Welcome, ${username}! Redirecting to your dashboard…`);
+    setTimeout(() => (window.location.href = "/dashboard"), 1200);
+  };
+
+  const handleReset = () => {
+    if (!confirm("Clear all fields and start over?")) return;
+    setUsername(""); setEmail(""); setPassword(""); setMessage("");
+  };
+
+  const handleExit = () => {
+    if (!confirm("Exit without saving?")) return;
+    window.location.href = "/";
+  };
+
+  return (
+    <div className="max-w-md mx-auto mt-16 p-6 bg-white rounded-lg shadow">
+      <h2 className="text-2xl font-bold text-center text-red-700 mb-3">Join CoogsNation</h2>
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <input
+          type="text"
+          inputMode="text"
+          autoComplete="username"
+          placeholder="Create a username"
+          className="border p-2 rounded text-black placeholder-gray-500"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          required
+        />
+
+        <input
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          placeholder="Email address"
+          className="border p-2 rounded text-black placeholder-gray-500"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+
+        <input
+          type="password"
+          autoComplete="new-password"
+          placeholder="Password (8+ chars, 1 capital & number)"
+          className="border p-2 rounded text-black placeholder-gray-500"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          pattern="^(?=.*[A-Z])(?=.*\\d).{8,}$"
+          title="Password must be 8+ chars with one capital letter and one number."
+          required
+        />
+
+        <button type="submit" className="bg-red-600 text-white py-2 rounded hover:bg-red-700">
+          Create Account
+        </button>
+      </form>
+
+      {message && <p className="text-center mt-3 text-gray-700">{message}</p>}
+
+      <div className="flex justify-center mt-6 gap-4">
+        <button onClick={handleReset} className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600">🔄 Reset</button>
+        <button onClick={handleExit}  className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">🚪 Exit</button>
+      </div>
+
+      <p className="text-center text-sm text-gray-600 mt-4">
+        Already a member? <a href="/login" className="text-red-600 hover:underline">Log in</a>
+      </p>
+    </div>
+  );
+}
+// File: LoginPage.jsx
+import { useEffect, useState } from "react";
+
+export default function LoginPage() {
+  const [identifier, setIdentifier] = useState(""); // username OR email
+  const [password, setPassword]     = useState("");
+  const [showPw, setShowPw]         = useState(false);
+  const [message, setMessage]       = useState("");
+
+  // One-time migration: convert any old {handle} to {username} for local test data
+  useEffect(() => {
+    const raw = localStorage.getItem("coogsnationUsers");
+    if (!raw) return;
+    let users = JSON.parse(raw);
+    let changed = false;
+
+    users = users.map(u => {
+      if (u.handle && !u.username) { changed = true; return { ...u, username: u.handle, handle: undefined }; }
+      return u;
+    });
+
+    if (changed) localStorage.setItem("coogsnationUsers", JSON.stringify(users));
+  }, []);
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+
+    const users = JSON.parse(localStorage.getItem("coogsnationUsers") || "[]");
+    const id = identifier.trim().toLowerCase();
+
+    const user = users.find(u =>
+      (u.username?.toLowerCase() === id || u.email?.toLowerCase() === id) &&
+      u.password === password
+    );
+
+    if (!user) {
+      setMessage("Invalid username/email or password.");
+      return;
+    }
+
+    localStorage.setItem("currentUser", JSON.stringify(user));
+    setMessage("Welcome back! Redirecting…");
+    setTimeout(() => (window.location.href = "/dashboard"), 1000);
+  };
+
+  return (
+    <div className="max-w-md mx-auto mt-16 p-6 bg-white rounded-lg shadow">
+      <h2 className="text-2xl font-bold text-center text-red-700 mb-3">
+        Welcome to Cougar Connect
+      </h2>
+      <p className="text-center text-gray-600 mb-6">
+        Sign in with your username <em>or</em> email
+      </p>
+
+      <form onSubmit={handleLogin} className="flex flex-col gap-4">
+        <input
+          type="text"
+          inputMode="text"
+          autoComplete="username email"
+          placeholder="Username or Email"
+          className="border p-2 rounded text-black placeholder-gray-500"
+          value={identifier}
+          onChange={(e) => setIdentifier(e.target.value)}
+          required
+        />
+
+        <div className="relative">
+          <input
+            type={showPw ? "text" : "password"}
+            autoComplete="current-password"
+            placeholder="Password"
+            className="border p-2 rounded w-full pr-10 text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            style={{
+              WebkitTextSecurity: showPw ? "none" : "disc",
+              color: "#000",
+              backgroundColor: "#fff",
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPw(v => !v)}
+            className="absolute inset-y-0 right-3 flex items-center text-gray-600 hover:text-red-600"
+            aria-label={showPw ? "Hide password" : "Show password"}
+          >
+            {showPw ? "🙈" : "👁️"}
+          </button>
+        </div>
+
+        <button type="submit" className="bg-red-600 text-white py-2 rounded hover:bg-red-700">
+          Sign In
+        </button>
+      </form>
+
+      {message && <p className="text-center mt-3 text-sm text-gray-700">{message}</p>}
+    </div>
+  );
+}

@@ -1,0 +1,147 @@
+// File: SignupPage.jsx
+import { useState } from "react";
+
+export default function SignupPage() {
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [message, setMessage] = useState("");
+
+  const handleChange = (e) =>
+    setForm({ ...form, [e.target.name]: e.target.value });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    // simple demo: store locally
+    const existing = localStorage.getItem("coogsnationUsers");
+    const users = existing ? JSON.parse(existing) : [];
+    users.push(form);
+    localStorage.setItem("coogsnationUsers", JSON.stringify(users));
+    setMessage("Account created! Redirecting to login...");
+    setTimeout(() => (window.location.href = "/login"), 1200);
+  };
+
+  return (
+    <div className="max-w-md mx-auto mt-10 p-6 border rounded-lg bg-white shadow">
+      <h2 className="text-2xl font-bold text-center mb-4 text-red-700">
+        Join CoogsNation
+      </h2>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <input
+          name="name"
+          placeholder="Full Name"
+          className="border p-2 rounded"
+          value={form.name}
+          onChange={handleChange}
+          required
+        />
+        <input
+          name="email"
+          type="email"
+          placeholder="Email"
+          className="border p-2 rounded"
+          value={form.email}
+          onChange={handleChange}
+          required
+        />
+        <input
+          name="password"
+          type="password"
+          placeholder="Password"
+          className="border p-2 rounded"
+          value={form.password}
+          onChange={handleChange}
+          required
+        />
+        <button
+          type="submit"
+          className="bg-red-600 text-white py-2 rounded hover:bg-red-700"
+        >
+          Create Account
+        </button>
+      </form>
+      {message && <p className="text-center mt-3 text-green-600">{message}</p>}
+      <p className="text-center mt-4 text-sm">
+        Already a member?{" "}
+        <a href="/login" className="text-red-600 hover:underline">
+          Log in
+        </a>
+      </p>
+    </div>
+  );
+}
+
+// File: LoginPage.jsx
+import { useState } from "react";
+
+export default function LoginPage() {
+  const [form, setForm] = useState({ email: "", password: "" });
+  const [error, setError] = useState("");
+
+  const handleChange = (e) =>
+    setForm({ ...form, [e.target.name]: e.target.value });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const users = JSON.parse(localStorage.getItem("coogsnationUsers") || "[]");
+    const found = users.find(
+      (u) => u.email === form.email && u.password === form.password
+    );
+    if (found) {
+      localStorage.setItem("currentUser", JSON.stringify(found));
+      window.location.href = "/dashboard";
+    } else {
+      setError("Invalid email or password.");
+    }
+  };
+
+  return (
+    <div className="max-w-md mx-auto mt-10 p-6 border rounded-lg bg-white shadow">
+      <h2 className="text-2xl font-bold text-center mb-4 text-red-700">
+        Log in to CoogsNation
+      </h2>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <input
+          name="email"
+          type="email"
+          placeholder="Email"
+          className="border p-2 rounded"
+          value={form.email}
+          onChange={handleChange}
+          required
+        />
+        <input
+          name="password"
+          type="password"
+          placeholder="Password"
+          className="border p-2 rounded"
+          value={form.password}
+          onChange={handleChange}
+          required
+        />
+        <button
+          type="submit"
+          className="bg-gray-900 text-white py-2 rounded hover:bg-gray-700"
+        >
+          Login
+        </button>
+      </form>
+      {error && <p className="text-center mt-3 text-red-600">{error}</p>}
+    </div>
+  );
+}
+
+// File: App.jsx  (root router setup)
+import Header from "./Header";
+import SignupPage from "./SignupPage";
+import LoginPage from "./LoginPage";
+
+export default function App() {
+  const path = window.location.pathname;
+
+  return (
+    <>
+      <Header />
+      {path === "/signup" && <SignupPage />}
+      {path === "/login" && <LoginPage />}
+    </>
+  );
+}

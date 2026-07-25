@@ -254,7 +254,7 @@ export interface IStorage {
   clearRateLimit(key: string, type: string): Promise<void>;
   cleanupExpiredRateLimits(): Promise<void>;
 
-  // Heartbeats Dating App operations
+  // Coogpaws Dating App operations
   // Profile operations
   getCoogpawsProfile(userId: string): Promise<CoogpawsProfile | undefined>;
   createCoogpawsProfile(profile: InsertCoogpawsProfile): Promise<CoogpawsProfile>;

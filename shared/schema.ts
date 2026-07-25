@@ -36,6 +36,7 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  role: varchar("role", { length: 20 }).notNull().default("member"),
   username: varchar("username").unique(), // This serves as the handle
   handle: varchar("handle").unique(), // Custom handle for display
   nickname: varchar("nickname"),
@@ -55,6 +56,18 @@ export const users = pgTable("users", {
   interest: varchar("interest", { length: 100 }),
   suggestionBox: text("suggestion_box"),
   
+  // Enhanced membership fields
+  aboutMe: text("about_me"),
+  interests: varchar("interests", { length: 1000 }),
+  affiliation: varchar("affiliation", { length: 40 }),
+  defaultAvatarChoice: integer("default_avatar_choice"),
+  graduationYear: integer("graduation_year"),
+  majorOrDepartment: varchar("major_or_department", { length: 120 }),
+  socialLinks: jsonb("social_links"),
+  addressLine1: varchar("address_line_1", { length: 100 }),
+  country: varchar("country", { length: 50 }).default("USA"),
+  optInOffers: boolean("opt_in_offers").default(false),
+  
   // Member category
   memberCategory: varchar("member_category", { length: 20 }), // Alum, Undergrad, Post Grad, Faculty, Staff, Fan
   
@@ -62,6 +75,14 @@ export const users = pgTable("users", {
   backupEmail: varchar("backup_email", { length: 255 }),
   passwordHash: varchar("password_hash", { length: 255 }),
   isLocalAccount: boolean("is_local_account").default(false),
+  
+  // Email verification fields for local accounts
+  emailVerifiedAt: timestamp("email_verified_at"),
+  emailVerificationTokenHash: varchar("email_verification_token_hash", { length: 255 }),
+  emailVerificationSentAt: timestamp("email_verification_sent_at"),
+  verificationResendCount: integer("verification_resend_count").default(0),
+  verificationLastResentAt: timestamp("verification_last_resent_at"),
+  scheduledDeletionAt: timestamp("scheduled_deletion_at"),
   
   
   // Security fields for account lockout and MFA
@@ -100,7 +121,13 @@ export const users = pgTable("users", {
   lastActiveAt: timestamp("last_active_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  // Indexes for email verification optimization
+  index("idx_users_email_verification_token").on(table.emailVerificationTokenHash),
+  index("idx_users_email_verification_sent").on(table.emailVerificationSentAt),
+  index("idx_users_scheduled_deletion").on(table.scheduledDeletionAt),
+  index("idx_users_local_account_verified").on(table.isLocalAccount, table.emailVerifiedAt),
+]);
 
 // User identities table for multi-provider authentication
 // SECURITY: Token fields removed - tokens never stored in database for security
@@ -220,8 +247,6 @@ export const events = pgTable("events", {
   eventDate: timestamp("event_date").notNull(),
   endDate: timestamp("end_date"),
   category: varchar("category", { length: 50 }),
-  maxAttendees: integer("max_attendees").default(0),
-  price: decimal("price", { precision: 10, scale: 2 }).default('0'),
   isPublic: boolean("is_public").default(true),
   createdById: varchar("created_by_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
@@ -578,13 +603,165 @@ export type User = typeof users.$inferSelect;
 export type InsertUserIdentity = typeof userIdentities.$inferInsert;
 export type UserIdentity = typeof userIdentities.$inferSelect;
 
-// Safe user type for API responses - excludes sensitive fields
-export type SafeUser = Omit<User, 'passwordHash' | 'backupEmail' | 'hasConsentedToDataUse' | 'hasConsentedToMarketing' | 'consentedAt'>;
+// Public member shape. This is an explicit allowlist so newly added database
+// columns can never become API-visible by accident.
+export type SafeUser = Pick<User,
+  | 'id'
+  | 'firstName'
+  | 'lastName'
+  | 'profileImageUrl'
+  | 'username'
+  | 'handle'
+  | 'nickname'
+  | 'title'
+  | 'bio'
+  | 'city'
+  | 'state'
+  | 'location'
+  | 'fanType'
+  | 'interest'
+  | 'aboutMe'
+  | 'interests'
+  | 'affiliation'
+  | 'defaultAvatarChoice'
+  | 'graduationYear'
+  | 'majorOrDepartment'
+  | 'socialLinks'
+  | 'country'
+  | 'memberCategory'
+  | 'isProfileComplete'
+  | 'profileCompletedAt'
+  | 'favoriteTeam'
+  | 'favoriteSports'
+  | 'otherSportComment'
+  | 'postCount'
+  | 'threadCount'
+  | 'achievementLevel'
+  | 'lastAchievementDate'
+  | 'reputation'
+  | 'isOnline'
+  | 'lastActiveAt'
+  | 'createdAt'
+  | 'updatedAt'
+>;
 
-// Utility function to create safe user response
+// Signed-in users may receive their own account/profile fields, but never
+// password, verification-token, MFA-token, or lockout internals.
+export type SelfUser = SafeUser & Pick<User,
+  | 'email'
+  | 'role'
+  | 'address'
+  | 'zipCode'
+  | 'dateOfBirth'
+  | 'suggestionBox'
+  | 'addressLine1'
+  | 'optInOffers'
+  | 'isLocalAccount'
+  | 'emailVerifiedAt'
+  | 'scheduledDeletionAt'
+  | 'phoneNumber'
+  | 'hasConsentedToDataUse'
+  | 'hasConsentedToMarketing'
+  | 'consentedAt'
+  | 'commentsAndSuggestions'
+>;
+
+// Administrative listings expose only fields needed to administer accounts.
+// They deliberately exclude credentials, tokens, MFA secrets, street address,
+// phone number, date of birth, and private consent/profile notes.
+export type AdminSafeUser = SafeUser & Pick<User,
+  | 'email'
+  | 'role'
+  | 'isLocalAccount'
+  | 'emailVerifiedAt'
+  | 'scheduledDeletionAt'
+  | 'failedLoginAttempts'
+  | 'lockedUntil'
+  | 'lastFailedAttempt'
+  | 'mfaAttempts'
+  | 'mfaLockedUntil'
+  | 'mfaLastAttemptAt'
+>;
+
 export function createSafeUser(user: User): SafeUser {
-  const { passwordHash, backupEmail, hasConsentedToDataUse, hasConsentedToMarketing, consentedAt, ...safeUser } = user;
-  return safeUser;
+  return {
+    id: user.id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    profileImageUrl: user.profileImageUrl,
+    username: user.username,
+    handle: user.handle,
+    nickname: user.nickname,
+    title: user.title,
+    bio: user.bio,
+    city: user.city,
+    state: user.state,
+    location: user.location,
+    fanType: user.fanType,
+    interest: user.interest,
+    aboutMe: user.aboutMe,
+    interests: user.interests,
+    affiliation: user.affiliation,
+    defaultAvatarChoice: user.defaultAvatarChoice,
+    graduationYear: user.graduationYear,
+    majorOrDepartment: user.majorOrDepartment,
+    socialLinks: user.socialLinks,
+    country: user.country,
+    memberCategory: user.memberCategory,
+    isProfileComplete: user.isProfileComplete,
+    profileCompletedAt: user.profileCompletedAt,
+    favoriteTeam: user.favoriteTeam,
+    favoriteSports: user.favoriteSports,
+    otherSportComment: user.otherSportComment,
+    postCount: user.postCount,
+    threadCount: user.threadCount,
+    achievementLevel: user.achievementLevel,
+    lastAchievementDate: user.lastAchievementDate,
+    reputation: user.reputation,
+    isOnline: user.isOnline,
+    lastActiveAt: user.lastActiveAt,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  };
+}
+
+export function createSelfUser(user: User): SelfUser {
+  return {
+    ...createSafeUser(user),
+    email: user.email,
+    role: user.role,
+    address: user.address,
+    zipCode: user.zipCode,
+    dateOfBirth: user.dateOfBirth,
+    suggestionBox: user.suggestionBox,
+    addressLine1: user.addressLine1,
+    optInOffers: user.optInOffers,
+    isLocalAccount: user.isLocalAccount,
+    emailVerifiedAt: user.emailVerifiedAt,
+    scheduledDeletionAt: user.scheduledDeletionAt,
+    phoneNumber: user.phoneNumber,
+    hasConsentedToDataUse: user.hasConsentedToDataUse,
+    hasConsentedToMarketing: user.hasConsentedToMarketing,
+    consentedAt: user.consentedAt,
+    commentsAndSuggestions: user.commentsAndSuggestions,
+  };
+}
+
+export function createAdminSafeUser(user: User): AdminSafeUser {
+  return {
+    ...createSafeUser(user),
+    email: user.email,
+    role: user.role,
+    isLocalAccount: user.isLocalAccount,
+    emailVerifiedAt: user.emailVerifiedAt,
+    scheduledDeletionAt: user.scheduledDeletionAt,
+    failedLoginAttempts: user.failedLoginAttempts,
+    lockedUntil: user.lockedUntil,
+    lastFailedAttempt: user.lastFailedAttempt,
+    mfaAttempts: user.mfaAttempts,
+    mfaLockedUntil: user.mfaLockedUntil,
+    mfaLastAttemptAt: user.mfaLastAttemptAt,
+  };
 }
 
 export type InsertForumCategory = typeof forumCategories.$inferInsert;
@@ -817,21 +994,41 @@ export const userProfileCompletionSchema = z.object({
   lastName: z.string().min(1, "Last name is required"),
   nickname: z.string().optional(),
   email: z.string().email("Please enter a valid email address").optional(),
-  address: z.string().min(1, "Address is required"),
-  city: z.string().min(1, "City is required"),
-  state: z.string().length(2, "State must be 2 characters").regex(/^[A-Z]{2}$/, "State must be in format like TX"),
-  zipCode: z.string().min(5, "ZIP code is required").max(10),
-  dateOfBirth: z.coerce.date(), // Converts string to Date automatically
-  fanType: z.enum(["Graduate", "Under Grad", "Faculty", "Staff", "Coog Crazy Fan"]).optional(),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().length(2, "State must be 2 characters").regex(/^[A-Z]{2}$/, "State must be in format like TX").optional(),
+  zipCode: z.string().min(5, "ZIP code must be at least 5 characters").max(10).optional(),
+  dateOfBirth: z.coerce.date().optional(), // Converts string to Date automatically
+  graduationYear: z.number().int().min(1950).max(2050, "Please enter a valid graduation year").optional(),
+  fanType: z.enum(["Student", "Ex-Student", "Graduate", "Post Graduate", "Faculty", "Staff", "Coog Crazy Fan", "Friend"]).optional(),
   interest: z.string().optional(),
   suggestionBox: z.string().optional(),
-  memberCategory: z.enum(["Alum", "Undergrad", "Post Grad", "Faculty", "Staff", "Fan"], { required_error: "Please select a member category" }),
+  memberCategory: z.enum(["Student", "Ex-Student", "Graduate", "Post Graduate", "Faculty", "Staff", "Coog Crazy Fan", "Friend"], { required_error: "Please select a member category" }),
   // Comments and favorite sports
   commentsAndSuggestions: z.string().optional(),
   favoriteSports: z.array(z.enum(["football", "basketball", "other"])).optional(),
   otherSportComment: z.string().optional(),
   hasConsentedToDataUse: z.boolean().refine(val => val === true, "You must consent to data use to continue"),
   hasConsentedToMarketing: z.boolean().optional(),
+  
+  // Enhanced membership fields
+  aboutMe: z.string().max(2000, "About me must be less than 2000 characters").optional(),
+  interests: z.string().max(1000, "Interests must be less than 1000 characters").optional(),
+  affiliation: z.enum(["Student", "Ex-Student", "Graduate", "Post Graduate", "Faculty", "Staff", "Coog Crazy Fan", "Friend"]).optional(),
+  defaultAvatarChoice: z.number().int().min(1).max(5, "Avatar choice must be between 1 and 5").optional(),
+  majorOrDepartment: z.string().max(120, "Major/Department must be less than 120 characters").optional(),
+  socialLinks: z.object({
+    twitter: z.string().url("Please enter a valid Twitter URL").optional().or(z.literal('')),
+    linkedin: z.string().url("Please enter a valid LinkedIn URL").optional().or(z.literal('')),
+    instagram: z.string().url("Please enter a valid Instagram URL").optional().or(z.literal('')),
+    facebook: z.string().url("Please enter a valid Facebook URL").optional().or(z.literal('')),
+    website: z.string().url("Please enter a valid website URL").optional().or(z.literal('')),
+  }).optional(),
+  addressLine1: z.string().max(100, "Address line 1 must be less than 100 characters").optional(),
+
+  country: z.string().max(50, "Country must be less than 50 characters").optional(),
+  optInOffers: z.boolean().optional(),
+  
   // Optional password fields for local account creation
   password: passwordSchema.optional(),
   confirmPassword: z.string().optional(),
@@ -847,24 +1044,68 @@ export const userProfileCompletionSchema = z.object({
   path: ["confirmPassword"],
 });
 
-// User profile update schema (for existing users)
-export const userProfileUpdateSchema = createInsertSchema(users).omit({
-  id: true,
-  email: true,
-  createdAt: true,
-  updatedAt: true,
-  postCount: true,
-  threadCount: true,
-  achievementLevel: true,
-  lastAchievementDate: true,
-  reputation: true,
-  isOnline: true,
-  lastActiveAt: true,
-}).extend({
-  handle: z.string().min(3, "Handle must be at least 3 characters").max(30, "Handle must be less than 30 characters").regex(/^[a-zA-Z0-9_]+$/, "Handle can only contain letters, numbers, and underscores").optional(),
-  state: z.string().length(2, "State must be 2 characters").regex(/^[A-Z]{2}$/, "State must be in format like TX").optional(),
-  memberCategory: z.enum(["Alum", "Undergrad", "Post Grad", "Faculty", "Staff", "Fan"]).optional(),
-});
+// User profile update schema (for existing users).
+// SECURITY: This is an explicit allowlist. Never derive self-service update
+// fields from the complete users table; new database columns must remain
+// non-writable until deliberately added here.
+const optionalNullableText = (max: number, message: string) =>
+  z.string().max(max, message).nullable().optional();
+
+const optionalNullableUrl = z.string().url('Please enter a valid URL').or(z.literal('')).nullable().optional();
+
+export const userProfileUpdateSchema = z.object({
+  firstName: optionalNullableText(100, 'First name must be less than 100 characters'),
+  lastName: optionalNullableText(100, 'Last name must be less than 100 characters'),
+  handle: z.string()
+    .min(3, 'Handle must be at least 3 characters')
+    .max(30, 'Handle must be less than 30 characters')
+    .regex(/^[a-zA-Z0-9_]+$/, 'Handle can only contain letters, numbers, and underscores')
+    .nullable()
+    .optional(),
+  nickname: optionalNullableText(100, 'Nickname must be less than 100 characters'),
+  title: optionalNullableText(150, 'Title must be less than 150 characters'),
+  bio: optionalNullableText(2000, 'Bio must be less than 2000 characters'),
+  address: optionalNullableText(255, 'Address must be less than 255 characters'),
+  city: optionalNullableText(100, 'City must be less than 100 characters'),
+  state: z.string()
+    .length(2, 'State must be 2 characters')
+    .regex(/^[A-Z]{2}$/, 'State must be in format like TX')
+    .nullable()
+    .optional(),
+  zipCode: optionalNullableText(10, 'ZIP code must be less than 10 characters'),
+  location: optionalNullableText(100, 'Location must be less than 100 characters'),
+  dateOfBirth: z.coerce.date().nullable().optional(),
+  fanType: optionalNullableText(50, 'Fan type must be less than 50 characters'),
+  interest: optionalNullableText(100, 'Interest must be less than 100 characters'),
+  suggestionBox: optionalNullableText(5000, 'Suggestion must be less than 5000 characters'),
+  aboutMe: optionalNullableText(2000, 'About me must be less than 2000 characters'),
+  interests: optionalNullableText(1000, 'Interests must be less than 1000 characters'),
+  affiliation: z.enum([
+    'Student', 'Current Student', 'Ex-Student', 'Graduate', 'Post Graduate',
+    'Faculty', 'Staff', 'Coog Crazy Fan', 'Friend'
+  ]).nullable().optional(),
+  defaultAvatarChoice: z.number().int().min(1).max(5, 'Avatar choice must be between 1 and 5').nullable().optional(),
+  graduationYear: z.number().int().min(1950).max(2050, 'Please enter a valid graduation year').nullable().optional(),
+  majorOrDepartment: optionalNullableText(120, 'Major/Department must be less than 120 characters'),
+  socialLinks: z.object({
+    twitter: optionalNullableUrl,
+    linkedin: optionalNullableUrl,
+    instagram: optionalNullableUrl,
+    facebook: optionalNullableUrl,
+    website: optionalNullableUrl,
+  }).strict().nullable().optional(),
+  addressLine1: optionalNullableText(100, 'Address line 1 must be less than 100 characters'),
+  country: optionalNullableText(50, 'Country must be less than 50 characters'),
+  optInOffers: z.boolean().optional(),
+  memberCategory: z.enum(['Alum', 'Undergrad', 'Post Grad', 'Faculty', 'Staff', 'Fan']).nullable().optional(),
+  phoneNumber: z.string().max(20, 'Phone number must be less than 20 characters').nullable().optional(),
+  favoriteTeam: optionalNullableText(50, 'Favorite team must be less than 50 characters'),
+  commentsAndSuggestions: optionalNullableText(5000, 'Comments must be less than 5000 characters'),
+  favoriteSports: optionalNullableText(255, 'Favorite sports must be less than 255 characters'),
+  otherSportComment: optionalNullableText(255, 'Sport comment must be less than 255 characters'),
+  hasConsentedToDataUse: z.boolean().optional(),
+  hasConsentedToMarketing: z.boolean().optional(),
+}).strict();
 
 // Local account registration schema (password-based registration)
 export const localAccountRegistrationSchema = z.object({
@@ -881,24 +1122,43 @@ export const localAccountRegistrationSchema = z.object({
   state: z.string().length(2, "State must be 2 characters").regex(/^[A-Z]{2}$/, "State must be in format like TX"),
   zipCode: z.string().min(5, "ZIP code is required").max(10),
   dateOfBirth: z.coerce.date(),
-  fanType: z.enum(["Graduate", "Under Grad", "Faculty", "Staff", "Coog Crazy Fan"]).optional(),
+  graduationYear: z.number().int().min(1950).max(2050, "Please enter a valid graduation year").optional(),
+  fanType: z.enum(["Student", "Ex-Student", "Graduate", "Post Graduate", "Faculty", "Staff", "Coog Crazy Fan", "Friend"]).optional(),
   interest: z.string().optional(),
   suggestionBox: z.string().optional(),
-  memberCategory: z.enum(["Alum", "Undergrad", "Post Grad", "Faculty", "Staff", "Fan"], { required_error: "Please select a member category" }),
+  memberCategory: z.enum(["Student", "Ex-Student", "Graduate", "Post Graduate", "Faculty", "Staff", "Coog Crazy Fan", "Friend"], { required_error: "Please select a member category" }),
   // Comments and favorite sports
   commentsAndSuggestions: z.string().optional(),
   favoriteSports: z.array(z.enum(["football", "basketball", "other"])).optional(),
   otherSportComment: z.string().optional(),
   hasConsentedToDataUse: z.boolean().refine(val => val === true, "You must consent to data use to continue"),
   hasConsentedToMarketing: z.boolean().optional(),
+  
+  // Enhanced membership fields
+  aboutMe: z.string().max(2000, "About me must be less than 2000 characters").optional(),
+  interests: z.string().max(1000, "Interests must be less than 1000 characters").optional(),
+  affiliation: z.enum(["Student", "Ex-Student", "Graduate", "Post Graduate", "Faculty", "Staff", "Coog Crazy Fan", "Friend"]).optional(),
+  defaultAvatarChoice: z.number().int().min(1).max(5, "Avatar choice must be between 1 and 5").optional(),
+  majorOrDepartment: z.string().max(120, "Major/Department must be less than 120 characters").optional(),
+  socialLinks: z.object({
+    twitter: z.string().url("Please enter a valid Twitter URL").optional().or(z.literal('')),
+    linkedin: z.string().url("Please enter a valid LinkedIn URL").optional().or(z.literal('')),
+    instagram: z.string().url("Please enter a valid Instagram URL").optional().or(z.literal('')),
+    facebook: z.string().url("Please enter a valid Facebook URL").optional().or(z.literal('')),
+    website: z.string().url("Please enter a valid website URL").optional().or(z.literal('')),
+  }).optional(),
+  addressLine1: z.string().max(100, "Address line 1 must be less than 100 characters").optional(),
+
+  country: z.string().max(50, "Country must be less than 50 characters").optional(),
+  optInOffers: z.boolean().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords must match",
   path: ["confirmPassword"],
 });
 
-// Local login schema - uses handle as username
+// Local login schema - accepts username, email, or social media account
 export const localLoginSchema = z.object({
-  handle: z.string().min(3, "Handle must be at least 3 characters").max(30, "Handle must be less than 30 characters").regex(/^[a-zA-Z0-9_]+$/, "Handle can only contain letters, numbers, and underscores"),
+  handle: z.string().min(3, "Username or email must be at least 3 characters"),
   password: z.string().min(1, "Password is required"),
 });
 
@@ -1116,3 +1376,48 @@ export const insertRateLimitSchema = createInsertSchema(rateLimits).omit({
   createdAt: true,
   updatedAt: true,
 });
+
+// AI Chat and Learning Schemas
+export const aiChatMessageSchema = z.object({
+  id: z.string(),
+  conversationId: z.string(),
+  role: z.enum(["user", "assistant"]),
+  content: z.string().max(2000, "Message too long"),
+  timestamp: z.date(),
+  userId: z.string().optional(),
+});
+
+export const aiConversationSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  title: z.string().optional(),
+  messages: z.array(aiChatMessageSchema),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export const aiLearningDataSchema = z.object({
+  id: z.number(),
+  userInput: z.string(),
+  aiOutput: z.string(),
+  feedback: z.enum(["1", "-1"]).optional(), // "1" = good, "-1" = bad
+  userId: z.string().optional(),
+  createdAt: z.date(),
+});
+
+export const aiChatRequestSchema = z.object({
+  message: z.string().min(1, "Message is required").max(2000, "Message too long"),
+  conversationId: z.string().optional(),
+});
+
+export const aiFeedbackSchema = z.object({
+  id: z.number(),
+  feedback: z.enum(["1", "-1"]),
+});
+
+// AI Chat Types
+export type AIChatMessage = z.infer<typeof aiChatMessageSchema>;
+export type AIConversation = z.infer<typeof aiConversationSchema>;
+export type AILearningData = z.infer<typeof aiLearningDataSchema>;
+export type AIChatRequest = z.infer<typeof aiChatRequestSchema>;
+export type AIFeedback = z.infer<typeof aiFeedbackSchema>;

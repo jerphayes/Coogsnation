@@ -1,13 +1,11 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import { storage } from "./storage";
 import sqlite3 from "sqlite3";
 import { open } from "sqlite";
-import { setupAuth, isAuthenticated, requireUHAuthentication } from "./replitAuth";
-import path from "path";
-import express from "express";
-import { fileURLToPath } from "url";
+import { setupAuth, isAuthenticated, requireAdmin, requireUHAuthentication } from "./replitAuth";
 import {
   insertForumTopicSchema,
   insertForumPostSchema,
@@ -32,10 +30,16 @@ import {
   insertCoogpawsBlockSchema,
   insertCoogpawsReportSchema,
   createSafeUser,
+  createSelfUser,
+  createAdminSafeUser,
+  aiChatRequestSchema,
+  aiFeedbackSchema,
 } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import { promises as fs } from "fs";
+import * as fsSync from "fs";
+import path from "path";
 import sharp from "sharp";
 import { sendAchievementEmail } from "./emailService";
 import { checkForNewAchievement, achievementLevels, getNextAchievement } from "@shared/schema";
@@ -45,6 +49,7 @@ import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { ObjectPermission } from "./objectAcl";
 import { PODManagerService, PODHelpers } from "./podServices";
 import fetch from "node-fetch";
+import { rateLimit } from "express-rate-limit";
 
 // SQLite3 Learning Database Setup with Enhanced Error Handling
 let learningDB: any = null;
@@ -185,14 +190,13 @@ const upload = multer({
       'image/gif',
       'image/webp',
       'image/bmp',
-      'image/tiff',
-      'image/svg+xml'
+      'image/tiff'
     ];
     
     if (allowedMimeTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed! Supported formats: JPG, PNG, GIF, WebP, BMP, TIFF, SVG'));
+      cb(new Error('Only image files are allowed! Supported formats: JPG, PNG, GIF, WebP, BMP, TIFF'));
     }
   },
 });
@@ -213,89 +217,33 @@ function renderNav(role: string, username?: string) {
       <a href="/sports" style="color:white;">Sports News</a> |
       <a href="/alumni" style="color:white;">Alumni Store</a> |
       <a href="/events" style="color:white;">Events</a> |
-      <a href="/community" style="color:white;">Community</a> |
-      <a href="/coogpaws" style="color:white;">🐾 CoogPaws Chat</a>
+      <a href="/community" style="color:white;">Community</a>
       ${role === "admin" ? ' | <a href="/admin" style="color:white;">Admin Dashboard</a>' : ""}
-      <span style="float:right;"><a href="/guest" style="color:white; text-decoration:none; cursor:pointer;">👤 ${userDisplay}</a></span>
+      <span style="float:right;">👤 ${userDisplay}</span>
     </nav>
   `;
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // DEV: Vite serves the frontend. Do NOT static-serve here.
-  
-  // PROD ONLY (for VPS later):
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = path.dirname(__filename);
-  
-  if (process.env.NODE_ENV === "production") {
-    const clientDist = path.join(__dirname, "..", "client", "dist");
-    app.use(express.static(clientDist));
-    app.get("*", (_req, res) => res.sendFile(path.join(clientDist, "index.html")));
-  }
 
-  // Let React handle the home page route - removed server-side override
-
-  // Guest access route - allows guests to experience the site
-  app.get("/guest", (req: any, res: any) => {
-    // Set guest session
-    req.session.role = "guest";
-    req.session.username = "Guest";
-    // Redirect to main site for guest experience
-    res.redirect("/");
-  });
-
-  // Simple login page
+  // Redirect /login to main app (OAuth handled by frontend)
   app.get("/login", (req: any, res: any) => {
-    res.send(`
-      <h1>Admin Login</h1>
-      <form method="POST" action="/login">
-        <input name="username" placeholder="Username"><br><br>
-        <input type="password" name="password" placeholder="Password"><br><br>
-        <button type="submit">Login</button>
-      </form>
-    `);
+    res.redirect("/?showLogin=true");
   });
 
-  // Handle login (with env variables)
-  app.post("/login", (req: any, res: any) => {
-    const { username, password } = req.body;
-
-    if(username === process.env.ADMIN_USER && password === process.env.ADMIN_PASS) {
-      req.session.role = "admin";
-      req.session.username = username;
-      res.send("✅ Logged in as admin. Go to <a href='/admin'>Admin Dashboard</a>");
-    } else {
-      req.session.role = "user";
-      req.session.username = username;
-      res.send("❌ Invalid login");
-    }
+  // Redirect /signup to Replit Auth login (which includes signup options)
+  app.get("/signup", (req, res) => {
+    res.redirect("/api/login?returnTo=/dashboard");
   });
 
-  // Middleware to require admin role
-  function requireAdmin(req: any, res: any, next: any) {
-    if(req.session.role === "admin") {
-      next();
-    } else {
-      res.status(403).send("🚫 Access denied. Admins only.");
-    }
-  }
+  // Redirect /signup/other to login page for local account creation
+  app.get("/signup/other", (req, res) => {
+    res.redirect("/login");
+  });
 
-  // Admin dashboard (hidden from normal users)
-  app.get("/admin", requireAdmin, (req: any, res: any) => {
-    res.send(`
-      <html>
-        <head><title>Admin Dashboard</title></head>
-        <body>
-          ${renderNav(req.session.role, req.session.username)}
-          <h1>
-            <img src="/gavel.svg" alt="Gavel" style="width:24px; vertical-align:middle; margin-right:6px;">
-            CoogsNation Admin Dashboard
-          </h1>
-          <p>Only admins can see this page.</p>
-        </body>
-      </html>
-    `);
+  // Admin dashboard redirects to main admin interface
+  app.get("/admin", (req: any, res: any) => {
+    res.redirect("/dashboard?admin=true");
   });
 
   // Logout
@@ -306,7 +254,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Auth middleware
-  await setupAuth(app);
+  const sessionMiddleware = await setupAuth(app);
+
+  const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Too many login attempts. Please try again later." },
+  });
+
+  const aiLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Too many AI requests. Please try again shortly." },
+  });
+
+  // CSRF/origin guard for authenticated browser requests that change state.
+  app.use("/api", (req, res, next) => {
+    if (["GET", "HEAD", "OPTIONS"].includes(req.method) || !req.isAuthenticated()) {
+      return next();
+    }
+
+    const source = req.get("origin") || req.get("referer");
+    if (!source) {
+      if (process.env.NODE_ENV === "production") {
+        return res.status(403).json({ message: "Request origin could not be verified" });
+      }
+      return next();
+    }
+
+    try {
+      const sourceUrl = new URL(source);
+      const configuredOrigins = [
+        process.env.APP_ORIGIN,
+        process.env.APP_DOMAIN ? `https://${process.env.APP_DOMAIN}` : undefined,
+      ].filter(Boolean) as string[];
+      const requestOrigin = `${req.protocol}://${req.get("host")}`;
+      const allowedOrigins = new Set([requestOrigin, ...configuredOrigins]);
+      if (!allowedOrigins.has(sourceUrl.origin)) {
+        return res.status(403).json({ message: "Untrusted request origin" });
+      }
+      return next();
+    } catch {
+      return res.status(403).json({ message: "Invalid request origin" });
+    }
+  });
+
+  // Simple redirect routes to existing Replit Auth system
+  app.get("/auth/google", (req, res) => {
+    res.redirect("/api/login?returnTo=/dashboard");
+  });
+
+  app.get("/auth/apple", (req, res) => {
+    res.redirect("/api/login?returnTo=/dashboard");
+  });
+
+  app.get("/auth/linkedin", (req, res) => {
+    res.redirect("/api/login?returnTo=/dashboard");
+  });
+
+  app.get("/auth/facebook", (req, res) => {
+    res.redirect("/api/login?returnTo=/dashboard");
+  });
+
+  app.get("/auth/twitter", (req, res) => {
+    res.redirect("/api/login?returnTo=/dashboard");
+  });
+
+  app.get("/auth/x", (req, res) => {
+    res.redirect("/api/login?returnTo=/dashboard");
+  });
+
+  app.get("/auth/email", (req, res) => {
+    res.redirect("/login");
+  });
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
@@ -318,10 +342,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
       // Return safe user object without sensitive fields
-      res.json(createSafeUser(user));
+      res.json(createSelfUser(user));
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Get current user profile (for ProfileDisplay component)
+  app.get('/api/profile', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      // Return profile data compatible with ProfileDisplay
+      res.json({
+        handle: user.handle,
+        avatar_url: user.profileImageUrl || ""
+      });
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+      res.status(500).json({ message: "Failed to fetch profile" });
     }
   });
 
@@ -444,6 +487,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isProfileComplete: true,
         profileCompletedAt: new Date(),
         isLocalAccount: true,
+        // Enhanced membership fields
+        aboutMe: validatedData.aboutMe || null,
+        interests: validatedData.interests || null,
+        affiliation: validatedData.affiliation || null,
+        defaultAvatarChoice: validatedData.defaultAvatarChoice || null,
+        graduationYear: validatedData.graduationYear || null,
+        majorOrDepartment: validatedData.majorOrDepartment || null,
+        socialLinks: validatedData.socialLinks || null,
+        addressLine1: validatedData.addressLine1 || null,
+        country: validatedData.country || 'USA',
+        optInOffers: validatedData.optInOffers || false,
       });
 
       res.status(201).json({ 
@@ -469,7 +523,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Local login verification - uses handle as username with account lockout
-  app.post('/api/auth/login-local', async (req, res) => {
+  app.post('/api/auth/login-local', loginLimiter, async (req, res) => {
     try {
       const validatedData = localLoginSchema.parse(req.body);
       
@@ -477,7 +531,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUserByHandle(validatedData.handle);
       if (!user || !user.isLocalAccount || !user.passwordHash) {
         // Don't reveal if user exists or not - just generic error
-        return res.status(401).json({ message: "Invalid handle or password" });
+        return res.status(401).json({ message: "Invalid username/email or password" });
       }
 
       // Check if account is locked
@@ -510,7 +564,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
         
-        return res.status(401).json({ message: "Invalid handle or password" });
+        return res.status(401).json({ message: "Invalid username/email or password" });
       }
 
       // Successful login - clear any failed attempts
@@ -816,7 +870,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post('/api/auth/upload-avatar', isAuthenticated, secureAvatarUpload.single('avatar'), async (req: any, res) => {
-    const userId = req.user.claims.sub;
+    const userId = req.user.id;
     const startTime = Date.now();
     
     try {
@@ -901,7 +955,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         message: "Avatar uploaded successfully",
         avatarUrl: avatarUrl,
-        user: createSafeUser(updatedUser)
+        user: createSelfUser(updatedUser)
       });
       
     } catch (error) {
@@ -924,9 +978,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Legacy disk avatar uploads are disabled. This path is retained only so
+  // authenticated users can delete avatars created by older releases.
+  const uploadDir = path.join(process.cwd(), "uploads", "avatars");
+
+  // Delete avatar endpoint
+  app.delete('/api/delete-avatar', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      
+      // Get current user to check for existing avatar
+      const currentUser = await storage.getUser(userId);
+      
+      if (!currentUser?.profileImageUrl) {
+        return res.status(404).json({ error: "No avatar to delete." });
+      }
+
+      // ✅ Clean up avatar file (disk storage only)
+      if (currentUser.profileImageUrl.startsWith('/uploads/avatars/')) {
+        const filename = path.basename(currentUser.profileImageUrl);
+        const filePath = path.join(uploadDir, filename);
+        if (fsSync.existsSync(filePath)) {
+          fsSync.unlinkSync(filePath);
+          console.log(`Deleted disk avatar: ${filename}`);
+        }
+      }
+      // Note: Object storage avatars are not automatically deleted to prevent data loss
+      // They should be manually managed through object storage admin panel
+
+      // ✅ Remove avatar URL from database
+      await storage.updateProfileImage(userId, "");
+
+      res.json({
+        message: "Avatar deleted successfully!",
+      });
+    } catch (error: any) {
+      console.error("Avatar deletion error:", error);
+      res.status(500).json({ error: "Error deleting avatar." });
+    }
+  });
+
+  // Serve uploaded avatars statically with Cache-Control headers
+  app.use('/uploads/avatars', express.static(uploadDir, {
+    maxAge: '1y', // Cache for 1 year
+    setHeaders: (res) => {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    }
+  }));
+
   // Object storage serving route (for protected objects like avatars)
   app.get("/objects/:objectPath(*)", isAuthenticated, async (req: any, res) => {
-    const userId = req.user?.claims?.sub;
+    const userId = req.user?.id;
     const objectStorageService = new ObjectStorageService();
     
     try {
@@ -971,9 +1073,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Admin security management endpoints
   // Unlock user account (admin only - for now checking if user is authenticated, would need proper admin role check)
-  app.post('/api/admin/unlock-account', isAuthenticated, async (req: any, res) => {
+  app.post('/api/admin/unlock-account', requireAdmin, async (req: any, res) => {
     try {
-      const adminUserId = req.user.claims.sub;
+      const adminUserId = req.user.id;
       const { userId, handle } = req.body;
 
       if (!userId && !handle) {
@@ -1026,9 +1128,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get account security status (admin only)
-  app.get('/api/admin/account-status/:identifier', isAuthenticated, async (req: any, res) => {
+  app.get('/api/admin/account-status/:identifier', requireAdmin, async (req: any, res) => {
     try {
-      const adminUserId = req.user.claims.sub;
+      const adminUserId = req.user.id;
       const identifier = req.params.identifier;
 
       // Find user by ID or handle
@@ -1073,7 +1175,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User statistics routes for testing
   app.get('/api/user/statistics', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const stats = await storage.getUserStatistics(userId);
       res.json(stats);
     } catch (error) {
@@ -1084,7 +1186,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/user/statistics/update', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const updatedStats = await storage.updateUserStatistics(userId);
       res.json(updatedStats);
     } catch (error) {
@@ -1105,7 +1207,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/user/achievements', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -1166,7 +1268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const file = req.file;
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const timestamp = Date.now();
       
       // Get file extension, default to .jpg if none
@@ -1289,7 +1391,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/forums/topics', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       
       // Generate slug from title
       const slug = req.body.title
@@ -1332,7 +1434,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/forums/posts', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       
       const validatedData = insertForumPostSchema.parse({
         ...req.body,
@@ -1367,7 +1469,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if user is the owner
-      if (topic.authorId !== req.user.claims.sub) {
+      if (topic.authorId !== req.user.id) {
         return res.status(403).json({ message: "You can only edit your own topics" });
       }
       
@@ -1395,7 +1497,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if user is the owner
-      if (topic.authorId !== req.user.claims.sub) {
+      if (topic.authorId !== req.user.id) {
         return res.status(403).json({ message: "You can only delete your own topics" });
       }
       
@@ -1418,7 +1520,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if user is the owner
-      if (post.authorId !== req.user.claims.sub) {
+      if (post.authorId !== req.user.id) {
         return res.status(403).json({ message: "You can only edit your own posts" });
       }
       
@@ -1446,7 +1548,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if user is the owner
-      if (post.authorId !== req.user.claims.sub) {
+      if (post.authorId !== req.user.id) {
         return res.status(403).json({ message: "You can only delete your own posts" });
       }
       
@@ -1501,7 +1603,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertNewsCommentSchema.parse({
         ...req.body,
         articleId,
-        authorId: req.user.claims.sub,
+        authorId: req.user.id,
       });
       const comment = await storage.createNewsComment(validatedData);
       res.status(201).json(comment);
@@ -1530,7 +1632,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertEventSchema.parse({
         ...req.body,
-        createdById: req.user.claims.sub,
+        createdById: req.user.id,
       });
       const event = await storage.createEvent(validatedData);
       res.status(201).json(event);
@@ -1967,7 +2069,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Shopping cart routes
   app.get('/api/cart', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const cartItems = await storage.getCartItems(userId);
       res.json(cartItems);
     } catch (error) {
@@ -1980,7 +2082,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertShoppingCartSchema.parse({
         ...req.body,
-        userId: req.user.claims.sub,
+        userId: req.user.id,
       });
       const cartItem = await storage.addToCart(validatedData);
       res.status(201).json(cartItem);
@@ -2019,7 +2121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Checkout route
   app.post('/api/checkout', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { promoCode } = req.body;
       
       // Get cart items
@@ -2080,7 +2182,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User routes
   app.get('/api/users/:userId/orders', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
       const orders = await storage.getOrders(userId, limit);
       res.json(orders);
@@ -2092,7 +2194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/users/:userId/posts', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
       const posts = await storage.getUserPosts(userId, limit);
       res.json(posts);
@@ -2104,7 +2206,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/users/:userId/notifications', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const unreadOnly = req.query.unread === 'true';
       const notifications = await storage.getUserNotifications(userId, unreadOnly);
       res.json(notifications);
@@ -2127,19 +2229,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/users/profile', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const updates = req.body;
-      const updatedUser = await storage.updateUserProfile(userId, updates);
-      res.json(updatedUser);
-    } catch (error) {
+      const userId = req.user.id;
+      
+      // Validate the input using our enhanced membership schema
+      const validatedData = userProfileUpdateSchema.parse(req.body);
+      
+      // Update user profile with validated data
+      const updatedUser = await storage.updateUserProfile(userId, validatedData);
+      
+      // Return safe user data (without sensitive fields)
+      res.json(createSelfUser(updatedUser));
+    } catch (error: any) {
       console.error("Error updating user profile:", error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid profile data", 
+          errors: error.errors 
+        });
+      }
+      
+      // Handle database constraint violations
+      if (error.code === '23505') {
+        if (error.detail?.includes('handle')) {
+          return res.status(400).json({ message: "Handle is already taken" });
+        }
+        if (error.detail?.includes('email')) {
+          return res.status(400).json({ message: "Email is already in use" });
+        }
+      }
+      
       res.status(500).json({ message: "Failed to update profile" });
     }
   });
 
   app.delete('/api/users/profile/:userId', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const requestedUserId = req.params.userId;
       
       // Only allow users to delete their own profile
@@ -2180,53 +2306,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin API endpoints
-  app.get('/api/admin/stats', async (req, res) => {
-    try {
-      const userCount = await storage.getUserCount();
-      const postCount = await storage.getPostCount();
-      const eventCount = await storage.getEventCount();
-      const articleCount = await storage.getArticleCount();
-      const forumCount = await storage.getForumCount();
-      
-      res.json({
-        totalUsers: userCount || 0,
-        totalPosts: postCount || 0,
-        totalEvents: eventCount || 0,
-        totalOrders: 0,
-        totalArticles: articleCount || 0,
-        activeForums: forumCount || 0,
-        todaySignups: 0,
-        monthlyRevenue: 0
-      });
-    } catch (error) {
-      console.error('Error fetching admin stats:', error);
-      res.status(500).json({ error: 'Failed to fetch admin stats' });
-    }
-  });
-
-  app.get('/api/admin/activities', async (req, res) => {
-    try {
-      res.json([
-        { id: '1', type: 'user_signup', description: 'New user registered', timestamp: new Date().toISOString(), user: 'Admin' },
-        { id: '2', type: 'new_post', description: 'New forum post created', timestamp: new Date().toISOString(), user: 'User123' }
-      ]);
-    } catch (error) {
-      console.error('Error fetching admin activities:', error);
-      res.status(500).json({ error: 'Failed to fetch admin activities' });
-    }
-  });
-
-  app.get('/api/admin/users', async (req, res) => {
-    try {
-      const users = await storage.getAllUsers();
-      res.json(users || []);
-    } catch (error) {
-      console.error('Error fetching admin users:', error);
-      res.status(500).json({ error: 'Failed to fetch users' });
-    }
-  });
-
   // Campus locations routes
   app.get('/api/campus/locations', async (req, res) => {
     try {
@@ -2252,9 +2331,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/campus/locations', isAuthenticated, async (req: any, res) => {
+  app.post('/api/campus/locations', requireAdmin, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const locationData = insertCampusLocationSchema.parse(req.body);
       const location = await storage.createCampusLocation(locationData);
       res.status(201).json(location);
@@ -2264,7 +2343,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/campus/locations/:id', isAuthenticated, async (req: any, res) => {
+  app.put('/api/campus/locations/:id', requireAdmin, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const locationData = insertCampusLocationSchema.partial().parse(req.body);
@@ -2276,7 +2355,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/campus/locations/:id', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/campus/locations/:id', requireAdmin, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteCampusLocation(id);
@@ -2323,31 +2402,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Profile completion routes
-  app.get('/api/auth/check-handle', async (req, res) => {
-    try {
-      const handle = req.query.handle as string;
-      if (!handle || handle.length < 3) {
-        return res.status(400).json({ error: 'Handle must be at least 3 characters' });
-      }
-      
-      if (handle.length > 30) {
-        return res.status(400).json({ error: 'Handle must be less than 30 characters' });
-      }
-      
-      // Apply same regex validation as schema
-      const handleRegex = /^[a-zA-Z0-9_]+$/;
-      if (!handleRegex.test(handle)) {
-        return res.status(400).json({ error: 'Handle can only contain letters, numbers, and underscores' });
-      }
-
-      // Check if handle exists
-      const existingUser = await storage.getUserByHandle(handle);
-      res.json({ available: !existingUser });
-    } catch (error) {
-      console.error('Error checking handle availability:', error);
-      res.status(500).json({ error: 'Failed to check handle availability' });
-    }
-  });
 
   app.post('/api/auth/complete-profile', isAuthenticated, async (req: any, res) => {
     try {
@@ -2368,10 +2422,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check for duplicate address (excluding current user)
       const duplicateAddress = await storage.checkDuplicateAddress(
-        profileData.address,
-        profileData.city,
-        profileData.state,
-        profileData.zipCode,
+        profileData.address || '',
+        profileData.city || '',
+        profileData.state || '',
+        profileData.zipCode || '',
         userId
       );
       if (duplicateAddress) {
@@ -2408,9 +2462,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         consentedAt: new Date(),
         isProfileComplete: true,
         profileCompletedAt: new Date(),
+        // Enhanced membership fields
+        aboutMe: profileData.aboutMe || null,
+        interests: profileData.interests || null,
+        affiliation: profileData.affiliation || null,
+        defaultAvatarChoice: profileData.defaultAvatarChoice || null,
+        graduationYear: profileData.graduationYear || null,
+        majorOrDepartment: profileData.majorOrDepartment || null,
+        socialLinks: profileData.socialLinks || null,
+        addressLine1: profileData.addressLine1 || null,
+        country: profileData.country || 'USA',
+        optInOffers: profileData.optInOffers || false,
       });
 
-      res.json(updatedUser);
+      res.json(createSelfUser(updatedUser));
     } catch (error: any) {
       console.error('Error completing profile:', error);
       if (error instanceof z.ZodError) {
@@ -2426,7 +2491,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/auth/update-profile', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const profileData = userProfileUpdateSchema.parse(req.body);
 
       // If handle is being updated, check availability
@@ -2438,7 +2503,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updatedUser = await storage.updateUserProfile(userId, profileData);
-      res.json(createSafeUser(updatedUser));
+      res.json(createSelfUser(updatedUser));
     } catch (error: any) {
       console.error('Error updating profile:', error);
       if (error instanceof z.ZodError) {
@@ -2453,7 +2518,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin routes
-  app.get('/api/admin/stats', isAuthenticated, async (req: any, res) => {
+  app.get('/api/admin/activities', requireAdmin, async (_req, res) => {
+    // A real audit log should replace this empty baseline response.
+    res.json([]);
+  });
+
+  app.get('/api/admin/stats', requireAdmin, async (req: any, res) => {
     try {
       const stats = await storage.getAdminStats();
       res.json(stats);
@@ -2463,12 +2533,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/admin/users', isAuthenticated, async (req: any, res) => {
+  app.get('/api/admin/users', requireAdmin, async (req: any, res) => {
     try {
       const users = await storage.getAllUsersWithStatistics();
       // Filter sensitive data from admin response
       const safeUsers = users.map(user => ({
-        ...createSafeUser(user),
+        ...createAdminSafeUser(user),
         postCount: user.postCount,
         threadCount: user.threadCount,
         daysSinceSignup: user.daysSinceSignup,
@@ -2481,13 +2551,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/admin/recent-members', isAuthenticated, async (req: any, res) => {
+  app.get('/api/admin/recent-members', requireAdmin, async (req: any, res) => {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
       const recentMembers = await storage.getRecentMembers(limit);
       // Filter sensitive data from admin response
       const safeRecentMembers = recentMembers.map(member => ({
-        ...createSafeUser(member),
+        ...createAdminSafeUser(member),
         daysSinceSignup: member.daysSinceSignup,
       }));
       res.json(safeRecentMembers);
@@ -2497,7 +2567,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/admin/achievement-summary', isAuthenticated, async (req: any, res) => {
+  app.get('/api/admin/achievement-summary', requireAdmin, async (req: any, res) => {
     try {
       const achievementSummary = await storage.getAchievementSummary();
       res.json(achievementSummary);
@@ -2507,9 +2577,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Heartbeats Dating App Routes
+  // Coogpaws Dating App Routes
   
-  // Get user's Heartbeats profile
+  // Get user's Coogpaws profile
   app.get('/api/coogpaws/profile', requireUHAuthentication, async (req: any, res) => {
     try {
       const userId = req.user.id;
@@ -2536,12 +2606,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(profile);
     } catch (error: any) {
-      console.error("Error fetching Heartbeats profile:", error);
+      console.error("Error fetching Coogpaws profile:", error);
       res.status(500).json({ message: "Failed to fetch profile" });
     }
   });
 
-  // Create or update Heartbeats profile
+  // Create or update Coogpaws profile
   app.post('/api/coogpaws/profile', requireUHAuthentication, async (req: any, res) => {
     try {
       const userId = req.user.id;
@@ -2581,7 +2651,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(profile);
     } catch (error: any) {
-      console.error("Error saving Heartbeats profile:", error);
+      console.error("Error saving Coogpaws profile:", error);
       if (error.name === 'ZodError') {
         return res.status(400).json({ message: "Invalid profile data", errors: error.errors });
       }
@@ -2618,7 +2688,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(profiles);
     } catch (error: any) {
-      console.error("Error fetching Heartbeats profiles:", error);
+      console.error("Error fetching Coogpaws profiles:", error);
       res.status(500).json({ message: "Failed to fetch profiles" });
     }
   });
@@ -2871,7 +2941,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete/deactivate Heartbeats profile
+  // Delete/deactivate Coogpaws profile
   app.delete('/api/coogpaws/profile', requireUHAuthentication, async (req: any, res) => {
     try {
       const userId = req.user.id;
@@ -2898,7 +2968,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({ message: "Profile deleted successfully" });
     } catch (error: any) {
-      console.error("Error deleting Heartbeats profile:", error);
+      console.error("Error deleting Coogpaws profile:", error);
       res.status(500).json({ message: "Failed to delete profile" });
     }
   });
@@ -3017,7 +3087,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Enhanced AI Ask Endpoint with Learning Capabilities
-  app.post('/api/ask', async (req, res) => {
+  app.post('/api/ask', isAuthenticated, aiLimiter, async (req, res) => {
     try {
       const question = req.body.question || "";
       
@@ -3106,14 +3176,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Post moderation endpoint for chat widget
-  app.post('/api/moderate-post', async (req, res) => {
+  app.post('/api/moderate-post', isAuthenticated, aiLimiter, async (req, res) => {
     try {
       const { title = "", content = "" } = req.body || {};
       const text = `${title}\n${content}`;
 
       const openaiApiKey = process.env.OPENAI_API_KEY;
       if (!openaiApiKey) {
-        return res.json({ ok: true, message: "Content accepted (moderation unavailable)" });
+        return res.status(503).json({ ok: false, message: "Moderation service unavailable" });
       }
 
       const response = await fetch("https://api.openai.com/v1/moderations", {
@@ -3136,12 +3206,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ ok: true, message: "Content approved" });
     } catch (error) {
       console.error("Error in post moderation:", error);
-      res.json({ ok: true, message: "Content accepted (moderation error)" });
+      res.status(503).json({ ok: false, message: "Moderation service unavailable" });
     }
   });
 
   // Voting system for AI answer feedback
-  app.post('/api/vote', async (req, res) => {
+  app.post('/api/vote', isAuthenticated, aiLimiter, async (req, res) => {
     try {
       const { id, delta } = req.body;
       
@@ -3191,39 +3261,508 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Feature flags endpoint
+  app.get("/api/feature-flags", async (req, res) => {
+    try {
+      const flags = {
+        aiEnabled: process.env.AI_ENABLED === "true" || false
+      };
+      
+      res.json({ success: true, flags });
+    } catch (error) {
+      console.error("Error fetching feature flags:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to fetch feature flags" 
+      });
+    }
+  });
+
+  // AI Chat endpoints for enhanced Chat with Memory
+  app.post('/api/ai/chat', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const validatedData = aiChatRequestSchema.parse(req.body);
+      
+      // Check if AI features are enabled
+      const aiEnabled = process.env.AI_ENABLED === 'true' || process.env.VITE_AI_ENABLED === 'true';
+      if (!aiEnabled) {
+        return res.status(503).json({ message: "AI features are currently disabled" });
+      }
+      
+      const { message, conversationId } = validatedData;
+      
+      // Generate response using existing AI system
+      let memory = [];
+      if (learningDB) {
+        try {
+          const stmt = await learningDB.prepare(
+            "SELECT * FROM learned WHERE question LIKE ? ORDER BY votes DESC LIMIT 5"
+          );
+          memory = await stmt.all(`%${message}%`);
+        } catch (error) {
+          console.error("Error fetching AI memory:", error);
+        }
+      }
+      
+      // Build enhanced prompt with memory
+      let enhancedPrompt = message;
+      if (memory.length > 0) {
+        enhancedPrompt += "\n\nRelevant past Q&A:\n";
+        memory.forEach((item: any) => {
+          enhancedPrompt += `Q: ${item.question}\nA: ${item.answer}\nVotes: ${item.votes}\n\n`;
+        });
+      }
+      
+      // Generate AI response (placeholder - integrate with actual AI service)
+      const aiResponse = `🐾 CoogAI: I understand you're asking about "${message}". Based on our University of Houston community knowledge, here's what I can help with...`;
+      
+      // Store the interaction for learning
+      if (learningDB) {
+        try {
+          await learningDB.run(
+            "INSERT INTO learned (question, answer, context, votes, user_id) VALUES (?, ?, ?, 0, ?)",
+            [message, aiResponse, "ai-chat", userId]
+          );
+        } catch (error) {
+          console.error("Error storing AI interaction:", error);
+        }
+      }
+      
+      res.json({
+        id: Date.now(),
+        response: aiResponse,
+        conversationId: conversationId || `conv_${Date.now()}`,
+        memory: memory.length
+      });
+      
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error in AI chat:", error);
+      res.status(500).json({ message: "AI chat error" });
+    }
+  });
+  
+  app.post('/api/ai/feedback', isAuthenticated, async (req: any, res) => {
+    try {
+      const validatedData = aiFeedbackSchema.parse(req.body);
+      const { id, feedback } = validatedData;
+      
+      if (learningDB) {
+        const delta = feedback === "1" ? 1 : -1;
+        await learningDB.run(
+          "UPDATE learned SET votes = votes + ? WHERE id = ?", 
+          [delta, id]
+        );
+        
+        console.log(`🤖 AI Feedback recorded: ${feedback === "1" ? 'positive' : 'negative'} for ID ${id}`);
+        res.json({ success: true, message: "Feedback recorded" });
+      } else {
+        res.status(500).json({ message: "Learning system unavailable" });
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error recording AI feedback:", error);
+      res.status(500).json({ message: "Failed to record feedback" });
+    }
+  });
+
+  // Coog Paws Chat Route - Serve Socket.IO real-time chat interface
+  const coogPawsHandler = (req: any, res: any) => {
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>🐾 Coog Paws Chat - CoogsNation</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <style>
+            body { 
+              font-family: 'Arial', sans-serif; 
+              background: linear-gradient(135deg, #c8102e, #d62d20); 
+              color: white; 
+              margin: 0; 
+              padding: 20px; 
+              min-height: 100vh;
+            }
+            .container { 
+              max-width: 800px; 
+              margin: 0 auto; 
+              background: rgba(255,255,255,0.1); 
+              border-radius: 15px; 
+              padding: 20px;
+              backdrop-filter: blur(10px);
+            }
+            h1 { 
+              text-align: center; 
+              margin-bottom: 30px; 
+              font-size: 2.5em;
+              text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            }
+            #messages { 
+              border: 2px solid rgba(255,255,255,0.3); 
+              height: 400px; 
+              overflow-y: auto; 
+              padding: 15px; 
+              margin-bottom: 15px;
+              background: rgba(255,255,255,0.1);
+              border-radius: 10px;
+              font-size: 16px;
+            }
+            .input-container {
+              display: flex;
+              gap: 10px;
+              align-items: center;
+            }
+            #msg { 
+              flex: 1;
+              padding: 12px 15px; 
+              border: none;
+              border-radius: 25px;
+              font-size: 16px;
+              outline: none;
+            }
+            button { 
+              padding: 12px 20px; 
+              background: white; 
+              color: #c8102e; 
+              border: none; 
+              border-radius: 25px; 
+              cursor: pointer;
+              font-weight: bold;
+              font-size: 16px;
+            }
+            button:hover { 
+              background: #f0f0f0; 
+            }
+            .message {
+              margin: 8px 0;
+              padding: 8px 12px;
+              background: rgba(255,255,255,0.2);
+              border-radius: 15px;
+              word-wrap: break-word;
+            }
+            .back-link {
+              display: inline-block;
+              margin-bottom: 20px;
+              color: white;
+              text-decoration: none;
+              padding: 8px 16px;
+              background: rgba(255,255,255,0.2);
+              border-radius: 20px;
+              transition: all 0.3s ease;
+            }
+            .back-link:hover {
+              background: rgba(255,255,255,0.3);
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <a href="/" class="back-link">← Back to CoogsNation</a>
+            <h1>🐾 Coog Paws Chat</h1>
+            <p style="text-align: center; margin-bottom: 30px; font-size: 18px;">Real-time chat for meaningful connections in the Cougar community</p>
+            
+            <div id="messages"></div>
+            <div class="input-container">
+              <input 
+                id="msg" 
+                placeholder="Type your message here..." 
+                autocomplete="off"
+                maxlength="500"
+              />
+              <button onclick="send()">Send 🐾</button>
+            </div>
+          </div>
+
+          <script src="/socket.io/socket.io.js"></script>
+          <script>
+            const socket = io();
+            const messages = document.getElementById("messages");
+            const input = document.getElementById("msg");
+
+            // Handle incoming chat messages
+            socket.on("chat", data => {
+              const messageDiv = document.createElement("div");
+              messageDiv.className = "message";
+              messageDiv.textContent = data.message || data;
+              messages.appendChild(messageDiv);
+              messages.scrollTop = messages.scrollHeight;
+            });
+
+            // Send message function
+            function send() {
+              const message = input.value.trim();
+              if (!message) return;
+              
+              socket.emit("chat", { message: message });
+              input.value = "";
+            }
+
+            // Send message on Enter key
+            input.addEventListener("keypress", function(e) {
+              if (e.key === "Enter") {
+                send();
+              }
+            });
+
+            // Focus on input when page loads
+            window.addEventListener("load", () => {
+              input.focus();
+            });
+
+            // Connection status
+            socket.on("connect", () => {
+              console.log("Connected to Coog Paws Chat");
+            });
+
+            socket.on("disconnect", () => {
+              console.log("Disconnected from Coog Paws Chat");
+            });
+          </script>
+        </body>
+      </html>
+    `);
+  };
+
+  // Only /coogpaws route available
+  app.get("/coogpaws", coogPawsHandler);
 
   const httpServer = createServer(app);
   
-  // 🐾 Socket.IO setup
-  const io = new SocketIOServer(httpServer, {
-    cors: { origin: "*", methods: ["GET", "POST"] }
-  });
-
-  // 🐾 Socket.IO events  
-  io.on("connection", (socket) => {
-    console.log("🐾 User connected");
-
-    socket.on("chat message", (msg) => {
-      io.emit("chat message", msg);
-    });
-
-    socket.on("disconnect", () => {
-      console.log("❌ User disconnected");
-    });
-  });
-
-  // ✅ Only serve frontend in PRODUCTION
-  if (process.env.NODE_ENV === "production") {
-    const __filename = fileURLToPath(import.meta.url);
-    const __dirname = path.dirname(__filename);
-    const clientDist = path.join(__dirname, "..", "client", "dist");
-    
-    app.use(express.static(clientDist));
-
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(clientDist, "index.html"));
-    });
+  // Initialize Socket.IO with the same authenticated session used by Express.
+  const configuredSocketOrigins = [
+    process.env.APP_ORIGIN,
+    process.env.APP_DOMAIN ? `https://${process.env.APP_DOMAIN}` : undefined,
+    ...(process.env.REPLIT_DOMAINS || "")
+      .split(",")
+      .filter(Boolean)
+      .map((domain) => domain === "localhost" ? "http://localhost:5000" : `https://${domain}`),
+  ].filter(Boolean) as string[];
+  if (process.env.NODE_ENV !== "production") {
+    configuredSocketOrigins.push("http://localhost:5000", "http://localhost:5173");
   }
+
+  const io = new SocketIOServer(httpServer, {
+    cors: {
+      origin: configuredSocketOrigins,
+      methods: ["GET", "POST"],
+      credentials: true,
+    }
+  });
+
+  io.engine.use(sessionMiddleware as any);
+
+  const requireSocketUser = async (socket: any, next: (error?: Error) => void) => {
+    try {
+      const sessionUser = socket.request.session?.passport?.user;
+      const userId = sessionUser?.id;
+      if (!userId) return next(new Error("Unauthorized"));
+      const dbUser = await storage.getUser(userId);
+      if (!dbUser) return next(new Error("Unauthorized"));
+      socket.data.userId = dbUser.id;
+      socket.data.user = dbUser;
+      return next();
+    } catch (error) {
+      console.error("Socket authentication failed:", error);
+      return next(new Error("Unauthorized"));
+    }
+  };
+
+  const requireUHSocketUser = async (socket: any, next: (error?: Error) => void) => {
+    await requireSocketUser(socket, (error?: Error) => {
+      if (error) return next(error);
+      const dbUser = socket.data.user;
+      const email = String(dbUser?.email || "").toLowerCase();
+      const uhDomains = ["@uh.edu", "@cougarnet.uh.edu", "@central.uh.edu", "@uhcl.edu", "@uhd.edu", "@uhv.edu"];
+      if (!uhDomains.some((domain) => email.endsWith(domain))) {
+        return next(new Error("UH community verification required"));
+      }
+      if (!dbUser.firstName || !dbUser.lastName) {
+        return next(new Error("Complete profile required"));
+      }
+      return next();
+    });
+  };
+
+  io.of("/").use(requireUHSocketUser);
+
+  // Handle authenticated UH-community Socket.IO connections
+  io.on("connection", (socket) => {
+    console.log("👤 User connected to Coog Paws Chat:", socket.id);
+    
+    // Broadcast join message
+    socket.broadcast.emit("chat", { 
+      message: "Someone joined the Coog Paws chat! 🐾" 
+    });
+    
+    // Handle chat messages
+    socket.on("chat", (data) => {
+      console.log("💬 Coog Paws message:", data);
+      // Broadcast message to all connected clients
+      io.emit("chat", { 
+        message: data.message || data 
+      });
+    });
+    
+    // Handle disconnection
+    socket.on("disconnect", () => {
+      console.log("👋 User disconnected from Coog Paws Chat:", socket.id);
+      socket.broadcast.emit("chat", { 
+        message: "Someone left the Coog Paws chat 🐾💔" 
+      });
+    });
+  });
+
+  // AI Chat Namespace for streaming responses
+  const aiNamespace = io.of("/ai");
+  aiNamespace.use(requireSocketUser);
+  
+  aiNamespace.on("connection", (socket) => {
+    console.log("🤖 User connected to AI Chat:", socket.id);
+    
+    // Handle AI chat message requests with streaming
+    socket.on("ai-message", async (data) => {
+      try {
+        console.log("🤖 AI request:", data);
+        const { message, conversationId } = data;
+        const userId = socket.data.userId;
+        
+        // Check if AI features are enabled
+        const aiEnabled = process.env.AI_ENABLED === 'true' || process.env.VITE_AI_ENABLED === 'true';
+        if (!aiEnabled) {
+          socket.emit("ai-response", { 
+            error: "AI features are currently disabled",
+            conversationId 
+          });
+          return;
+        }
+        
+        // Get memory from learning database
+        let memory = [];
+        if (learningDB) {
+          try {
+            const stmt = await learningDB.prepare(
+              "SELECT * FROM learned WHERE question LIKE ? ORDER BY votes DESC LIMIT 3"
+            );
+            memory = await stmt.all(`%${message}%`);
+          } catch (error) {
+            console.error("Error fetching AI memory:", error);
+          }
+        }
+        
+        // Simulate streaming response by sending chunks
+        const responseId = Date.now();
+        const fullResponse = `🤖 CoogAI: I understand you're asking about "${message}". Based on our University of Houston community knowledge and ${memory.length} similar past conversations, here's what I can help with...\n\nThis is a simulated AI response that would integrate with a real AI service like OpenAI. The memory system is working and learning from user interactions.`;
+        
+        // Send response in chunks to simulate streaming
+        const words = fullResponse.split(' ');
+        let currentResponse = '';
+        
+        for (let i = 0; i < words.length; i++) {
+          currentResponse += words[i] + ' ';
+          
+          // Send chunk every few words
+          if (i % 5 === 0 || i === words.length - 1) {
+            socket.emit("ai-chunk", {
+              id: responseId,
+              chunk: words.slice(Math.max(0, i - 4), i + 1).join(' '),
+              fullResponse: currentResponse.trim(),
+              isComplete: i === words.length - 1,
+              conversationId,
+              memoryUsed: memory.length
+            });
+            
+            // Small delay to simulate real streaming
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+        }
+        
+        // Store the interaction for learning if we have a database
+        if (learningDB) {
+          try {
+            await learningDB.run(
+              "INSERT INTO learned (question, answer, context, votes, user_id) VALUES (?, ?, ?, 0, ?)",
+              [message, fullResponse, "ai-streaming-chat", userId]
+            );
+          } catch (error) {
+            console.error("Error storing AI interaction:", error);
+          }
+        }
+        
+      } catch (error) {
+        console.error("Error in AI streaming:", error);
+        socket.emit("ai-response", { 
+          error: "AI service unavailable",
+          conversationId: data.conversationId 
+        });
+      }
+    });
+    
+    // Handle disconnection
+    socket.on("disconnect", () => {
+      console.log("🤖 User disconnected from AI Chat:", socket.id);
+    });
+  });
+
+  // Avatar upload endpoints
+  app.post("/api/objects/avatar-upload", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+      
+      const objectStorageService = new ObjectStorageService();
+      const { url, objectPath } = await objectStorageService.getAvatarUploadURL(userId);
+      res.json({ 
+        method: "PUT",
+        url: url,
+        objectPath: objectPath 
+      });
+    } catch (error) {
+      console.error("Error getting avatar upload URL:", error);
+      res.status(500).json({ error: "Failed to get upload URL" });
+    }
+  });
+
+  app.put("/api/objects/avatar-complete", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { avatarURL } = req.body;
+      
+      if (!avatarURL) {
+        return res.status(400).json({ error: "Avatar URL is required" });
+      }
+
+      const objectStorageService = new ObjectStorageService();
+      // Set ACL policy for the uploaded avatar
+      const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
+        avatarURL,
+        {
+          owner: userId,
+          visibility: "public", // Avatars should be publicly accessible
+        }
+      );
+
+      // Update user's profile image URL in database
+      await storage.updateUserProfile(userId, {
+        profileImageUrl: objectPath
+      });
+
+      res.json({ 
+        success: true,
+        objectPath: objectPath,
+        message: "Avatar uploaded successfully" 
+      });
+    } catch (error) {
+      console.error("Error completing avatar upload:", error);
+      res.status(500).json({ error: "Failed to complete avatar upload" });
+    }
+  });
 
   return httpServer;
 }

@@ -1,0 +1,45 @@
+// src/components/JoinDropdown.tsx
+import { useState } from "react";
+import { FaGoogle, FaApple, FaLinkedin, FaFacebook, FaTwitter, FaCog } from "react-icons/fa";
+
+export default function JoinDropdown() {
+  const [open, setOpen] = useState(false);
+
+  const providers = [
+    { name: "Sign Up", icon: null, color: "bg-red-600 text-white hover:bg-red-700", path: "/signup" },
+    { name: "Continue with Google", icon: <FaGoogle />, color: "text-red-500 hover:text-red-600", path: "/auth/google" },
+    { name: "Continue with Apple", icon: <FaApple />, color: "text-gray-800 hover:text-black", path: "/auth/apple" },
+    { name: "Continue with LinkedIn", icon: <FaLinkedin />, color: "text-blue-600 hover:text-blue-700", path: "/auth/linkedin" },
+    { name: "Continue with Facebook", icon: <FaFacebook />, color: "text-blue-500 hover:text-blue-600", path: "/auth/facebook" },
+    { name: "Continue with X (Twitter)", icon: <FaTwitter />, color: "text-sky-500 hover:text-sky-600", path: "/auth/twitter" },
+    { name: "Continue with Other", icon: <FaCog />, color: "text-gray-500 hover:text-gray-700", path: "/signup/other" },
+  ];
+
+  return (
+    <div className="relative inline-block text-left">
+      <button
+        onClick={() => setOpen(!open)}
+        className="text-white font-semibold hover:text-red-400 focus:outline-none"
+      >
+        Join ▾
+      </button>
+
+      {open && (
+        <div className="absolute right-0 mt-2 w-56 origin-top-right bg-white border border-gray-200 divide-y divide-gray-100 rounded-md shadow-lg focus:outline-none z-50">
+          <div className="py-1">
+            {providers.map((p, i) => (
+              <a
+                key={i}
+                href={p.path}
+                className={`flex items-center gap-3 px-4 py-2 text-sm font-medium ${p.color}`}
+              >
+                {p.icon && <span className="text-lg">{p.icon}</span>}
+                {p.name}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

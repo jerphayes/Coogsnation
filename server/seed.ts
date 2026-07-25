@@ -53,9 +53,9 @@ async function seedDatabase() {
       sortOrder: 5
     },
     {
-      name: "Heartbeats",
+      name: "Coogpaws",
       description: "Dating, relationships, and meeting fellow Coogs",
-      slug: "heartbeats",
+      slug: "coogpaws",
       icon: "fas fa-heart",
       color: "#EC4899",
       sortOrder: 6
