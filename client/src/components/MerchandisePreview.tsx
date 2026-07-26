@@ -1,9 +1,10 @@
 import { Card } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
+import type { ProductResponse } from "@shared/api-types";
 import { Link } from "wouter";
 
 export function MerchandisePreview() {
-  const { data: products, isLoading } = useQuery({
+  const { data: products, isLoading } = useQuery<ProductResponse[]>({
     queryKey: ["/api/products"],
   });
 

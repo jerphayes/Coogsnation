@@ -3,9 +3,7 @@ import express from "express";
 import { createServer, type Server } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import { storage } from "./storage";
-import sqlite3 from "sqlite3";
-import { open } from "sqlite";
-import { setupAuth, isAuthenticated, requireAdmin, requireUHAuthentication } from "./replitAuth";
+import { setupAuth, isAuthenticated, requireAdmin, requireUHAuthentication } from "./auth";
 import {
   insertForumTopicSchema,
   insertForumPostSchema,
@@ -32,54 +30,25 @@ import {
   createSafeUser,
   createSelfUser,
   createAdminSafeUser,
+  aiQuestionSchema,
   aiChatRequestSchema,
+  aiModerationRequestSchema,
   aiFeedbackSchema,
 } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import { promises as fs } from "fs";
-import * as fsSync from "fs";
 import path from "path";
 import sharp from "sharp";
 import { sendAchievementEmail } from "./emailService";
 import { checkForNewAchievement, achievementLevels, getNextAchievement } from "@shared/schema";
 import { PasswordService } from "./passwordService";
 import { mfaService } from "./mfaService";
-import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
-import { ObjectPermission } from "./objectAcl";
+import { FileStorageService, FileNotFoundError } from "./fileStorage";
 import { PODManagerService, PODHelpers } from "./podServices";
-import fetch from "node-fetch";
 import { rateLimit } from "express-rate-limit";
-
-// SQLite3 Learning Database Setup with Enhanced Error Handling
-let learningDB: any = null;
-
-(async () => {
-  try {
-    learningDB = await open({
-      filename: "./coogsnation_ai_learning.db",
-      driver: sqlite3.Database
-    });
-
-    // Create table for learned Q&A pairs
-    await learningDB.exec(`
-      CREATE TABLE IF NOT EXISTS learned (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        question TEXT NOT NULL,
-        answer TEXT NOT NULL,
-        votes INTEGER DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    
-    console.log("📚 AI Learning database initialized successfully");
-  } catch (error) {
-    console.error("❌ Failed to initialize learning database:", error);
-    // Continue without crashing - database functionality will be disabled
-    learningDB = null;
-  }
-})();
+import { getAIService } from "./ai/service";
+import { AIServiceError } from "./ai/types";
 
 // Helper function to verify Google reCAPTCHA
 async function verifyRecaptcha(recaptchaResponse: string, clientIP?: string): Promise<boolean> {
@@ -226,35 +195,9 @@ function renderNav(role: string, username?: string) {
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
-  // Redirect /login to main app (OAuth handled by frontend)
-  app.get("/login", (req: any, res: any) => {
-    res.redirect("/?showLogin=true");
-  });
-
-  // Redirect /signup to Replit Auth login (which includes signup options)
-  app.get("/signup", (req, res) => {
-    res.redirect("/api/login?returnTo=/dashboard");
-  });
-
-  // Redirect /signup/other to login page for local account creation
-  app.get("/signup/other", (req, res) => {
-    res.redirect("/login");
-  });
-
-  // Admin dashboard redirects to main admin interface
-  app.get("/admin", (req: any, res: any) => {
-    res.redirect("/dashboard?admin=true");
-  });
-
-  // Logout
-  app.get("/logout", (req: any, res: any) => {
-    req.session.destroy(() => {
-      res.send("Logged out. <a href='/login'>Login again</a>");
-    });
-  });
-
   // Auth middleware
   const sessionMiddleware = await setupAuth(app);
+  const aiService = getAIService();
 
   const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -303,32 +246,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Simple redirect routes to existing Replit Auth system
-  app.get("/auth/google", (req, res) => {
-    res.redirect("/api/login?returnTo=/dashboard");
-  });
-
-  app.get("/auth/apple", (req, res) => {
-    res.redirect("/api/login?returnTo=/dashboard");
-  });
-
+  // Optional social-login aliases. Core email/password authentication is always available.
   app.get("/auth/linkedin", (req, res) => {
-    res.redirect("/api/login?returnTo=/dashboard");
+    const returnTo = encodeURIComponent(String(req.query.redirect || "/dashboard"));
+    res.redirect(`/api/auth/linkedin?returnTo=${returnTo}`);
   });
 
   app.get("/auth/facebook", (req, res) => {
-    res.redirect("/api/login?returnTo=/dashboard");
+    const returnTo = encodeURIComponent(String(req.query.redirect || "/dashboard"));
+    res.redirect(`/api/auth/facebook?returnTo=${returnTo}`);
   });
 
-  app.get("/auth/twitter", (req, res) => {
-    res.redirect("/api/login?returnTo=/dashboard");
-  });
-
-  app.get("/auth/x", (req, res) => {
-    res.redirect("/api/login?returnTo=/dashboard");
-  });
-
-  app.get("/auth/email", (req, res) => {
+  app.get("/auth/email", (_req, res) => {
     res.redirect("/login");
   });
 
@@ -932,17 +861,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Upload to secure object storage
-      const objectStorageService = new ObjectStorageService();
+      const fileStorageService = new FileStorageService();
       let avatarUrl;
       
       try {
-        avatarUrl = await objectStorageService.uploadAvatarDirect(
+        avatarUrl = await fileStorageService.uploadAvatarDirect(
           userId,
           processedImageBuffer,
           'image/jpeg'
         );
       } catch (storageError) {
-        console.error(`[SECURITY] Object storage upload failed for user ${userId}:`, storageError);
+        console.error(`[SECURITY] File storage upload failed for user ${userId}:`, storageError);
         return res.status(500).json({ message: "Failed to save avatar" });
       }
 
@@ -978,96 +907,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Legacy disk avatar uploads are disabled. This path is retained only so
-  // authenticated users can delete avatars created by older releases.
-  const uploadDir = path.join(process.cwd(), "uploads", "avatars");
-
-  // Delete avatar endpoint
+  // Delete the signed-in user's current avatar.
   app.delete('/api/delete-avatar', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
-      
-      // Get current user to check for existing avatar
       const currentUser = await storage.getUser(userId);
-      
-      if (!currentUser?.profileImageUrl) {
-        return res.status(404).json({ error: "No avatar to delete." });
+      const currentAvatar = currentUser?.profileImageUrl || "";
+      if (currentAvatar.startsWith("/objects/")) {
+        const fileStorage = new FileStorageService();
+        await fileStorage.deleteByObjectPath(currentAvatar, userId);
       }
-
-      // ✅ Clean up avatar file (disk storage only)
-      if (currentUser.profileImageUrl.startsWith('/uploads/avatars/')) {
-        const filename = path.basename(currentUser.profileImageUrl);
-        const filePath = path.join(uploadDir, filename);
-        if (fsSync.existsSync(filePath)) {
-          fsSync.unlinkSync(filePath);
-          console.log(`Deleted disk avatar: ${filename}`);
-        }
-      }
-      // Note: Object storage avatars are not automatically deleted to prevent data loss
-      // They should be manually managed through object storage admin panel
-
-      // ✅ Remove avatar URL from database
       await storage.updateProfileImage(userId, "");
-
-      res.json({
-        message: "Avatar deleted successfully!",
-      });
-    } catch (error: any) {
+      res.json({ message: "Avatar deleted successfully" });
+    } catch (error) {
       console.error("Avatar deletion error:", error);
-      res.status(500).json({ error: "Error deleting avatar." });
+      res.status(500).json({ error: "Error deleting avatar" });
     }
   });
 
-  // Serve uploaded avatars statically with Cache-Control headers
-  app.use('/uploads/avatars', express.static(uploadDir, {
-    maxAge: '1y', // Cache for 1 year
-    setHeaders: (res) => {
-      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-    }
-  }));
-
-  // Object storage serving route (for protected objects like avatars)
-  app.get("/objects/:objectPath(*)", isAuthenticated, async (req: any, res) => {
-    const userId = req.user?.id;
-    const objectStorageService = new ObjectStorageService();
-    
+  // Serve application-managed files. Public files do not require a login; private
+  // files are available only to their owner.
+  app.get("/objects/:objectPath(*)", async (req: any, res) => {
+    const fileStorage = new FileStorageService();
     try {
-      const objectFile = await objectStorageService.getObjectEntityFile(req.path);
-      const canAccess = await objectStorageService.canAccessObjectEntity({
-        objectFile,
-        userId: userId,
-        requestedPermission: ObjectPermission.READ,
-      });
-      
-      if (!canAccess) {
-        console.log(`[SECURITY] Access denied to object ${req.path} for user ${userId}`);
-        return res.sendStatus(404); // Return 404 instead of 401 to prevent enumeration
-      }
-      
-      objectStorageService.downloadObject(objectFile, res);
+      const file = await fileStorage.getFile(req.path);
+      const userId = req.isAuthenticated?.() ? req.user?.id : undefined;
+      if (!fileStorage.canAccess(file, userId)) return res.sendStatus(404);
+      fileStorage.download(file, res);
     } catch (error) {
-      if (error instanceof ObjectNotFoundError) {
-        return res.sendStatus(404);
-      }
-      console.error(`[SECURITY] Error accessing object ${req.path}:`, error);
+      if (error instanceof FileNotFoundError) return res.sendStatus(404);
+      console.error(`Error accessing stored file ${req.path}:`, error);
       return res.sendStatus(500);
-    }
-  });
-
-  // Public object serving route
-  app.get("/public-objects/:filePath(*)", async (req, res) => {
-    const filePath = req.params.filePath;
-    const objectStorageService = new ObjectStorageService();
-    
-    try {
-      const file = await objectStorageService.searchPublicObject(filePath);
-      if (!file) {
-        return res.status(404).json({ error: "File not found" });
-      }
-      objectStorageService.downloadObject(file, res);
-    } catch (error) {
-      console.error("Error searching for public object:", error);
-      return res.status(500).json({ error: "Internal server error" });
     }
   });
 
@@ -3061,178 +2931,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ========== CHAT WIDGET API ENDPOINTS ==========
-  
-  // FAQ data for chat widget
+  // ========== UNIVERSAL AI API ENDPOINTS ==========
+
   const FAQS = [
     { q: "How do I create an account?", a: "Click the 'Join' button in the header, fill out the signup form, complete the reCAPTCHA, and submit." },
     { q: "What are the community rules?", a: "Be respectful, no spam, and keep posts on UH and sports topics. Check our Community Guidelines for more details." },
     { q: "How do I reset my password?", a: "Use the 'Forgot password' link on the login page or contact our support team." },
     { q: "Can I promote my business?", a: "Business promotions are only allowed in designated marketplace areas. Please respect our community guidelines." },
-    { q: "How do I report a post?", a: "Click 'Report' on any post. Our AI system reviews reports first, then our admin team follows up." },
-    { q: "How do I join forums?", a: "Navigate to the Forums section and click on any category that interests you. You can start participating immediately!" },
-    { q: "What is CoogsNation?", a: "CoogsNation is the premier online community for University of Houston Cougar fans, students, alumni, and supporters." }
+    { q: "How do I report a post?", a: "Click 'Report' on any post. Automated safety checks review reports first, then the admin team follows up." },
+    { q: "How do I join forums?", a: "Navigate to the Forums section and click a category. Authenticated members can participate immediately." },
+    { q: "What is CoogsNation?", a: "CoogsNation is an online community for University of Houston Cougar fans, students, alumni, faculty, staff, and friends." },
   ];
 
-  function findBestFAQMatch(question = "") {
+  function findBestFAQMatch(question: string) {
     const q = question.toLowerCase();
-    let best = null, score = 0;
-    for (const f of FAQS) {
-      const text = (f.q + " " + f.a).toLowerCase();
-      let s = 0;
-      for (const w of q.split(/\W+/)) if (text.includes(w)) s++;
-      if (s > score) { score = s; best = f; }
+    let best: typeof FAQS[number] | null = null;
+    let score = 0;
+    for (const faq of FAQS) {
+      const text = `${faq.q} ${faq.a}`.toLowerCase();
+      let current = 0;
+      for (const word of q.split(/\W+/).filter((value) => value.length > 2)) {
+        if (text.includes(word)) current += 1;
+      }
+      if (current > score) {
+        score = current;
+        best = faq;
+      }
     }
     return score >= 2 ? best : null;
   }
 
-  // Enhanced AI Ask Endpoint with Learning Capabilities
-  app.post('/api/ask', isAuthenticated, aiLimiter, async (req, res) => {
-    try {
-      const question = req.body.question || "";
-      
-      if (!question.trim()) {
-        return res.json({ answer: "Please ask me a question!", source: "error" });
-      }
+  function sendAIError(res: any, error: unknown, fallback = "AI service unavailable") {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ message: "Invalid AI request", errors: error.errors });
+    }
+    if (error instanceof AIServiceError) {
+      return res.status(error.statusCode).json({ message: error.message, code: error.code });
+    }
+    console.error(fallback, error);
+    return res.status(503).json({ message: fallback, code: "AI_SERVICE_ERROR" });
+  }
 
-      // 1. First check static FAQ
-      const bestFAQ = findBestFAQMatch(question);
+  app.post('/api/ask', isAuthenticated, aiLimiter, async (req: any, res) => {
+    try {
+      const validated = aiQuestionSchema.parse(req.body);
+      const bestFAQ = findBestFAQMatch(validated.question);
       if (bestFAQ) {
-        return res.json({ answer: bestFAQ.a, source: "faq" });
+        return res.json({
+          answer: bestFAQ.a,
+          source: "faq",
+          conversationId: validated.conversationId || null,
+        });
       }
-
-      // 2. Check Learned Database for previously answered questions
-      if (learningDB) {
-        try {
-          const learnedAnswer = await learningDB.get(
-            "SELECT * FROM learned WHERE question LIKE ? ORDER BY votes DESC LIMIT 1", 
-            [`%${question}%`]
-          );
-          
-          if (learnedAnswer) {
-            console.log("📖 Found learned answer for question:", question);
-            return res.json({ 
-              answer: learnedAnswer.answer, 
-              source: "learned",
-              learnedId: learnedAnswer.id 
-            });
-          }
-        } catch (dbError) {
-          console.error("Learning DB query error:", dbError);
-        }
-      }
-
-      // 3. Fallback to OpenAI for new questions
-      const openaiApiKey = process.env.OPENAI_API_KEY;
-      if (!openaiApiKey) {
-        return res.json({ answer: "AI chat is currently unavailable. Please try again later or contact support for help.", source: "error" });
-      }
-
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${openaiApiKey}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "system", 
-              content: "You are CoogsNation AI Assistant, helping users with questions about the University of Houston fan community platform. Be helpful, concise, and friendly. Focus on CoogsNation features, UH sports, and community topics."
-            },
-            {
-              role: "user", 
-              content: question
-            }
-          ]
-        })
+      const result = await aiService.ask({
+        userId: req.user.id,
+        message: validated.question,
+        conversationId: validated.conversationId,
       });
-
-      const data = await response.json() as any;
-      const answer = data.choices?.[0]?.message?.content?.trim() || "I'm sorry, I couldn't process your question right now. Please try again or contact support.";
-
-      // 4. Save new Q&A pair to learning database for future use
-      if (learningDB && answer !== "I'm sorry, I couldn't process your question right now. Please try again or contact support.") {
-        try {
-          await learningDB.run(
-            "INSERT INTO learned (question, answer) VALUES (?, ?)", 
-            [question, answer]
-          );
-          console.log("💡 Saved new Q&A to learning database");
-        } catch (saveError) {
-          console.error("Failed to save to learning DB:", saveError);
-        }
-      }
-
-      res.json({ answer, source: "openai" });
+      return res.json(result);
     } catch (error) {
-      console.error("Error in enhanced AI chat:", error);
-      res.json({ 
-        answer: "I'm experiencing technical difficulties. Please try again later or contact our support team.", 
-        source: "error" 
-      });
+      return sendAIError(res, error);
     }
   });
 
-  // Post moderation endpoint for chat widget
-  app.post('/api/moderate-post', isAuthenticated, aiLimiter, async (req, res) => {
+  app.post('/api/moderate-post', isAuthenticated, aiLimiter, async (req: any, res) => {
     try {
-      const { title = "", content = "" } = req.body || {};
-      const text = `${title}\n${content}`;
-
-      const openaiApiKey = process.env.OPENAI_API_KEY;
-      if (!openaiApiKey) {
-        return res.status(503).json({ ok: false, message: "Moderation service unavailable" });
+      const validated = aiModerationRequestSchema.parse(req.body);
+      const result = await aiService.moderate(req.user.id, `${validated.title}\n${validated.content}`.trim());
+      if (!result.allowed) {
+        return res.json({ ok: false, message: result.reason || "Content blocked by safety moderation", categories: result.categories });
       }
-
-      const response = await fetch("https://api.openai.com/v1/moderations", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${openaiApiKey}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model: "omni-moderation-latest",
-          input: text
-        })
-      });
-
-      const data = await response.json() as any;
-      if (data.results?.[0]?.flagged) {
-        return res.json({ ok: false, message: "Content blocked by AI moderation" });
-      }
-      
-      res.json({ ok: true, message: "Content approved" });
+      return res.json({ ok: true, message: "Content approved", categories: [] });
     } catch (error) {
-      console.error("Error in post moderation:", error);
-      res.status(503).json({ ok: false, message: "Moderation service unavailable" });
+      // Moderation fails closed: provider errors never approve content.
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ ok: false, message: "Invalid moderation request", errors: error.errors });
+      }
+      if (error instanceof AIServiceError) {
+        return res.status(error.statusCode).json({ ok: false, message: error.message, code: error.code });
+      }
+      console.error("Moderation service unavailable:", error);
+      return res.status(503).json({ ok: false, message: "Moderation service unavailable" });
     }
   });
 
-  // Voting system for AI answer feedback
-  app.post('/api/vote', isAuthenticated, aiLimiter, async (req, res) => {
+  app.post('/api/vote', isAuthenticated, aiLimiter, async (req: any, res) => {
     try {
-      const { id, delta } = req.body;
-      
-      if (!id || !delta || (delta !== 1 && delta !== -1)) {
-        return res.status(400).json({ message: "Invalid vote data" });
-      }
-      
-      if (learningDB) {
-        await learningDB.run(
-          "UPDATE learned SET votes = votes + ? WHERE id = ?", 
-          [delta, id]
-        );
-        
-        console.log(`📊 Vote recorded: ${delta > 0 ? 'upvote' : 'downvote'} for answer ID ${id}`);
-        res.json({ success: true, message: "Vote recorded" });
-      } else {
-        res.status(500).json({ message: "Learning database not available" });
-      }
+      const validated = aiFeedbackSchema.parse({
+        id: req.body?.id,
+        feedback: String(req.body?.delta ?? req.body?.feedback),
+      });
+      const value = validated.feedback === "1" ? 1 : -1;
+      const score = await aiService.vote(validated.id, req.user.id, value);
+      return res.json({ success: true, score, message: "Feedback recorded" });
     } catch (error) {
-      console.error("Error recording vote:", error);
-      res.status(500).json({ message: "Failed to record vote" });
+      return sendAIError(res, error, "Failed to record AI feedback");
     }
   });
 
@@ -3253,7 +3046,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ 
         success: true, 
         message: "Captcha verified! Please use the main 'Join' button in the header to complete registration.",
-        redirect: "/api/login"
+        redirect: "/login"
       });
     } catch (error) {
       console.error("Error in chat widget signup:", error);
@@ -3261,113 +3054,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Feature flags endpoint
-  app.get("/api/feature-flags", async (req, res) => {
+  // Feature flags endpoint exposes capabilities, never API keys or secrets.
+  app.get("/api/feature-flags", async (_req, res) => {
+    res.json({ success: true, flags: { aiEnabled: aiService.publicStatus().enabled }, ai: aiService.publicStatus() });
+  });
+
+  app.post('/api/ai/chat', isAuthenticated, aiLimiter, async (req: any, res) => {
     try {
-      const flags = {
-        aiEnabled: process.env.AI_ENABLED === "true" || false
-      };
-      
-      res.json({ success: true, flags });
-    } catch (error) {
-      console.error("Error fetching feature flags:", error);
-      res.status(500).json({ 
-        success: false, 
-        message: "Failed to fetch feature flags" 
+      const validated = aiChatRequestSchema.parse(req.body);
+      const result = await aiService.ask({
+        userId: req.user.id,
+        message: validated.message,
+        conversationId: validated.conversationId,
       });
+      return res.json({
+        id: result.knowledgeId || result.requestId,
+        response: result.answer,
+        source: result.source,
+        provider: result.provider,
+        model: result.model,
+        requestId: result.requestId,
+        conversationId: result.conversationId,
+        usage: result.usage,
+      });
+    } catch (error) {
+      return sendAIError(res, error, "AI chat unavailable");
     }
   });
 
-  // AI Chat endpoints for enhanced Chat with Memory
-  app.post('/api/ai/chat', isAuthenticated, async (req: any, res) => {
+  app.post('/api/ai/feedback', isAuthenticated, aiLimiter, async (req: any, res) => {
     try {
-      const userId = req.user.id;
-      const validatedData = aiChatRequestSchema.parse(req.body);
-      
-      // Check if AI features are enabled
-      const aiEnabled = process.env.AI_ENABLED === 'true' || process.env.VITE_AI_ENABLED === 'true';
-      if (!aiEnabled) {
-        return res.status(503).json({ message: "AI features are currently disabled" });
-      }
-      
-      const { message, conversationId } = validatedData;
-      
-      // Generate response using existing AI system
-      let memory = [];
-      if (learningDB) {
-        try {
-          const stmt = await learningDB.prepare(
-            "SELECT * FROM learned WHERE question LIKE ? ORDER BY votes DESC LIMIT 5"
-          );
-          memory = await stmt.all(`%${message}%`);
-        } catch (error) {
-          console.error("Error fetching AI memory:", error);
-        }
-      }
-      
-      // Build enhanced prompt with memory
-      let enhancedPrompt = message;
-      if (memory.length > 0) {
-        enhancedPrompt += "\n\nRelevant past Q&A:\n";
-        memory.forEach((item: any) => {
-          enhancedPrompt += `Q: ${item.question}\nA: ${item.answer}\nVotes: ${item.votes}\n\n`;
-        });
-      }
-      
-      // Generate AI response (placeholder - integrate with actual AI service)
-      const aiResponse = `🐾 CoogAI: I understand you're asking about "${message}". Based on our University of Houston community knowledge, here's what I can help with...`;
-      
-      // Store the interaction for learning
-      if (learningDB) {
-        try {
-          await learningDB.run(
-            "INSERT INTO learned (question, answer, context, votes, user_id) VALUES (?, ?, ?, 0, ?)",
-            [message, aiResponse, "ai-chat", userId]
-          );
-        } catch (error) {
-          console.error("Error storing AI interaction:", error);
-        }
-      }
-      
-      res.json({
-        id: Date.now(),
-        response: aiResponse,
-        conversationId: conversationId || `conv_${Date.now()}`,
-        memory: memory.length
-      });
-      
+      const validated = aiFeedbackSchema.parse(req.body);
+      const score = await aiService.vote(validated.id, req.user.id, validated.feedback === "1" ? 1 : -1);
+      return res.json({ success: true, score, message: "Feedback recorded" });
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      console.error("Error in AI chat:", error);
-      res.status(500).json({ message: "AI chat error" });
+      return sendAIError(res, error, "Failed to record AI feedback");
     }
   });
-  
-  app.post('/api/ai/feedback', isAuthenticated, async (req: any, res) => {
+
+  app.get('/api/admin/ai/status', requireAdmin, async (_req, res) => {
     try {
-      const validatedData = aiFeedbackSchema.parse(req.body);
-      const { id, feedback } = validatedData;
-      
-      if (learningDB) {
-        const delta = feedback === "1" ? 1 : -1;
-        await learningDB.run(
-          "UPDATE learned SET votes = votes + ? WHERE id = ?", 
-          [delta, id]
-        );
-        
-        console.log(`🤖 AI Feedback recorded: ${feedback === "1" ? 'positive' : 'negative'} for ID ${id}`);
-        res.json({ success: true, message: "Feedback recorded" });
-      } else {
-        res.status(500).json({ message: "Learning system unavailable" });
-      }
+      return res.json(await aiService.adminStatus());
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      console.error("Error recording AI feedback:", error);
-      res.status(500).json({ message: "Failed to record feedback" });
+      return sendAIError(res, error, "Unable to load AI status");
+    }
+  });
+
+  app.put('/api/admin/ai/knowledge/:id/approval', requireAdmin, async (req, res) => {
+    try {
+      const id = z.coerce.number().int().positive().parse(req.params.id);
+      const approved = z.boolean().parse(req.body?.approved);
+      await aiService.setKnowledgeApproval(id, approved);
+      return res.json({ success: true, id, approved });
+    } catch (error) {
+      return sendAIError(res, error, "Unable to update AI knowledge approval");
     }
   });
 
@@ -3537,10 +3277,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const configuredSocketOrigins = [
     process.env.APP_ORIGIN,
     process.env.APP_DOMAIN ? `https://${process.env.APP_DOMAIN}` : undefined,
-    ...(process.env.REPLIT_DOMAINS || "")
-      .split(",")
-      .filter(Boolean)
-      .map((domain) => domain === "localhost" ? "http://localhost:5000" : `https://${domain}`),
   ].filter(Boolean) as string[];
   if (process.env.NODE_ENV !== "production") {
     configuredSocketOrigins.push("http://localhost:5000", "http://localhost:5173");
@@ -3590,179 +3326,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   io.of("/").use(requireUHSocketUser);
 
-  // Handle authenticated UH-community Socket.IO connections
-  io.on("connection", (socket) => {
-    console.log("👤 User connected to Coog Paws Chat:", socket.id);
-    
-    // Broadcast join message
-    socket.broadcast.emit("chat", { 
-      message: "Someone joined the Coog Paws chat! 🐾" 
-    });
-    
-    // Handle chat messages
-    socket.on("chat", (data) => {
-      console.log("💬 Coog Paws message:", data);
-      // Broadcast message to all connected clients
-      io.emit("chat", { 
-        message: data.message || data 
-      });
-    });
-    
-    // Handle disconnection
-    socket.on("disconnect", () => {
-      console.log("👋 User disconnected from Coog Paws Chat:", socket.id);
-      socket.broadcast.emit("chat", { 
-        message: "Someone left the Coog Paws chat 🐾💔" 
-      });
-    });
-  });
+  // Per-user Socket.IO rate limiter for member chat messages.
+  const chatSocketWindows = new Map<string, { startedAt: number; count: number }>();
+  const assertChatSocketRate = (userId: string) => {
+    const now = Date.now();
+    const current = chatSocketWindows.get(userId);
+    if (!current || now - current.startedAt >= 60_000) {
+      chatSocketWindows.set(userId, { startedAt: now, count: 1 });
+      return;
+    }
+    if (current.count >= 30) throw new Error("Chat message rate limit reached");
+    current.count += 1;
+  };
+  const memberChatMessageSchema = z.object({
+    message: z.string().trim().min(1).max(2000),
+  }).strict();
 
-  // AI Chat Namespace for streaming responses
-  const aiNamespace = io.of("/ai");
-  aiNamespace.use(requireSocketUser);
-  
-  aiNamespace.on("connection", (socket) => {
-    console.log("🤖 User connected to AI Chat:", socket.id);
-    
-    // Handle AI chat message requests with streaming
-    socket.on("ai-message", async (data) => {
+  // Handle authenticated UH-community Socket.IO connections.
+  io.on("connection", (socket) => {
+    console.log("User connected to Coog Paws Chat:", socket.id);
+    socket.broadcast.emit("chat", { message: "Someone joined the Coog Paws chat." });
+
+    socket.on("chat", (data) => {
       try {
-        console.log("🤖 AI request:", data);
-        const { message, conversationId } = data;
-        const userId = socket.data.userId;
-        
-        // Check if AI features are enabled
-        const aiEnabled = process.env.AI_ENABLED === 'true' || process.env.VITE_AI_ENABLED === 'true';
-        if (!aiEnabled) {
-          socket.emit("ai-response", { 
-            error: "AI features are currently disabled",
-            conversationId 
-          });
-          return;
-        }
-        
-        // Get memory from learning database
-        let memory = [];
-        if (learningDB) {
-          try {
-            const stmt = await learningDB.prepare(
-              "SELECT * FROM learned WHERE question LIKE ? ORDER BY votes DESC LIMIT 3"
-            );
-            memory = await stmt.all(`%${message}%`);
-          } catch (error) {
-            console.error("Error fetching AI memory:", error);
-          }
-        }
-        
-        // Simulate streaming response by sending chunks
-        const responseId = Date.now();
-        const fullResponse = `🤖 CoogAI: I understand you're asking about "${message}". Based on our University of Houston community knowledge and ${memory.length} similar past conversations, here's what I can help with...\n\nThis is a simulated AI response that would integrate with a real AI service like OpenAI. The memory system is working and learning from user interactions.`;
-        
-        // Send response in chunks to simulate streaming
-        const words = fullResponse.split(' ');
-        let currentResponse = '';
-        
-        for (let i = 0; i < words.length; i++) {
-          currentResponse += words[i] + ' ';
-          
-          // Send chunk every few words
-          if (i % 5 === 0 || i === words.length - 1) {
-            socket.emit("ai-chunk", {
-              id: responseId,
-              chunk: words.slice(Math.max(0, i - 4), i + 1).join(' '),
-              fullResponse: currentResponse.trim(),
-              isComplete: i === words.length - 1,
-              conversationId,
-              memoryUsed: memory.length
-            });
-            
-            // Small delay to simulate real streaming
-            await new Promise(resolve => setTimeout(resolve, 100));
-          }
-        }
-        
-        // Store the interaction for learning if we have a database
-        if (learningDB) {
-          try {
-            await learningDB.run(
-              "INSERT INTO learned (question, answer, context, votes, user_id) VALUES (?, ?, ?, 0, ?)",
-              [message, fullResponse, "ai-streaming-chat", userId]
-            );
-          } catch (error) {
-            console.error("Error storing AI interaction:", error);
-          }
-        }
-        
+        const validated = memberChatMessageSchema.parse(
+          typeof data === "string" ? { message: data } : data,
+        );
+        assertChatSocketRate(socket.data.userId);
+        io.emit("chat", {
+          message: validated.message,
+          userId: socket.data.userId,
+          sentAt: new Date().toISOString(),
+        });
       } catch (error) {
-        console.error("Error in AI streaming:", error);
-        socket.emit("ai-response", { 
-          error: "AI service unavailable",
-          conversationId: data.conversationId 
+        socket.emit("chat-error", {
+          message: error instanceof Error ? error.message : "Invalid chat message",
         });
       }
     });
-    
-    // Handle disconnection
+
     socket.on("disconnect", () => {
-      console.log("🤖 User disconnected from AI Chat:", socket.id);
+      socket.broadcast.emit("chat", { message: "Someone left the Coog Paws chat." });
     });
   });
 
-  // Avatar upload endpoints
-  app.post("/api/objects/avatar-upload", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      if (!userId) {
-        return res.status(401).json({ error: "User not authenticated" });
+  // Provider-neutral AI streaming namespace.
+  const aiNamespace = io.of("/ai");
+  aiNamespace.use(requireSocketUser);
+
+  aiNamespace.on("connection", (socket) => {
+    console.log("User connected to AI Chat:", socket.id);
+
+    socket.on("ai-message", async (data) => {
+      let conversationId: string | undefined;
+      try {
+        const validated = aiChatRequestSchema.parse(data);
+        conversationId = validated.conversationId;
+        const userId = socket.data.userId as string;
+        aiService.assertSocketRate(userId);
+        let fullResponse = "";
+        const result = await aiService.stream(
+          {
+            userId,
+            message: validated.message,
+            conversationId,
+            requestType: "stream",
+          },
+          async (chunk) => {
+            fullResponse += chunk;
+            socket.emit("ai-chunk", {
+              chunk,
+              fullResponse,
+              isComplete: false,
+              conversationId,
+            });
+          },
+        );
+        socket.emit("ai-chunk", {
+          id: result.knowledgeId || result.requestId,
+          chunk: "",
+          fullResponse: result.answer,
+          isComplete: true,
+          conversationId: result.conversationId,
+          source: result.source,
+          provider: result.provider,
+          model: result.model,
+          requestId: result.requestId,
+          usage: result.usage,
+        });
+      } catch (error) {
+        const statusCode = error instanceof AIServiceError ? error.statusCode : 400;
+        const code = error instanceof AIServiceError ? error.code : "INVALID_AI_REQUEST";
+        socket.emit("ai-response", {
+          error: error instanceof Error ? error.message : "AI service unavailable",
+          code,
+          statusCode,
+          conversationId,
+        });
       }
-      
-      const objectStorageService = new ObjectStorageService();
-      const { url, objectPath } = await objectStorageService.getAvatarUploadURL(userId);
-      res.json({ 
-        method: "PUT",
-        url: url,
-        objectPath: objectPath 
-      });
-    } catch (error) {
-      console.error("Error getting avatar upload URL:", error);
-      res.status(500).json({ error: "Failed to get upload URL" });
-    }
+    });
+
+    socket.on("disconnect", () => {
+      console.log("User disconnected from AI Chat:", socket.id);
+    });
   });
 
-  app.put("/api/objects/avatar-complete", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const { avatarURL } = req.body;
-      
-      if (!avatarURL) {
-        return res.status(400).json({ error: "Avatar URL is required" });
-      }
-
-      const objectStorageService = new ObjectStorageService();
-      // Set ACL policy for the uploaded avatar
-      const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
-        avatarURL,
-        {
-          owner: userId,
-          visibility: "public", // Avatars should be publicly accessible
-        }
-      );
-
-      // Update user's profile image URL in database
-      await storage.updateUserProfile(userId, {
-        profileImageUrl: objectPath
-      });
-
-      res.json({ 
-        success: true,
-        objectPath: objectPath,
-        message: "Avatar uploaded successfully" 
-      });
-    } catch (error) {
-      console.error("Error completing avatar upload:", error);
-      res.status(500).json({ error: "Failed to complete avatar upload" });
-    }
-  });
 
   return httpServer;
 }

@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import type { NewsArticleResponse } from "@shared/api-types";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import { useForm } from "react-hook-form";
@@ -37,18 +38,14 @@ export default function NewsAdmin() {
   // Check if user has admin privileges (simplified check)
   const isAdmin = user?.email?.includes("admin") || user?.id === "46031129";
 
-  const { data: articles = [], isLoading } = useQuery({
+  const { data: articles = [], isLoading } = useQuery<NewsArticleResponse[]>({
     queryKey: ["/api/news"],
     enabled: isAuthenticated && isAdmin,
   });
 
   const createArticleMutation = useMutation({
     mutationFn: (data: CreateArticleFormData) =>
-      apiRequest("/api/news", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      }),
+      apiRequest("POST", "/api/news", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/news"] });
       setIsCreateDialogOpen(false);
@@ -69,9 +66,7 @@ export default function NewsAdmin() {
 
   const deleteArticleMutation = useMutation({
     mutationFn: (id: number) =>
-      apiRequest(`/api/news/${id}`, {
-        method: "DELETE",
-      }),
+      apiRequest("DELETE", `/api/news/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/news"] });
       toast({
@@ -95,17 +90,16 @@ export default function NewsAdmin() {
     createArticleMutation.mutate({
       ...data,
       authorId: user?.id || "",
-      slug: data.title.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, ''),
     });
   };
 
   // Filter articles based on selected filters
-  const filteredArticles = Array.isArray(articles) ? articles.filter((article: any) => {
+  const filteredArticles = Array.isArray(articles) ? articles.filter((article) => {
     const categoryMatch = selectedCategory === "all" || article.category === selectedCategory;
     return categoryMatch;
   }) : [];
 
-  const getCategoryColor = (category: string) => {
+  const getCategoryColor = (category: string | null) => {
     const colors: { [key: string]: string } = {
       sports: "bg-green-500",
       academics: "bg-blue-500",
@@ -113,7 +107,7 @@ export default function NewsAdmin() {
       alumni: "bg-yellow-500",
       general: "bg-gray-500",
     };
-    return colors[category] || "bg-gray-500";
+    return (category && colors[category]) || "bg-gray-500";
   };
 
   if (!isAuthenticated) {
@@ -286,7 +280,7 @@ export default function NewsAdmin() {
                 <i className="fas fa-eye text-3xl text-green-600"></i>
               </div>
               <h3 className="text-2xl font-bold text-uh-black">
-                {filteredArticles.filter((a: any) => a.isPublished).length}
+                {filteredArticles.filter((a) => a.isPublished).length}
               </h3>
               <p className="text-gray-600">Published</p>
             </CardContent>
@@ -298,7 +292,7 @@ export default function NewsAdmin() {
                 <i className="fas fa-edit text-3xl text-yellow-600"></i>
               </div>
               <h3 className="text-2xl font-bold text-uh-black">
-                {filteredArticles.filter((a: any) => !a.isPublished).length}
+                {filteredArticles.filter((a) => !a.isPublished).length}
               </h3>
               <p className="text-gray-600">Drafts</p>
             </CardContent>
@@ -310,7 +304,7 @@ export default function NewsAdmin() {
                 <i className="fas fa-chart-line text-3xl text-purple-600"></i>
               </div>
               <h3 className="text-2xl font-bold text-uh-black">
-                {filteredArticles.reduce((sum: number, a: any) => sum + (a.viewCount || 0), 0)}
+                {filteredArticles.reduce((sum: number, a) => sum + (a.viewCount || 0), 0)}
               </h3>
               <p className="text-gray-600">Total Views</p>
             </CardContent>
@@ -366,7 +360,7 @@ export default function NewsAdmin() {
               </div>
             ) : (
               <div className="space-y-4">
-                {filteredArticles.map((article: any) => (
+                {filteredArticles.map((article) => (
                   <div
                     key={article.id}
                     className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"

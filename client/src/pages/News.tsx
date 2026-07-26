@@ -3,9 +3,10 @@ import { Footer } from "@/components/Footer";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
+import type { NewsArticleResponse } from "@shared/api-types";
 
 export default function News() {
-  const { data: newsArticles, isLoading } = useQuery({
+  const { data: newsArticles, isLoading } = useQuery<NewsArticleResponse[]>({
     queryKey: ["/api/news"],
   });
 

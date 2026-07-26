@@ -166,7 +166,7 @@ export class MfaService {
       
       emailSuccess = await sendEmail({
         to: user.email,
-        from: process.env.SENDGRID_FROM_EMAIL || 'noreply@coogs.replit.app',
+        from: process.env.SENDGRID_FROM_EMAIL || 'noreply@coogsnation.local',
         subject: emailSubject,
         html: emailBody,
         text: `Your CoogsNation ${purposeText} code is: ${token}. This code expires in ${MFA_CONFIG.expiryMinutes} minutes.`

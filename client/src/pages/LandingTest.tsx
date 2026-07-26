@@ -16,7 +16,7 @@ export default function LandingTest() {
       <p>This should be clearly visible!</p>
       <p style={{ color: '#FFFF00' }}>University of Houston - CoogsNation</p>
       <button 
-        onClick={() => window.location.href = '/api/login'}
+        onClick={() => window.location.href = '/login'}
         style={{
           padding: '1rem 2rem',
           fontSize: '1.5rem',

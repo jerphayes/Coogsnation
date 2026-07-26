@@ -7,7 +7,7 @@ process.env.SESSION_SECRET ||= "test-only-session-secret-with-sufficient-length"
 
 const [{ storage }, { requireAdmin }] = await Promise.all([
   import("../server/storage"),
-  import("../server/replitAuth"),
+  import("../server/auth"),
 ]);
 
 const originalGetUser = storage.getUser.bind(storage);

@@ -14,8 +14,6 @@ import { Badge } from '@/components/ui/badge';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
-import { ObjectUploader } from '@/components/ObjectUploader';
-import type { UploadResult } from '@uppy/core';
 import { userProfileCompletionSchema, localAccountRegistrationSchema } from '@shared/schema';
 import { User, UserPlus, MapPin, Calendar, Shield, Info, Eye, EyeOff, Lock, MessageSquare } from 'lucide-react';
 import { PasswordStrengthIndicator } from '@/components/ui/PasswordStrengthIndicator';
@@ -51,47 +49,36 @@ export default function ProfileCompletion() {
   const [handleAvailable, setHandleAvailable] = useState<boolean | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLocalRegistration, setIsLocalRegistration] = useState(true); // Start directly in email registration mode
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const [uploadedAvatarPath, setUploadedAvatarPath] = useState<string | null>(null);
 
-  // Avatar upload functions
-  const handleGetUploadParameters = async () => {
+  const handleAvatarFileChange = async (file?: File) => {
+    if (!file) return;
+    setIsUploadingAvatar(true);
     try {
-      const response = await apiRequest('POST', '/api/objects/avatar-upload') as any;
-      return {
-        method: response.method as "PUT",
-        url: response.url,
-      };
-    } catch (error) {
-      console.error('Error getting avatar upload URL:', error);
-      throw error;
-    }
-  };
-
-  const handleAvatarUploadComplete = async (result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
-    try {
-      const file = result.successful?.[0];
-      if (file && file.uploadURL) {
-        // Complete the avatar upload process
-        const response = await apiRequest('PUT', '/api/objects/avatar-complete', {
-          avatarURL: file.uploadURL
-        }) as any;
-        
-        setUploadedAvatarPath(response.objectPath);
-        
-        toast({
-          title: 'Avatar Uploaded!',
-          description: 'Your profile picture has been uploaded successfully.',
-        });
-      }
-    } catch (error) {
-      console.error('Error completing avatar upload:', error);
-      toast({
-        title: 'Upload Error',
-        description: 'Failed to complete avatar upload. Please try again.',
-        variant: 'destructive',
+      const formData = new FormData();
+      formData.append("avatar", file);
+      const response = await fetch("/api/auth/upload-avatar", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
       });
+      if (!response.ok) {
+        throw new Error((await response.text()) || "Avatar upload failed");
+      }
+      const result = await response.json();
+      setUploadedAvatarPath(result.avatarUrl);
+      toast({ title: "Avatar Uploaded", description: "Your profile picture has been saved." });
+    } catch (error) {
+      console.error("Avatar upload failed:", error);
+      toast({
+        title: "Upload Error",
+        description: error instanceof Error ? error.message : "Avatar upload failed",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingAvatar(false);
     }
   };
 
@@ -99,6 +86,7 @@ export default function ProfileCompletion() {
   const { data: user } = useQuery<any>({
     queryKey: ['/api/auth/user'],
   });
+  const isLocalRegistration = !user;
 
   const form = useForm<ProfileCompletionData | LocalRegistrationData>({
     resolver: zodResolver(isLocalRegistration ? localAccountRegistrationSchema : userProfileCompletionSchema),
@@ -205,7 +193,7 @@ export default function ProfileCompletion() {
     }
   };
 
-  // Profile completion mutation (for Replit Auth users)
+  // Complete an authenticated member profile
   const profileCompletionMutation = useMutation({
     mutationFn: async (data: ProfileCompletionData) => {
       // Include reCAPTCHA token in the payload for profile completion too
@@ -290,55 +278,6 @@ export default function ProfileCompletion() {
     }
   };
 
-  // Show local registration option if no user is logged in and not already in local registration mode
-  if (!user && !isLocalRegistration) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Card className="w-full max-w-md mx-auto">
-            <CardContent className="pt-6">
-              <div className="text-center space-y-4">
-                <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center mx-auto">
-                  <UserPlus className="w-8 h-8 text-white" />
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Join CoogsNation</h2>
-                <p className="text-gray-600 dark:text-gray-300">
-                  Choose how you'd like to create your account:
-                </p>
-                <div className="space-y-3">
-                  <Button 
-                    onClick={() => window.location.href = '/api/login'} 
-                    className="w-full"
-                    data-testid="button-replit-auth"
-                  >
-                    Continue with Replit Auth
-                  </Button>
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-gray-50 dark:bg-gray-900 px-2 text-gray-500">Or</span>
-                    </div>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setIsLocalRegistration(true)}
-                    className="w-full"
-                    data-testid="button-local-registration"
-                  >
-                    <Lock className="w-4 h-4 mr-2" />
-                    Create Password-Based Account
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -412,34 +351,32 @@ export default function ProfileCompletion() {
                   )}
                 />
 
-                {/* Avatar Upload - Right under handle box as requested */}
+                {/* Avatar upload is available after authentication. */}
                 <div className="mt-6 border-t pt-4">
                   <h4 className="font-medium mb-3 text-gray-900 dark:text-gray-100 flex items-center gap-2">
                     <User className="w-4 h-4" />
                     Profile Avatar (Optional)
                   </h4>
-                  <div className="flex flex-col space-y-3">
+                  {user ? (
+                    <div className="space-y-3">
+                      <p className="text-sm text-gray-600 dark:text-gray-300">
+                        Upload a JPG, PNG, or WebP image. The server validates and converts it safely.
+                      </p>
+                      <Input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        disabled={isUploadingAvatar}
+                        onChange={(event) => handleAvatarFileChange(event.target.files?.[0])}
+                      />
+                      {uploadedAvatarPath && (
+                        <div className="text-sm text-green-600 dark:text-green-400">✓ Avatar uploaded successfully</div>
+                      )}
+                    </div>
+                  ) : (
                     <p className="text-sm text-gray-600 dark:text-gray-300">
-                      Upload a profile picture to personalize your account. Accepts JPG, PNG and other safe image formats.
+                      Create your account first, then add an avatar from your profile.
                     </p>
-                    <ObjectUploader
-                      maxNumberOfFiles={1}
-                      maxFileSize={5242880}
-                      onGetUploadParameters={handleGetUploadParameters}
-                      onComplete={handleAvatarUploadComplete}
-                      buttonClassName="w-fit"
-                    >
-                      <div className="flex items-center gap-2">
-                        <User className="w-4 h-4" />
-                        <span>Upload Avatar</span>
-                      </div>
-                    </ObjectUploader>
-                    {uploadedAvatarPath && (
-                      <div className="text-sm text-green-600 dark:text-green-400">
-                        ✓ Avatar uploaded successfully
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

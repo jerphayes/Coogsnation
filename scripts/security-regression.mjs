@@ -2,7 +2,7 @@ import fs from "node:fs";
 
 const routes = fs.readFileSync("server/routes.ts", "utf8");
 const index = fs.readFileSync("server/index.ts", "utf8");
-const auth = fs.readFileSync("server/replitAuth.ts", "utf8");
+const auth = fs.readFileSync("server/auth.ts", "utf8");
 const gitignore = fs.readFileSync(".gitignore", "utf8");
 const schema = fs.readFileSync("shared/schema.ts", "utf8");
 const advancedProfile = fs.readFileSync("client/src/pages/AdvancedProfile.tsx", "utf8");

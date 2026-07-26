@@ -121,7 +121,7 @@ export default function Landing() {
 
         {/* Get Started Button */}
         <button 
-          onClick={() => window.location.href = '/api/login'}
+          onClick={() => window.location.href = '/login'}
           style={{
             backgroundColor: '#B91C1C',
             color: 'white',

@@ -1,8 +1,9 @@
 import { Card } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
+import type { CommunityStats as CommunityStatsData } from "@shared/api-types";
 
 export function CommunityStats() {
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading } = useQuery<CommunityStatsData>({
     queryKey: ["/api/community/stats"],
   });
 

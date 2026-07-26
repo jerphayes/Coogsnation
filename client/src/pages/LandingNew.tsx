@@ -104,7 +104,7 @@ export default function Landing() {
             <header>
               <img src="https://upload.wikimedia.org/wikipedia/commons/2/2e/University_of_Houston_logo.svg" alt="UH Logo" class="logo" />
               <nav>
-                <a href="/api/login">Login</a>
+                <a href="/login">Login</a>
                 <a href="/forums">Forums</a>
                 <a href="/news">News</a>
                 <a href="/event-management">Events</a>
@@ -117,7 +117,7 @@ export default function Landing() {
               <h1>Welcome to</h1>
               <h2>CoogsNation.com</h2>
               <p>The Premier Online Community for Houston Cougar Fans, Students, and Alumni</p>
-              <button onclick="window.location.href='/api/login'">Join the Pack 🐾</button>
+              <button onclick="window.location.href='/login'">Join the Pack 🐾</button>
             </div>
 
             <div class="section">
@@ -192,7 +192,7 @@ export default function Landing() {
             <div style="text-align: center; padding: 3rem; background-color: #a00000; color: white;">
               <h2>Ready to Go Coogs?</h2>
               <p>Join thousands of Houston Cougar fans in the most active online community</p>
-              <button onclick="window.location.href='/api/login'" style="background: white; color: #a00000; padding: 1rem 2rem; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">
+              <button onclick="window.location.href='/login'" style="background: white; color: #a00000; padding: 1rem 2rem; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">
                 Join CoogsNation Today
               </button>
               <p style="margin-top: 1rem; font-size: 0.9rem;">Free to join • Instant access • Go Coogs! 🐾</p>

@@ -136,7 +136,7 @@ export default function Landing() {
           className="logo" 
         />
         <nav className="landing-nav">
-          <a href="/api/login">Login</a>
+          <a href="/login">Login</a>
           <a href="/forums">Forums</a>
           <a href="/news">News</a>
           <a href="/event-management">Events</a>
@@ -153,7 +153,7 @@ export default function Landing() {
         <h1>Welcome to</h1>
         <h2>CoogsNation.com</h2>
         <p>The Premier Online Community for Houston Cougar Fans, Students, and Alumni</p>
-        <button onClick={() => window.location.href = '/api/login'}>
+        <button onClick={() => window.location.href = '/login'}>
           Join the Pack 🐾
         </button>
       </div>
@@ -232,7 +232,7 @@ export default function Landing() {
       <div className="cta-section">
         <h2>Ready to Go Coogs?</h2>
         <p>Join thousands of Houston Cougar fans in the most active online community</p>
-        <button onClick={() => window.location.href = '/api/login'}>
+        <button onClick={() => window.location.href = '/login'}>
           Join CoogsNation Today
         </button>
         <p style={{ marginTop: '1rem', fontSize: '0.9rem' }}>

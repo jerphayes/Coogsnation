@@ -1,9 +1,10 @@
 import { Card } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
+import type { EventResponse } from "@shared/api-types";
 import { Link } from "wouter";
 
 export function UpcomingEvents() {
-  const { data: events, isLoading } = useQuery({
+  const { data: events, isLoading } = useQuery<EventResponse[]>({
     queryKey: ["/api/events"],
   });
 

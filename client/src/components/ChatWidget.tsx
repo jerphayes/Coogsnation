@@ -9,7 +9,9 @@ interface Message {
   text: string;
   sender: 'user' | 'ai';
   timestamp: Date;
-  source?: 'faq' | 'ai' | 'error';
+  source?: 'faq' | 'learned' | 'provider' | 'ai' | 'error';
+  provider?: string;
+  model?: string;
 }
 
 export function ChatWidget() {
@@ -25,6 +27,7 @@ export function ChatWidget() {
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [conversationId] = useState(() => `conv_${crypto.randomUUID()}`);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -56,17 +59,22 @@ export function ChatWidget() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ question }),
+        body: JSON.stringify({ question, conversationId }),
       });
 
       const data = await response.json();
-      
+      if (!response.ok) {
+        throw new Error(data.message || "AI request failed");
+      }
+
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         text: data.answer || "I'm sorry, I couldn't process your question.",
         sender: 'ai',
         timestamp: new Date(),
-        source: data.source || 'ai'
+        source: data.source || 'provider',
+        provider: data.provider,
+        model: data.model,
       };
 
       setMessages(prev => [...prev, aiMessage]);
@@ -173,6 +181,8 @@ export function ChatWidget() {
                       {formatTime(message.timestamp)}
                       {message.source === 'faq' && ' • FAQ'}
                       {message.source === 'ai' && ' • AI'}
+                      {message.source === 'provider' && ` • ${message.provider || 'AI'}`}
+                      {message.source === 'learned' && ' • Community knowledge'}
                     </div>
                   </div>
                 </div>
@@ -205,6 +215,7 @@ export function ChatWidget() {
                 placeholder="Type your question about CoogsNation..."
                 className="flex-1 min-h-[40px] max-h-[120px] resize-none focus:ring-uh-red focus:border-uh-red"
                 disabled={isLoading}
+                maxLength={4000}
                 data-testid="input-chat-message"
               />
               <Button
@@ -217,7 +228,7 @@ export function ChatWidget() {
               </Button>
             </div>
             <div className="mt-2 text-xs text-gray-500 text-center">
-              Ask about CoogsNation features, UH sports, or community topics
+              AI can make mistakes. Do not share passwords, financial data, or confidential information.
             </div>
           </div>
         </CardContent>

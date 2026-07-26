@@ -191,7 +191,7 @@ export default function ForumCategory() {
                 <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
                   <span>{(topics as ForumTopic[])?.length || 0} topics</span>
                   <span>•</span>
-                  <span>Last updated {formatDistance(new Date(currentCategory?.updatedAt || new Date()), new Date(), { addSuffix: true })}</span>
+                  <span>Last updated {formatDistance(new Date(currentCategory?.createdAt || new Date()), new Date(), { addSuffix: true })}</span>
                 </div>
               </div>
             </div>
@@ -500,7 +500,7 @@ export default function ForumCategory() {
                   </Button>
                 ) : (
                   <div className="text-gray-500">
-                    <Link href="/api/login" className="text-uh-red hover:underline">
+                    <Link href="/login" className="text-uh-red hover:underline">
                       Log in
                     </Link> to start a topic
                   </div>

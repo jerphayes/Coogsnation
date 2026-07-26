@@ -6,13 +6,14 @@ import { UpcomingEvents } from "@/components/UpcomingEvents";
 import { MerchandisePreview } from "@/components/MerchandisePreview";
 import { Card } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
+import type { NewsArticleResponse, ForumCategoryResponse } from "@shared/api-types";
 
 export default function Home() {
-  const { data: newsArticles, isLoading: newsLoading } = useQuery({
+  const { data: newsArticles, isLoading: newsLoading } = useQuery<NewsArticleResponse[]>({
     queryKey: ["/api/news"],
   });
 
-  const { data: forumCategories, isLoading: forumsLoading } = useQuery({
+  const { data: forumCategories, isLoading: forumsLoading } = useQuery<ForumCategoryResponse[]>({
     queryKey: ["/api/forums/categories"],
   });
 

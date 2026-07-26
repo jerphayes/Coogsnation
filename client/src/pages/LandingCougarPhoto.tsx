@@ -196,7 +196,7 @@ export default function Landing() {
         }}>The online community for University of Houston fans.</p>
 
         <button 
-          onClick={() => window.location.href = '/api/login'}
+          onClick={() => window.location.href = '/login'}
           style={{
             backgroundColor: '#B91C1C',
             color: 'white',

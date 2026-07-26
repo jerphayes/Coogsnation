@@ -1,8 +1,9 @@
 import { Card } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
+import type { ActiveMember } from "@shared/api-types";
 
 export function ActiveMembers() {
-  const { data: members, isLoading } = useQuery({
+  const { data: members, isLoading } = useQuery<ActiveMember[]>({
     queryKey: ["/api/community/members/active"],
   });
 
@@ -33,7 +34,7 @@ export function ActiveMembers() {
       </h3>
       <div className="space-y-3">
         {members && members.length > 0 ? (
-          members.map((member: any) => (
+          members.map((member) => (
             <div key={member.id} className="flex items-center space-x-3">
               <img 
                 src={member.profileImageUrl || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop"} 

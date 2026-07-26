@@ -259,40 +259,6 @@ export default function Landing() {
               fontWeight: 'bold',
               borderBottom: '1px solid #eee'
             }}>Login with Email</a>
-            <a href="/auth/google?redirect=/dashboard" style={{
-              display: 'block',
-              padding: '8px 12px',
-              textDecoration: 'none',
-              color: '#EF4444',
-              borderBottom: '1px solid #eee'
-            }}>Login with Google</a>
-            <a href="/auth/apple?redirect=/dashboard" style={{
-              display: 'block',
-              padding: '8px 12px',
-              textDecoration: 'none',
-              color: '#1F2937',
-              borderBottom: '1px solid #eee'
-            }}>Login with Apple</a>
-            <a href="/auth/linkedin?redirect=/dashboard" style={{
-              display: 'block',
-              padding: '8px 12px',
-              textDecoration: 'none',
-              color: '#2563EB',
-              borderBottom: '1px solid #eee'
-            }}>Login with LinkedIn</a>
-            <a href="/auth/facebook?redirect=/dashboard" style={{
-              display: 'block',
-              padding: '8px 12px',
-              textDecoration: 'none',
-              color: '#3B82F6',
-              borderBottom: '1px solid #eee'
-            }}>Login with Facebook</a>
-            <a href="/auth/x?redirect=/dashboard" style={{
-              display: 'block',
-              padding: '8px 12px',
-              textDecoration: 'none',
-              color: '#0EA5E9'
-            }}>Login with X (Twitter)</a>
           </div>
         </div>
         <div style={{ position: 'relative', display: 'inline-block' }}
@@ -348,47 +314,12 @@ export default function Landing() {
               fontWeight: 'bold',
               borderBottom: '1px solid #eee'
             }}>Sign Up</a>
-            <a href="/auth/google" style={{
-              display: 'block',
-              padding: '8px 12px',
-              textDecoration: 'none',
-              color: '#EF4444',
-              borderBottom: '1px solid #eee'
-            }}>Continue with Google</a>
-            <a href="/auth/apple" style={{
-              display: 'block',
-              padding: '8px 12px',
-              textDecoration: 'none',
-              color: '#1F2937',
-              borderBottom: '1px solid #eee'
-            }}>Continue with Apple</a>
-            <a href="/auth/linkedin" style={{
-              display: 'block',
-              padding: '8px 12px',
-              textDecoration: 'none',
-              color: '#2563EB',
-              borderBottom: '1px solid #eee'
-            }}>Continue with LinkedIn</a>
-            <a href="/auth/facebook" style={{
-              display: 'block',
-              padding: '8px 12px',
-              textDecoration: 'none',
-              color: '#3B82F6',
-              borderBottom: '1px solid #eee'
-            }}>Continue with Facebook</a>
-            <a href="/auth/x" style={{
-              display: 'block',
-              padding: '8px 12px',
-              textDecoration: 'none',
-              color: '#0EA5E9',
-              borderBottom: '1px solid #eee'
-            }}>Continue with X (Twitter)</a>
-            <a href="/signup/other" style={{
+            <a href="/signup" style={{
               display: 'block',
               padding: '8px 12px',
               textDecoration: 'none',
               color: '#4B5563'
-            }}>Continue with Other</a>
+            }}>Create Account</a>
           </div>
         </div>
         <a href="/forums" style={{

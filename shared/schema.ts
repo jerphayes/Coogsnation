@@ -17,7 +17,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Session storage table.
-// (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
+// Session table used by the portable PostgreSQL session store.
 export const sessions = pgTable(
   "sessions",
   {
@@ -29,7 +29,7 @@ export const sessions = pgTable(
 );
 
 // User storage table.
-// (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
+// Session table used by the portable PostgreSQL session store.
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique(),
@@ -134,7 +134,7 @@ export const users = pgTable("users", {
 export const userIdentities = pgTable("user_identities", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  provider: varchar("provider", { length: 50 }).notNull(), // replit, facebook, linkedin, local
+  provider: varchar("provider", { length: 50 }).notNull(), // local or an optional external identity provider
   providerUserId: varchar("provider_user_id", { length: 255 }).notNull(), // Provider-specific user ID
   emailAtAuth: varchar("email_at_auth", { length: 255 }), // Email captured during auth (for matching)
   profileData: jsonb("profile_data"), // Store provider profile data
@@ -810,6 +810,15 @@ export type CampusLocation = typeof campusLocations.$inferSelect;
 export type InsertCoogpawsProfile = typeof coogpawsProfiles.$inferInsert;
 export type CoogpawsProfile = typeof coogpawsProfiles.$inferSelect;
 
+// Safe browse card type: profile + display-only owner fields (no secrets).
+export type CoogpawsBrowseProfile = CoogpawsProfile & {
+  ownerFirstName: string | null;
+  ownerLastName: string | null;
+  ownerProfileImageUrl: string | null;
+  ownerMajorOrDepartment: string | null;
+  ownerGraduationYear: number | null;
+};
+
 export type InsertCoogpawsSwipe = typeof coogpawsSwipes.$inferInsert;
 export type CoogpawsSwipe = typeof coogpawsSwipes.$inferSelect;
 
@@ -1377,6 +1386,65 @@ export const insertRateLimitSchema = createInsertSchema(rateLimits).omit({
   updatedAt: true,
 });
 
+// Provider-neutral AI knowledge, usage, and audit tables.
+export const aiKnowledge = pgTable("ai_knowledge", {
+  id: serial("id").primaryKey(),
+  questionHash: varchar("question_hash", { length: 64 }).notNull().unique(),
+  normalizedQuestion: text("normalized_question").notNull(),
+  question: text("question").notNull(),
+  answer: text("answer").notNull(),
+  context: varchar("context", { length: 100 }).default("assistant"),
+  provider: varchar("provider", { length: 50 }).notNull(),
+  model: varchar("model", { length: 200 }).notNull(),
+  score: integer("score").default(0).notNull(),
+  approved: boolean("approved").default(false).notNull(),
+  createdByUserId: varchar("created_by_user_id").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index("idx_ai_knowledge_score").on(table.score),
+  index("idx_ai_knowledge_approved").on(table.approved),
+]);
+
+export const aiKnowledgeFeedback = pgTable("ai_knowledge_feedback", {
+  id: serial("id").primaryKey(),
+  knowledgeId: integer("knowledge_id").notNull().references(() => aiKnowledge.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  value: integer("value").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  unique("unique_ai_feedback_user_knowledge").on(table.knowledgeId, table.userId),
+  index("idx_ai_feedback_knowledge").on(table.knowledgeId),
+]);
+
+export const aiInteractions = pgTable("ai_interactions", {
+  id: serial("id").primaryKey(),
+  requestId: varchar("request_id", { length: 64 }).notNull().unique(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  conversationId: varchar("conversation_id", { length: 100 }),
+  requestType: varchar("request_type", { length: 30 }).notNull(),
+  provider: varchar("provider", { length: 50 }).notNull(),
+  model: varchar("model", { length: 200 }).notNull(),
+  promptHash: varchar("prompt_hash", { length: 64 }).notNull(),
+  userMessage: text("user_message"),
+  assistantMessage: text("assistant_message"),
+  inputTokens: integer("input_tokens").default(0).notNull(),
+  outputTokens: integer("output_tokens").default(0).notNull(),
+  estimatedCostMicros: integer("estimated_cost_micros").default(0).notNull(),
+  status: varchar("status", { length: 20 }).notNull(),
+  errorCode: varchar("error_code", { length: 80 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index("idx_ai_interactions_user_created").on(table.userId, table.createdAt),
+  index("idx_ai_interactions_created").on(table.createdAt),
+  index("idx_ai_interactions_status").on(table.status),
+]);
+
+export type AIKnowledge = typeof aiKnowledge.$inferSelect;
+export type AIKnowledgeFeedback = typeof aiKnowledgeFeedback.$inferSelect;
+export type AIInteraction = typeof aiInteractions.$inferSelect;
+
 // AI Chat and Learning Schemas
 export const aiChatMessageSchema = z.object({
   id: z.string(),
@@ -1405,19 +1473,33 @@ export const aiLearningDataSchema = z.object({
   createdAt: z.date(),
 });
 
+export const aiQuestionSchema = z.object({
+  question: z.string().trim().min(1, "Question is required").max(4000, "Question too long"),
+  conversationId: z.string().trim().max(100).regex(/^[a-zA-Z0-9_-]+$/, "Invalid conversation ID").optional(),
+}).strict();
+
 export const aiChatRequestSchema = z.object({
-  message: z.string().min(1, "Message is required").max(2000, "Message too long"),
-  conversationId: z.string().optional(),
+  message: z.string().trim().min(1, "Message is required").max(4000, "Message too long"),
+  conversationId: z.string().trim().max(100).regex(/^[a-zA-Z0-9_-]+$/, "Invalid conversation ID").optional(),
+}).strict();
+
+export const aiModerationRequestSchema = z.object({
+  title: z.string().max(300).optional().default(""),
+  content: z.string().max(12000).optional().default(""),
+}).strict().refine((value) => Boolean(value.title.trim() || value.content.trim()), {
+  message: "Content is required",
 });
 
 export const aiFeedbackSchema = z.object({
-  id: z.number(),
+  id: z.coerce.number().int().positive(),
   feedback: z.enum(["1", "-1"]),
-});
+}).strict();
 
 // AI Chat Types
 export type AIChatMessage = z.infer<typeof aiChatMessageSchema>;
 export type AIConversation = z.infer<typeof aiConversationSchema>;
 export type AILearningData = z.infer<typeof aiLearningDataSchema>;
+export type AIQuestionRequest = z.infer<typeof aiQuestionSchema>;
 export type AIChatRequest = z.infer<typeof aiChatRequestSchema>;
+export type AIModerationRequest = z.infer<typeof aiModerationRequestSchema>;
 export type AIFeedback = z.infer<typeof aiFeedbackSchema>;

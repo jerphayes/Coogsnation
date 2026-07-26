@@ -3,34 +3,35 @@ import { Footer } from "@/components/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
+import type { NewsArticleResponse, ForumCategoryResponse, EventResponse, ProductResponse, CommunityStats, ActiveMember } from "@shared/api-types";
 
 export default function Landing() {
-  const { data: newsArticles } = useQuery({
+  const { data: newsArticles } = useQuery<NewsArticleResponse[]>({
     queryKey: ["/api/news"],
     retry: false,
   });
 
-  const { data: forumCategories } = useQuery({
+  const { data: forumCategories } = useQuery<ForumCategoryResponse[]>({
     queryKey: ["/api/forums/categories"],
     retry: false,
   });
 
-  const { data: upcomingEvents } = useQuery({
+  const { data: upcomingEvents } = useQuery<EventResponse[]>({
     queryKey: ["/api/events"],
     retry: false,
   });
 
-  const { data: products } = useQuery({
+  const { data: products } = useQuery<ProductResponse[]>({
     queryKey: ["/api/products"],
     retry: false,
   });
 
-  const { data: communityStats } = useQuery({
+  const { data: communityStats } = useQuery<CommunityStats>({
     queryKey: ["/api/community/stats"],
     retry: false,
   });
 
-  const { data: activeMembers } = useQuery({
+  const { data: activeMembers } = useQuery<ActiveMember[]>({
     queryKey: ["/api/community/members/active"],
     retry: false,
   });
@@ -115,7 +116,7 @@ export default function Landing() {
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Button 
-              onClick={() => window.location.href = "/api/login"}
+              onClick={() => window.location.href = "/login"}
               className="bg-white text-uh-red px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-100 transition-colors shadow-lg"
               data-testid="button-get-started"
             >

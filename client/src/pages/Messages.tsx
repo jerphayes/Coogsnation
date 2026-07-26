@@ -63,11 +63,7 @@ export default function Messages() {
 
   const sendMessageMutation = useMutation({
     mutationFn: ({ receiverId, content }: { receiverId: string; content: string }) =>
-      apiRequest("/api/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ receiverId, content }),
-      }),
+      apiRequest("POST", "/api/messages", { receiverId, content }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
       queryClient.invalidateQueries({ queryKey: ["/api/messages/conversations"] });
@@ -84,9 +80,7 @@ export default function Messages() {
 
   const markAsReadMutation = useMutation({
     mutationFn: (conversationId: string) =>
-      apiRequest(`/api/messages/conversations/${conversationId}/read`, {
-        method: "PATCH",
-      }),
+      apiRequest("PATCH", `/api/messages/conversations/${conversationId}/read`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/messages/conversations"] });
     },

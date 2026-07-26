@@ -145,21 +145,6 @@ export function Header() {
                   <a href="/login/email" className="block px-4 py-2 text-red-600 font-bold hover:bg-gray-100 border-b border-gray-200" data-testid="link-login-email">
                     Login with Email
                   </a>
-                  <a href="/auth/google?redirect=/dashboard" className="block px-4 py-2 text-red-500 hover:bg-gray-100 border-b border-gray-200" data-testid="link-login-google">
-                    Login with Google
-                  </a>
-                  <a href="/auth/apple?redirect=/dashboard" className="block px-4 py-2 text-gray-800 hover:bg-gray-100 border-b border-gray-200" data-testid="link-login-apple">
-                    Login with Apple
-                  </a>
-                  <a href="/auth/linkedin?redirect=/dashboard" className="block px-4 py-2 text-blue-600 hover:bg-gray-100 border-b border-gray-200" data-testid="link-login-linkedin">
-                    Login with LinkedIn
-                  </a>
-                  <a href="/auth/facebook?redirect=/dashboard" className="block px-4 py-2 text-blue-500 hover:bg-gray-100 border-b border-gray-200" data-testid="link-login-facebook">
-                    Login with Facebook
-                  </a>
-                  <a href="/auth/x?redirect=/dashboard" className="block px-4 py-2 text-sky-500 hover:bg-gray-100" data-testid="link-login-x">
-                    Login with X (Twitter)
-                  </a>
                 </div>
               </div>
 
@@ -172,24 +157,6 @@ export function Header() {
                 <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 min-w-[220px] z-50">
                   <a href="/join" className="block px-4 py-2 text-red-600 font-bold hover:bg-gray-100 border-b border-gray-200" data-testid="link-signup">
                     Sign Up
-                  </a>
-                  <a href="/auth/google" className="block px-4 py-2 text-red-500 hover:bg-gray-100 border-b border-gray-200" data-testid="link-join-google">
-                    Continue with Google
-                  </a>
-                  <a href="/auth/apple" className="block px-4 py-2 text-gray-800 hover:bg-gray-100 border-b border-gray-200" data-testid="link-join-apple">
-                    Continue with Apple
-                  </a>
-                  <a href="/auth/linkedin" className="block px-4 py-2 text-blue-600 hover:bg-gray-100 border-b border-gray-200" data-testid="link-join-linkedin">
-                    Continue with LinkedIn
-                  </a>
-                  <a href="/auth/facebook" className="block px-4 py-2 text-blue-500 hover:bg-gray-100 border-b border-gray-200" data-testid="link-join-facebook">
-                    Continue with Facebook
-                  </a>
-                  <a href="/auth/x" className="block px-4 py-2 text-sky-500 hover:bg-gray-100 border-b border-gray-200" data-testid="link-join-x">
-                    Continue with X (Twitter)
-                  </a>
-                  <a href="/signup/other" className="block px-4 py-2 text-gray-600 hover:bg-gray-100" data-testid="link-join-other">
-                    Continue with Other
                   </a>
                 </div>
               </div>

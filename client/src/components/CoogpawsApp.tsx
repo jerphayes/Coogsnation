@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertCoogpawsProfileSchema } from "@shared/schema";
+import type { CoogpawsProfileResponse, CoogpawsBrowseProfile } from "@shared/api-types";
 import { formatDistance } from "date-fns";
 import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
@@ -22,7 +23,7 @@ import { motion, AnimatePresence } from "framer-motion";
 const profileSchema = insertCoogpawsProfileSchema.omit({ userId: true });
 
 // UH email domain verification function
-function isUHEmail(email: string | undefined): boolean {
+function isUHEmail(email: string | null | undefined): boolean {
   if (!email) return false;
   
   const uhDomains = [
@@ -91,13 +92,13 @@ export default function CoogpawsApp() {
   }
 
   // Check if user has a Coogs Lounge profile
-  const { data: userProfile, isLoading: profileLoading } = useQuery({
+  const { data: userProfile, isLoading: profileLoading } = useQuery<CoogpawsProfileResponse | null>({
     queryKey: ["/api/coogpaws/profile"],
     enabled: isAuthenticated && isUHEmail(user?.email),
   });
 
   // Get profiles to swipe on
-  const { data: profiles = [], isLoading: profilesLoading } = useQuery({
+  const { data: profiles = [], isLoading: profilesLoading } = useQuery<CoogpawsBrowseProfile[]>({
     queryKey: ["/api/coogpaws/profiles"],
     enabled: isAuthenticated && !!userProfile,
   });
@@ -134,12 +135,14 @@ export default function CoogpawsApp() {
 
   // Swipe mutation
   const swipeMutation = useMutation({
-    mutationFn: (data: { swipedUserId: string; isLike: boolean }) =>
-      apiRequest("POST", "/api/coogpaws/swipe", {
+    mutationFn: async (data: { swipedUserId: string; isLike: boolean }) => {
+      const res = await apiRequest("POST", "/api/coogpaws/swipe", {
         swiperId: user?.id,
         swipedUserId: data.swipedUserId,
         isLike: data.isLike,
-      }),
+      });
+      return (await res.json()) as { isMatch: boolean };
+    },
     onSuccess: (data) => {
       if (data.isMatch) {
         setMatchedUser(profiles[currentProfileIndex]);
@@ -215,7 +218,7 @@ export default function CoogpawsApp() {
           <p className="text-gray-600 mb-6">
             Connect with fellow Coogs! Sign in to start meeting amazing people in the UH community.
           </p>
-          <a href="/api/login" className="bg-uh-red text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors">
+          <a href="/login" className="bg-uh-red text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors">
             Sign In to Continue
           </a>
         </CardContent>
@@ -312,7 +315,7 @@ export default function CoogpawsApp() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Looking For</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <Select onValueChange={field.onChange} defaultValue={field.value ?? undefined}>
                             <FormControl>
                               <SelectTrigger data-testid="select-looking-for">
                                 <SelectValue placeholder="What are you looking for?" />
@@ -341,6 +344,7 @@ export default function CoogpawsApp() {
                           <Input
                             placeholder="Sports, music, reading, hiking, gaming..."
                             {...field}
+                            value={field.value ?? ""}
                             data-testid="input-interests"
                           />
                         </FormControl>
@@ -362,6 +366,7 @@ export default function CoogpawsApp() {
                               min="18"
                               max="99"
                               {...field}
+                              value={field.value ?? ""}
                               onChange={(e) => field.onChange(parseInt(e.target.value))}
                               data-testid="input-age-min"
                             />
@@ -383,6 +388,7 @@ export default function CoogpawsApp() {
                               min="18"
                               max="99"
                               {...field}
+                              value={field.value ?? ""}
                               onChange={(e) => field.onChange(parseInt(e.target.value))}
                               data-testid="input-age-max"
                             />
@@ -399,7 +405,7 @@ export default function CoogpawsApp() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Location Preference</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} defaultValue={field.value ?? undefined}>
                           <FormControl>
                             <SelectTrigger data-testid="select-location">
                               <SelectValue placeholder="Where would you like to meet people?" />
@@ -564,13 +570,13 @@ export default function CoogpawsApp() {
                   {/* Profile info overlay */}
                   <div className="absolute bottom-4 left-4 right-4 text-white">
                     <h3 className="text-2xl font-bold">
-                      {user?.firstName} {user?.lastName}, {currentProfile.age}
+                      {currentProfile.ownerFirstName} {currentProfile.ownerLastName}, {currentProfile.age}
                     </h3>
-                    {user?.major && (
-                      <p className="text-sm opacity-90">{user.major}</p>
+                    {currentProfile.ownerMajorOrDepartment && (
+                      <p className="text-sm opacity-90">{currentProfile.ownerMajorOrDepartment}</p>
                     )}
-                    {user?.graduationYear && (
-                      <p className="text-sm opacity-90">Class of {user.graduationYear}</p>
+                    {currentProfile.ownerGraduationYear && (
+                      <p className="text-sm opacity-90">Class of {currentProfile.ownerGraduationYear}</p>
                     )}
                   </div>
                 </div>
@@ -661,7 +667,7 @@ export default function CoogpawsApp() {
           <div className="py-6">
             <div className="flex justify-center items-center space-x-4 mb-4">
               <Avatar className="w-16 h-16">
-                <AvatarImage src={user?.profileImageUrl} />
+                <AvatarImage src={user?.profileImageUrl ?? undefined} />
                 <AvatarFallback>{user?.firstName?.[0]}</AvatarFallback>
               </Avatar>
               <i className="fas fa-heart text-2xl text-uh-red animate-pulse"></i>
@@ -757,7 +763,7 @@ export default function CoogpawsApp() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Looking For</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value ?? undefined}>
                         <FormControl>
                           <SelectTrigger data-testid="select-edit-looking-for">
                             <SelectValue placeholder="What are you looking for?" />
@@ -786,6 +792,7 @@ export default function CoogpawsApp() {
                       <Input
                         placeholder="Sports, music, reading, hiking, gaming..."
                         {...field}
+                        value={field.value ?? ""}
                         data-testid="input-edit-interests"
                       />
                     </FormControl>
@@ -807,6 +814,7 @@ export default function CoogpawsApp() {
                           min="18"
                           max="99"
                           {...field}
+                          value={field.value ?? ""}
                           onChange={(e) => field.onChange(parseInt(e.target.value))}
                           data-testid="input-edit-age-min"
                         />
@@ -828,6 +836,7 @@ export default function CoogpawsApp() {
                           min="18"
                           max="99"
                           {...field}
+                          value={field.value ?? ""}
                           onChange={(e) => field.onChange(parseInt(e.target.value))}
                           data-testid="input-edit-age-max"
                         />
@@ -844,7 +853,7 @@ export default function CoogpawsApp() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Location Preference</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value ?? undefined}>
                       <FormControl>
                         <SelectTrigger data-testid="select-edit-location">
                           <SelectValue placeholder="Where would you like to meet people?" />

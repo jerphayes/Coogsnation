@@ -25,7 +25,6 @@ import NewsAdmin from "@/pages/NewsAdmin";
 import AdvancedProfile from "@/pages/AdvancedProfile";
 import Messages from "@/pages/Messages";
 import EventManagement from "@/pages/EventManagement";
-import EnhancedDashboard from "@/pages/EnhancedDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
 import TestAdmin from "@/pages/TestAdmin";
 import SimpleAdminDashboard from "@/pages/SimpleAdminDashboard";

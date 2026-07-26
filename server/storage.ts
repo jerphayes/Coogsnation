@@ -55,6 +55,7 @@ import {
   type EventRsvp,
   type InsertEventRsvp,
   type CoogpawsProfile,
+  type CoogpawsBrowseProfile,
   type InsertCoogpawsProfile,
   type CoogpawsSwipe,
   type InsertCoogpawsSwipe,
@@ -76,7 +77,7 @@ import { eq, desc, sql, and, like, isNull, isNotNull, gte, lte } from "drizzle-o
 
 // Interface for storage operations
 export interface IStorage {
-  // User operations (IMPORTANT) these user operations are mandatory for Replit Auth.
+  // User operations used by the authentication and profile systems.
   getUser(id: string): Promise<User | undefined>;
   getUserByHandle(handle: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
@@ -260,7 +261,7 @@ export interface IStorage {
   createCoogpawsProfile(profile: InsertCoogpawsProfile): Promise<CoogpawsProfile>;
   updateCoogpawsProfile(userId: string, profile: Partial<InsertCoogpawsProfile>): Promise<CoogpawsProfile>;
   deleteCoogpawsProfile(userId: string): Promise<void>;
-  getActiveCoogpawsProfiles(excludeUserId: string, limit?: number): Promise<CoogpawsProfile[]>;
+  getActiveCoogpawsProfiles(excludeUserId: string, limit?: number): Promise<CoogpawsBrowseProfile[]>;
   
   // Swipe operations
   recordSwipe(swipe: InsertCoogpawsSwipe): Promise<CoogpawsSwipe>;
@@ -290,7 +291,7 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  // User operations (IMPORTANT) these user operations are mandatory for Replit Auth.
+  // User operations used by the authentication and profile systems.
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
@@ -1913,7 +1914,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(coogpawsProfiles.userId, userId));
   }
 
-  async getActiveCoogpawsProfiles(excludeUserId: string, limit = 20): Promise<CoogpawsProfile[]> {
+  async getActiveCoogpawsProfiles(excludeUserId: string, limit = 20): Promise<CoogpawsBrowseProfile[]> {
     // Subquery for already swiped users
     const swipedSubquery = db
       .select({ swipedUserId: coogpawsSwipes.swipedUserId })
@@ -1932,8 +1933,16 @@ export class DatabaseStorage implements IStorage {
       .where(eq(coogpawsBlocks.blockedUserId, excludeUserId));
 
     const profiles = await db
-      .select()
+      .select({
+        profile: coogpawsProfiles,
+        ownerFirstName: users.firstName,
+        ownerLastName: users.lastName,
+        ownerProfileImageUrl: users.profileImageUrl,
+        ownerMajorOrDepartment: users.majorOrDepartment,
+        ownerGraduationYear: users.graduationYear,
+      })
       .from(coogpawsProfiles)
+      .innerJoin(users, eq(coogpawsProfiles.userId, users.id))
       .where(
         and(
           eq(coogpawsProfiles.isActive, true),
@@ -1945,7 +1954,14 @@ export class DatabaseStorage implements IStorage {
       )
       .limit(limit);
     
-    return profiles;
+    return profiles.map((row) => ({
+      ...row.profile,
+      ownerFirstName: row.ownerFirstName,
+      ownerLastName: row.ownerLastName,
+      ownerProfileImageUrl: row.ownerProfileImageUrl,
+      ownerMajorOrDepartment: row.ownerMajorOrDepartment,
+      ownerGraduationYear: row.ownerGraduationYear,
+    }));
   }
 
   // Swipe operations

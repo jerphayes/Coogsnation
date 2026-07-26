@@ -4,12 +4,13 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
+import type { EventResponse } from "@shared/api-types";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function Events() {
   const { isAuthenticated } = useAuth();
   
-  const { data: events, isLoading } = useQuery({
+  const { data: events, isLoading } = useQuery<EventResponse[]>({
     queryKey: ["/api/events"],
   });
 

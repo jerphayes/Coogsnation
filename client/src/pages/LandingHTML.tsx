@@ -255,7 +255,7 @@ export default function Landing() {
     <div class="welcome-title">Welcome to CoogsNation.com</div>
     <div class="welcome-subtitle">The online community for University of Houston fans.</div>
     
-    <button class="get-started-btn" onclick="window.location.href='/api/login'">Get Started</button>
+    <button class="get-started-btn" onclick="window.location.href='/login'">Get Started</button>
   </div>
 
   <div class="bottom-section">

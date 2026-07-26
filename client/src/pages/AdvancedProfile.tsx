@@ -283,7 +283,7 @@ export default function AdvancedProfile() {
                           <FormItem>
                             <FormLabel>Display Name / Nickname</FormLabel>
                             <FormControl>
-                              <Input placeholder="Your display name or nickname" {...field} />
+                              <Input placeholder="Your display name or nickname" {...field} value={field.value ?? ""} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -296,7 +296,7 @@ export default function AdvancedProfile() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Type of Fan</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select onValueChange={field.onChange} defaultValue={field.value ?? undefined}>
                               <FormControl>
                                 <SelectTrigger>
                                   <SelectValue placeholder="Select your fan type" />
@@ -327,6 +327,7 @@ export default function AdvancedProfile() {
                               placeholder="Tell us about yourself..."
                               className="resize-none"
                               {...field}
+                              value={field.value ?? ""}
                             />
                           </FormControl>
                           <FormMessage />
@@ -342,7 +343,7 @@ export default function AdvancedProfile() {
                           <FormItem>
                             <FormLabel>Interest</FormLabel>
                             <FormControl>
-                              <Input placeholder="e.g., Computer Science" {...field} />
+                              <Input placeholder="e.g., Computer Science" {...field} value={field.value ?? ""} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -356,7 +357,7 @@ export default function AdvancedProfile() {
                           <FormItem>
                             <FormLabel>City / Hometown</FormLabel>
                             <FormControl>
-                              <Input placeholder="e.g., Houston, TX" {...field} />
+                              <Input placeholder="e.g., Houston, TX" {...field} value={field.value ?? ""} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -371,7 +372,7 @@ export default function AdvancedProfile() {
                         <FormItem>
                           <FormLabel>Suggestion Box</FormLabel>
                           <FormControl>
-                            <Input placeholder="e.g., Sports, Music, Technology" {...field} />
+                            <Input placeholder="e.g., Sports, Music, Technology" {...field} value={field.value ?? ""} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -405,6 +406,7 @@ export default function AdvancedProfile() {
                                 placeholder="Tell us about yourself, your interests, goals, or anything you'd like the community to know..."
                                 className="min-h-[100px]"
                                 {...field}
+                                value={field.value ?? ""}
                               />
                             </FormControl>
                             <FormMessage />
@@ -420,7 +422,7 @@ export default function AdvancedProfile() {
                             <FormItem>
                               <FormLabel>Interests</FormLabel>
                               <FormControl>
-                                <Input placeholder="Sports, Music, Technology, Gaming, Reading, etc." {...field} />
+                                <Input placeholder="Sports, Music, Technology, Gaming, Reading, etc." {...field} value={field.value ?? ""} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -433,7 +435,7 @@ export default function AdvancedProfile() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Current Affiliation</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value}>
+                              <Select onValueChange={field.onChange} value={field.value ?? undefined}>
                                 <FormControl>
                                   <SelectTrigger>
                                     <SelectValue placeholder="Select your affiliation" />
@@ -483,7 +485,7 @@ export default function AdvancedProfile() {
                             <FormItem>
                               <FormLabel>Major/Department</FormLabel>
                               <FormControl>
-                                <Input placeholder="e.g., Computer Science" {...field} />
+                                <Input placeholder="e.g., Computer Science" {...field} value={field.value ?? ""} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -721,7 +723,7 @@ export default function AdvancedProfile() {
                               <FormItem>
                                 <FormLabel>Address Line 1</FormLabel>
                                 <FormControl>
-                                  <Input placeholder="Street address" {...field} />
+                                  <Input placeholder="Street address" {...field} value={field.value ?? ""} />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -736,7 +738,7 @@ export default function AdvancedProfile() {
                               <FormItem>
                                 <FormLabel>Country</FormLabel>
                                 <FormControl>
-                                  <Input placeholder="e.g., USA" {...field} />
+                                  <Input placeholder="e.g., USA" {...field} value={field.value ?? ""} />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
