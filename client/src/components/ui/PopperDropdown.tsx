@@ -60,7 +60,7 @@ export function PopperDropdown({ open, onOpenChange, trigger, children }: Popper
   }, [open, referenceElement, popperElement, onOpenChange])
 
   // Handle hover behavior with delays to prevent flickering
-  const hoverTimeoutRef = useRef<NodeJS.Timeout>()
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
   
   const handleMouseEnter = () => {
     if (hoverTimeoutRef.current) {

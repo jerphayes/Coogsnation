@@ -24,7 +24,10 @@ export default function AvatarUpload({ userId }: { userId: string }) {
 
     setError(null);
     setFile(selected);
-    setPreview(URL.createObjectURL(selected));
+    setPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(selected);
+    });
   };
 
   const handleUpload = async () => {

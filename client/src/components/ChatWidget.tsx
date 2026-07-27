@@ -211,7 +211,7 @@ export function ChatWidget() {
               <Textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyPress={handleKeyPress}
+                onKeyDown={handleKeyPress}
                 placeholder="Type your question about CoogsNation..."
                 className="flex-1 min-h-[40px] max-h-[120px] resize-none focus:ring-uh-red focus:border-uh-red"
                 disabled={isLoading}

@@ -151,8 +151,8 @@ div[class*="absolute"][class*="opacity-0"] {
 
 /* Enhanced Text Contrast Fixes */
 h1, h2, h3, h4, h5, h6 {
-  color: #111 !important; /* almost black for headers */
-  font-weight: 600 !important;
+  color: inherit; /* follow body/foreground color; avoids black-on-black */
+  font-weight: 600;
 }
 
 .dashboard-banner, .welcome-text, .subtext {

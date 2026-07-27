@@ -4,6 +4,18 @@ interface RichContentRendererProps {
 }
 
 export function RichContentRenderer({ content, className }: RichContentRendererProps) {
+  // Only allow safe URL protocols in rendered links; block javascript:, data:, vbscript:, etc.
+  const sanitizeUrl = (raw: string): string => {
+    const trimmed = raw.trim();
+    // Allow relative and anchor links
+    if (trimmed.startsWith("/") || trimmed.startsWith("#")) return trimmed;
+    const lowered = trimmed.toLowerCase().replace(/[\u0000-\u001f]/g, "");
+    if (lowered.startsWith("http://") || lowered.startsWith("https://") || lowered.startsWith("mailto:")) {
+      return trimmed;
+    }
+    return "#";
+  };
+
   // All patterns defined at the top level
   const patterns = {
     // YouTube embeds: {{YOUTUBE:videoId}}
@@ -39,8 +51,9 @@ export function RichContentRenderer({ content, className }: RichContentRendererP
                      emoji === '🎵' ? 'TikTok' :
                      emoji === '💼' ? 'LinkedIn' : 'Social Media';
       
+      const safeUrl = sanitizeUrl(url);
       return `<div class="social-link my-3 p-3 border rounded-lg bg-gray-50">
-        <a href="${url}" target="_blank" rel="noopener noreferrer" class="flex items-center text-blue-600 hover:text-blue-800">
+        <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="flex items-center text-blue-600 hover:text-blue-800">
           <span class="text-lg mr-2">${emoji}</span>
           <div>
             <div class="font-medium">${text || platform}</div>
@@ -52,7 +65,8 @@ export function RichContentRenderer({ content, className }: RichContentRendererP
 
     // Process regular links
     processedContent = processedContent.replace(patterns.links, (match, text, url) => {
-      return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline">${text}</a>`;
+      const safeUrl = sanitizeUrl(url);
+      return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline">${text}</a>`;
     });
 
     // Process text formatting

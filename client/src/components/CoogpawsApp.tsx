@@ -47,50 +47,6 @@ export default function CoogpawsApp() {
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
   const { toast } = useToast();
 
-  // UH email verification check
-  if (!isAuthenticated) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900">
-        <Card className="w-full max-w-md mx-4" data-testid="coogpaws-login-required">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl text-red-600 dark:text-red-400">Authentication Required</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <p className="text-gray-600 dark:text-gray-300 mb-4">
-              Please sign in to access Coogs Lounge.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (!isUHEmail(user?.email)) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-orange-50 to-red-100 dark:from-orange-950 dark:to-red-900">
-        <Card className="w-full max-w-md mx-4" data-testid="coogpaws-uh-required">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl text-red-600 dark:text-red-400">UH Community Access Required</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <p className="text-gray-600 dark:text-gray-300 mb-4">
-              Coogs Lounge is exclusively for University of Houston community members.
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              Please use your official UH email address (@uh.edu, @cougarnet.uh.edu, etc.) to access the dating platform.
-            </p>
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
-              <p className="text-sm text-red-700 dark:text-red-300">
-                Current email: {user?.email || 'None'}<br/>
-                Please contact support if you believe this is an error.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   // Check if user has a Coogs Lounge profile
   const { data: userProfile, isLoading: profileLoading } = useQuery<CoogpawsProfileResponse | null>({
     queryKey: ["/api/coogpaws/profile"],
@@ -179,17 +135,6 @@ export default function CoogpawsApp() {
     });
   };
 
-  const getAgeFromBirthDate = (birthDate: string) => {
-    const today = new Date();
-    const birth = new Date(birthDate);
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--;
-    }
-    return age;
-  };
-
   // Load existing profile data when modal opens
   useEffect(() => {
     if (userProfile && isProfileSetupOpen) {
@@ -221,6 +166,23 @@ export default function CoogpawsApp() {
           <a href="/login" className="bg-uh-red text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors">
             Sign In to Continue
           </a>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!isUHEmail(user?.email)) {
+    return (
+      <Card>
+        <CardContent className="p-12 text-center">
+          <div className="mb-4">
+            <i className="fas fa-heart text-4xl text-uh-red"></i>
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 mb-2">UH Community Access Required</h3>
+          <p className="text-gray-600 mb-6">
+            Coogs Lounge is exclusively for University of Houston community members. Please use your
+            official UH email address (@uh.edu, @cougarnet.uh.edu, etc.) to access it.
+          </p>
         </CardContent>
       </Card>
     );

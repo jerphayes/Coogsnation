@@ -2,7 +2,6 @@ import logoImage from "@assets/webiste master logo_1761671161849.jpg";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useGuest } from "@/hooks/useGuest";
-import { useEffect } from "react";
 
 export function Header() {
   const { isAuthenticated, user } = useAuth();
