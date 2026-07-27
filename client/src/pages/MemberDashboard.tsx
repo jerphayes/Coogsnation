@@ -1,18 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function MemberDashboard() {
-  const [user, setUser] = useState<{ username?: string; name?: string; email: string; password: string; avatar?: string } | null>(null);
+  const { user, isLoading, isAuthenticated } = useAuth();
 
   useEffect(() => {
-    const current = localStorage.getItem("currentUser");
-    if (!current) {
-      window.location.href = "/login/other";
-    } else {
-      setUser(JSON.parse(current));
+    if (!isLoading && !isAuthenticated) {
+      window.location.href = "/login";
     }
-  }, []);
+  }, [isLoading, isAuthenticated]);
 
-  if (!user) {
+  if (isLoading || !user) {
     return (
       <div className="text-center mt-20 text-gray-700">
         Loading your dashboard...
@@ -32,7 +30,7 @@ export default function MemberDashboard() {
         </a>
       </div>
       <h2 className="text-3xl font-bold text-center text-red-700 mb-6" data-testid="title-welcome">
-        Welcome back, {user.username || user.email}!
+        Welcome back, {user.handle || user.firstName || user.email}!
       </h2>
 
       <p className="text-center text-gray-600 mb-6">
@@ -144,13 +142,16 @@ export default function MemberDashboard() {
           data-testid="button-delete-membership"
           onClick={() => {
             if (confirm("Are you sure you want to delete your membership?")) {
-              const allUsers = JSON.parse(localStorage.getItem("coogsnationUsers") || "[]");
-              const filtered = allUsers.filter(
-                (u: any) => u.email !== user.email && u.username !== user.username
-              );
-              localStorage.setItem("coogsnationUsers", JSON.stringify(filtered));
-              localStorage.removeItem("currentUser");
-              window.location.href = "/";
+              void fetch("/api/users/profile", {
+                method: "DELETE",
+                credentials: "same-origin",
+              })
+                .then(() =>
+                  fetch("/api/logout", { method: "POST", credentials: "same-origin" })
+                )
+                .finally(() => {
+                  window.location.href = "/";
+                });
             }
           }}
         >

@@ -29,9 +29,7 @@ export default function ForumTopic() {
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
   
-  // Check for localStorage demo auth
-  const hasLocalAuth = typeof window !== 'undefined' && localStorage.getItem('currentUser');
-  const canPost = isAuthenticated || hasLocalAuth;
+  const canPost = isAuthenticated;
 
   const form = useForm<z.infer<typeof createPostSchema>>({
     resolver: zodResolver(createPostSchema),

@@ -139,9 +139,7 @@ export default function CoogpawsChat() {
   const sendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Check if guest mode or not authenticated
-    const hasLocalAuth = typeof window !== 'undefined' && localStorage.getItem('currentUser');
-    if (!isAuthenticated && !hasLocalAuth) {
+    if (!isAuthenticated) {
       toast({
         title: "Sign in required",
         description: "Please sign in to send messages in the chat.",
@@ -161,9 +159,7 @@ export default function CoogpawsChat() {
   const sendAIMessage = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Check if guest mode or not authenticated
-    const hasLocalAuth = typeof window !== 'undefined' && localStorage.getItem('currentUser');
-    if (!isAuthenticated && !hasLocalAuth) {
+    if (!isAuthenticated) {
       toast({
         title: "Sign in required",
         description: "Please sign in to chat with the AI assistant.",
@@ -217,9 +213,7 @@ export default function CoogpawsChat() {
     }
   };
 
-  // Check for local auth
-  const hasLocalAuth = typeof window !== 'undefined' && localStorage.getItem('currentUser');
-  const canInteract = isAuthenticated || hasLocalAuth;
+  const canInteract = isAuthenticated;
 
   return (
     <div className="min-h-screen bg-gray-50">

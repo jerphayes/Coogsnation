@@ -1,4 +1,5 @@
 import { Strategy as FacebookStrategy } from "passport-facebook";
+import { recordAuthEvent, clientIpOf, userAgentOf } from "./authAudit";
 import { Strategy as LinkedInStrategy } from "passport-linkedin-oauth2";
 import passport from "passport";
 import session from "express-session";
@@ -270,18 +271,63 @@ export async function setupAuth(app: Express): Promise<RequestHandler> {
     app.get("/api/auth/linkedin/callback", (_req, res) => res.status(404).json({ message: "LinkedIn login is not configured" }));
   }
 
-  app.get("/api/logout", (req, res, next) => {
+  // Logout is POST-only: a GET logout can be triggered cross-site by any
+  // <img>/<link> tag, which is a CSRF vector. The client must POST.
+  app.post("/api/logout", (req, res, next) => {
+    const loggingOutUserId = req.user?.id ?? null;
     req.logout((logoutError) => {
       if (logoutError) return next(logoutError);
       req.session.destroy((sessionError) => {
         if (sessionError) return next(sessionError);
         res.clearCookie(process.env.SESSION_COOKIE_NAME || "coogsnation.sid");
-        res.redirect("/");
+        void recordAuthEvent({
+          eventType: "logout",
+          outcome: "success",
+          userId: loggingOutUserId,
+          clientIp: clientIpOf(req as any),
+          userAgent: userAgentOf(req as any),
+        });
+        res.status(200).json({ message: "Logged out" });
       });
     });
   });
 
+  // Legacy GET alias: does not log the user out (that would reintroduce the
+  // CSRF vector); it simply redirects to the home page.
+  app.get("/api/logout", (_req, res) => {
+    res.redirect("/");
+  });
+
   return sessionMiddleware;
+}
+
+
+/**
+ * Enforce account state and session revocation for an authenticated request.
+ * Returns an error message if the session must be rejected, or null if valid.
+ *
+ * - accountStatus: only 'active' accounts may hold a session.
+ * - sessionVersion: the value captured at login must still match the database.
+ *   Incrementing users.session_version invalidates every outstanding session
+ *   (password reset/change, suspension, explicit security revocation).
+ */
+function evaluateSessionState(
+  dbUser: { accountStatus?: string | null; sessionVersion?: number | null },
+  sessionVersionAtLogin: number | undefined,
+): string | null {
+  const status = dbUser.accountStatus ?? "active";
+  if (status !== "active") {
+    return status === "suspended"
+      ? "Account suspended"
+      : status === "disabled"
+        ? "Account disabled"
+        : "Account not active";
+  }
+  const current = dbUser.sessionVersion ?? 0;
+  if (typeof sessionVersionAtLogin === "number" && sessionVersionAtLogin !== current) {
+    return "Session revoked";
+  }
+  return null;
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
@@ -295,6 +341,17 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
       req.logout(() => undefined);
       return res.status(401).json({ message: "Unauthorized" });
     }
+
+    const rejection = evaluateSessionState(
+      dbUser,
+      (req.session as any)?.sessionVersion,
+    );
+    if (rejection) {
+      req.logout(() => undefined);
+      req.session?.destroy(() => undefined);
+      return res.status(401).json({ message: rejection });
+    }
+
     return next();
   } catch (error) {
     console.error("Authentication check failed:", error);
@@ -310,6 +367,17 @@ export const requireAdmin: RequestHandler = async (req, res, next) => {
   try {
     const dbUser = await storage.getUser(req.user.id);
     if (!dbUser) return res.status(401).json({ message: "Unauthorized" });
+
+    const rejection = evaluateSessionState(
+      dbUser,
+      (req.session as any)?.sessionVersion,
+    );
+    if (rejection) {
+      req.logout(() => undefined);
+      req.session?.destroy(() => undefined);
+      return res.status(401).json({ message: rejection });
+    }
+
     if (dbUser.role !== "admin") {
       return res.status(403).json({ message: "Administrator access required" });
     }

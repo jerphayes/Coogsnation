@@ -7,9 +7,6 @@ export function Header() {
   const { isAuthenticated, user } = useAuth();
   const { isGuestMode, enableGuestMode } = useGuest();
 
-  // Check for localStorage demo auth
-  const hasLocalAuth = typeof window !== 'undefined' && localStorage.getItem('currentUser');
-
   const handleGuestClick = () => {
     enableGuestMode();
     window.location.href = '/forums';
@@ -85,7 +82,7 @@ export function Header() {
         {/* Right side - Auth buttons or User info */}
         <div className="flex items-center gap-4">
           {/* Show different UI based on auth status */}
-          {isAuthenticated || hasLocalAuth ? (
+          {isAuthenticated ? (
             <>
               {/* Authenticated User Options */}
               <Link 
@@ -96,10 +93,16 @@ export function Header() {
                 Dashboard
               </Link>
               <button
-                onClick={() => {
-                  localStorage.removeItem('currentUser');
+                onClick={async () => {
                   localStorage.removeItem('guestMode');
-                  window.location.href = '/api/logout';
+                  try {
+                    await fetch('/api/logout', {
+                      method: 'POST',
+                      credentials: 'same-origin',
+                    });
+                  } finally {
+                    window.location.href = '/';
+                  }
                 }}
                 className="text-white font-bold hover:text-red-500 transition-colors"
                 data-testid="button-logout"

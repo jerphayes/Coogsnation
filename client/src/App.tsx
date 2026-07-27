@@ -37,13 +37,8 @@ import ProfileCompletion from "@/pages/ProfileCompletion";
 import LiveSports from "@/pages/LiveSports";
 import CoogpawsChat from "@/pages/CoogpawsChat";
 import Login from "@/pages/Login";
-import Signup from "@/pages/Signup";
 import LoginEmail from "@/pages/LoginEmail";
-import LoginLocal from "@/pages/LoginLocal";
 import MemberDashboard from "@/pages/MemberDashboard";
-import JoinPage from "@/pages/JoinPage";
-import LocalProfile from "@/pages/LocalProfile";
-import SessionTest from "@/pages/SessionTest";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -77,12 +72,10 @@ function Router() {
       <Route path="/complete-profile" component={ProfileCompletion} />
       <Route path="/login" component={Login} />
       <Route path="/login/email" component={LoginEmail} />
-      <Route path="/login/other" component={LoginLocal} />
-      <Route path="/signup" component={Signup} />
-      <Route path="/join" component={JoinPage} />
+      <Route path="/login/other" component={Login} />
+      <Route path="/signup" component={ProfileCompletion} />
+      <Route path="/join" component={ProfileCompletion} />
       <Route path="/member-dashboard" component={MemberDashboard} />
-      <Route path="/profile/local" component={LocalProfile} />
-      <Route path="/session-test" component={SessionTest} />
       <Route path="/live-sports" component={LiveSports} />
       <Route path="/coogpaws-chat" component={CoogpawsChat} />
       <Route path="/forums/categories/:categoryId" component={ForumCategory} />

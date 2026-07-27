@@ -3,6 +3,7 @@ import express from "express";
 import { createServer, type Server } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import { storage } from "./storage";
+import { recordAuthEvent, clientIpOf, userAgentOf } from "./authAudit";
 import { setupAuth, isAuthenticated, requireAdmin, requireUHAuthentication } from "./auth";
 import {
   insertForumTopicSchema,
@@ -456,8 +457,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = localLoginSchema.parse(req.body);
       
-      // Find user by handle
-      const user = await storage.getUserByHandle(validatedData.handle);
+      // Accept either an email address or a handle as the login identifier.
+      // Resolved server-side so the client sends one field either way.
+      const identifier = validatedData.handle.trim();
+      const user = identifier.includes("@")
+        ? await storage.getUserByEmail(identifier.toLowerCase())
+        : await storage.getUserByHandle(identifier);
       if (!user || !user.isLocalAccount || !user.passwordHash) {
         // Don't reveal if user exists or not - just generic error
         return res.status(401).json({ message: "Invalid username/email or password" });
@@ -493,7 +498,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
         
+        void recordAuthEvent({
+          eventType: "login",
+          outcome: "failure",
+          userId: user.id,
+          identifier,
+          clientIp: clientIpOf(req as any),
+          userAgent: userAgentOf(req as any),
+          detail: "invalid_password",
+        });
         return res.status(401).json({ message: "Invalid username/email or password" });
+      }
+
+      // Enforce account lifecycle state: only active accounts may authenticate.
+      const status = user.accountStatus ?? "active";
+      if (status !== "active") {
+        await recordAuthEvent({
+          eventType: "login",
+          outcome: "blocked",
+          userId: user.id,
+          identifier,
+          clientIp: clientIpOf(req as any),
+          userAgent: userAgentOf(req as any),
+          detail: `account_status=${status}`,
+        });
+        return res.status(403).json({
+          message: "This account is not active. Please contact support.",
+        });
       }
 
       // Successful login - clear any failed attempts
@@ -507,6 +538,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(500).json({ message: "Login failed - session error" });
         }
         
+        // Capture the account's session version. isAuthenticated compares this
+        // against the database on every request, so incrementing
+        // users.session_version revokes all outstanding sessions.
+        (req.session as any).sessionVersion = user.sessionVersion ?? 0;
+
         // Create standardized user object for passport
         const authUser = {
           id: user.id,
@@ -520,6 +556,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return res.status(500).json({ message: "Login failed" });
           }
           
+          void recordAuthEvent({
+            eventType: "login",
+            outcome: "success",
+            userId: user.id,
+            identifier,
+            clientIp: clientIpOf(req as any),
+            userAgent: userAgentOf(req as any),
+          });
+
           // Return success with basic user info
           res.json({ 
             message: "Login successful",

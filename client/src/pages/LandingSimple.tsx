@@ -332,11 +332,12 @@ export default function Landing() {
           Continue as Guest
         </a>
         <button
-          onClick={() => {
-            // Clear localStorage demo auth
-            localStorage.removeItem('currentUser');
-            // Redirect to home page
-            window.location.href = '/';
+          onClick={async () => {
+            try {
+              await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });
+            } finally {
+              window.location.href = '/';
+            }
           }}
           style={{
             margin: '0 15px',

@@ -79,8 +79,9 @@ export default function AdvancedProfile() {
         title: "Profile Deleted",
         description: "Your profile has been permanently deleted",
       });
-      // Redirect to logout or home page
-      window.location.href = '/api/logout';
+      // Destroy the server session, then return home
+      void fetch('/api/logout', { method: 'POST', credentials: 'same-origin' })
+        .finally(() => { window.location.href = '/'; });
     },
     onError: () => {
       toast({

@@ -37,6 +37,10 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   role: varchar("role", { length: 20 }).notNull().default("member"),
+  // Account lifecycle state. Only 'active' may authenticate.
+  accountStatus: varchar("account_status", { length: 20 }).notNull().default("active"),
+  // Monotonic counter; incrementing invalidates all outstanding sessions.
+  sessionVersion: integer("session_version").notNull().default(0),
   username: varchar("username").unique(), // This serves as the handle
   handle: varchar("handle").unique(), // Custom handle for display
   nickname: varchar("nickname"),

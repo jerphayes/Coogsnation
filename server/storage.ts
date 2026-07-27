@@ -297,13 +297,23 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  // Identifier lookups are case-insensitive. PostgreSQL text equality is
+  // case-sensitive by default, which would otherwise allow "Jerry@x.com" and
+  // "jerry@x.com" to exist as separate accounts and would break login for
+  // users who type a different case than they registered with.
   async getUserByHandle(handle: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.handle, handle));
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(sql`lower(${users.handle}) = lower(${handle})`);
     return user;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(sql`lower(${users.email}) = lower(${email})`);
     return user;
   }
 
