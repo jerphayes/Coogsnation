@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 
 export default function ProfileDisplay() {
-  const [profile, setProfile] = useState<{ handle: string; avatar_url?: string } | null>(null);
+  const [profile, setProfile] = useState<{
+    handle?: string | null;
+    displayName: string;
+    avatar_url?: string;
+  } | null>(null);
 
   useEffect(() => {
     fetch("/api/profile")
@@ -23,7 +27,9 @@ export default function ProfileDisplay() {
           No Avatar
         </div>
       )}
-      <h2 className="text-lg font-semibold" data-testid="text-handle">@{profile?.handle}</h2>
+      <h2 className="text-lg font-semibold" data-testid="text-handle">
+        {profile?.handle ? `@${profile.handle}` : profile?.displayName || "Coogs Fan"}
+      </h2>
     </div>
   );
 }

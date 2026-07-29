@@ -161,7 +161,10 @@ export default function AdvancedProfile() {
 
   const engagement = getEngagementLevel(userStats);
   const badges = getReputationBadges(userStats);
-  const profileDisplayName = userProfile?.nickname || userProfile?.handle || (user as any)?.name || "Coogs Fan";
+  const fullName = [userProfile?.firstName || (user as any)?.firstName, userProfile?.lastName || (user as any)?.lastName]
+    .filter(Boolean)
+    .join(" ");
+  const profileDisplayName = userProfile?.nickname || userProfile?.handle || fullName || (user as any)?.email || "Coogs Fan";
   const profileLocation = userProfile?.city || userProfile?.location;
 
   return (

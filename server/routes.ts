@@ -53,6 +53,13 @@ import { AIServiceError } from "./ai/types";
 
 // Helper function to verify Google reCAPTCHA
 async function verifyRecaptcha(recaptchaResponse: string, clientIP?: string): Promise<boolean> {
+  // Codespaces/local development can opt into an explicit bypass. The bypass
+  // is ignored in production even if the variable is accidentally present.
+  if (process.env.NODE_ENV !== "production" && process.env.RECAPTCHA_DEV_BYPASS === "true") {
+    console.log(`[RECAPTCHA] Development bypass accepted from IP: ${clientIP}`);
+    return true;
+  }
+
   if (!recaptchaResponse) {
     console.log(`[RECAPTCHA] No captcha response provided from IP: ${clientIP}`);
     return false;
@@ -290,6 +297,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Return profile data compatible with ProfileDisplay
       res.json({
         handle: user.handle,
+        displayName: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "Coogs Fan",
         avatar_url: user.profileImageUrl || ""
       });
     } catch (error) {
@@ -307,8 +315,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Handle is required" });
       }
 
-      const existingUser = await storage.getUserByHandle(handle);
-      res.json({ available: !existingUser });
+      const normalizedHandle = handle.trim();
+      if (!/^[a-zA-Z0-9_]{3,30}$/.test(normalizedHandle)) {
+        return res.status(400).json({
+          message: "Handle must be 3-30 characters and contain only letters, numbers, and underscores",
+        });
+      }
+
+      const existingUser = await storage.getUserByHandle(normalizedHandle);
+      const currentUserId = (req.user as any)?.id;
+      res.json({ available: !existingUser || existingUser.id === currentUserId });
     } catch (error) {
       console.error("Error checking handle:", error);
       res.status(500).json({ message: "Failed to check handle availability" });
@@ -352,40 +368,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Check for duplicate name
-      const duplicateName = await storage.checkDuplicateName(
-        validatedData.firstName,
-        validatedData.lastName
-      );
-      if (duplicateName) {
-        return res.status(400).json({ 
-          message: 'A user with this name already exists. If this is your name, please contact support for assistance.' 
-        });
-      }
-
-      // Check for duplicate address
-      const duplicateAddress = await storage.checkDuplicateAddress(
-        validatedData.address,
-        validatedData.city,
-        validatedData.state,
-        validatedData.zipCode
-      );
-      if (duplicateAddress) {
-        return res.status(400).json({ 
-          message: 'A user with this address already exists. Please ensure you are not creating a duplicate account.' 
-        });
-      }
-      
       // Check if email is already taken
       const existingUserByEmail = await storage.getUserByEmail(validatedData.email);
       if (existingUserByEmail) {
         return res.status(400).json({ message: "Email is already registered" });
       }
 
-      // Check if handle is already taken
-      const existingUserByHandle = await storage.getUserByHandle(validatedData.handle);
-      if (existingUserByHandle) {
-        return res.status(400).json({ message: "Handle is already taken" });
+      // A custom handle is optional. When supplied, it must still be unique.
+      if (validatedData.handle) {
+        const existingUserByHandle = await storage.getUserByHandle(validatedData.handle);
+        if (existingUserByHandle) {
+          return res.status(400).json({ message: "Handle is already taken" });
+        }
       }
 
       // Hash the password
@@ -397,22 +391,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: validatedData.email,
         firstName: validatedData.firstName,
         lastName: validatedData.lastName,
-        nickname: validatedData.nickname,
-        handle: validatedData.handle,
+        nickname: validatedData.nickname || null,
+        handle: validatedData.handle || null,
         passwordHash,
-        backupEmail: validatedData.backupEmail,
-        address: validatedData.address,
-        city: validatedData.city,
-        state: validatedData.state,
-        zipCode: validatedData.zipCode,
+        backupEmail: validatedData.backupEmail || null,
+        address: validatedData.address || null,
+        city: validatedData.city || null,
+        state: validatedData.state || null,
+        zipCode: validatedData.zipCode || null,
         dateOfBirth: validatedData.dateOfBirth,
-        fanType: validatedData.fanType,
-        memberCategory: validatedData.memberCategory,
-        commentsAndSuggestions: validatedData.commentsAndSuggestions,
+        fanType: validatedData.fanType || null,
+        memberCategory: validatedData.memberCategory || null,
+        commentsAndSuggestions: validatedData.commentsAndSuggestions || null,
         favoriteSports: validatedData.favoriteSports ? JSON.stringify(validatedData.favoriteSports) : null,
         otherSportComment: validatedData.otherSportComment,
         hasConsentedToDataUse: validatedData.hasConsentedToDataUse,
-        hasConsentedToMarketing: validatedData.hasConsentedToMarketing,
+        hasConsentedToMarketing: validatedData.hasConsentedToMarketing || false,
         consentedAt: new Date(),
         isProfileComplete: true,
         profileCompletedAt: new Date(),
@@ -426,7 +420,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         majorOrDepartment: validatedData.majorOrDepartment || null,
         socialLinks: validatedData.socialLinks || null,
         addressLine1: validatedData.addressLine1 || null,
-        country: validatedData.country || 'USA',
+        country: validatedData.country || null,
         optInOffers: validatedData.optInOffers || false,
       });
 
@@ -864,7 +858,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // SECURITY: Content-Type sniffing - verify actual file format using Sharp
       let imageMetadata;
       try {
-        imageMetadata = await sharp(file.buffer).metadata();
+        imageMetadata = await sharp(file.buffer, { limitInputPixels: 16_777_216 }).metadata();
       } catch (sharpError: any) {
         console.log(`[SECURITY] Avatar upload blocked - invalid image format for user ${userId}: ${sharpError?.message || sharpError}`);
         return res.status(400).json({ message: "Invalid image format" });
@@ -877,24 +871,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Unsupported image format" });
       }
 
-      // SECURITY: Validate pixel dimensions (max 500x500 as per requirement)
+      // SECURITY: Reject decompression-bomb-sized inputs, then resize normal
+      // photos down to a 500x500 avatar. Requiring the original upload to
+      // already be 500x500 made most phone photos unusable.
       if (!imageMetadata.width || !imageMetadata.height) {
         console.log(`[SECURITY] Avatar upload blocked - unable to determine dimensions for user ${userId}`);
         return res.status(400).json({ message: "Unable to determine image dimensions" });
       }
 
-      if (imageMetadata.width > 500 || imageMetadata.height > 500) {
-        console.log(`[SECURITY] Avatar upload blocked - dimensions too large: ${imageMetadata.width}x${imageMetadata.height} for user ${userId}`);
-        return res.status(400).json({ message: "Image dimensions must not exceed 500x500 pixels" });
+      if (imageMetadata.width * imageMetadata.height > 16_777_216) {
+        console.log(`[SECURITY] Avatar upload blocked - pixel count too large: ${imageMetadata.width}x${imageMetadata.height} for user ${userId}`);
+        return res.status(400).json({ message: "Image is too large to process safely" });
       }
 
       // SECURITY: Process image to strip EXIF data and ensure clean format
       let processedImageBuffer;
       try {
-        processedImageBuffer = await sharp(file.buffer)
+        processedImageBuffer = await sharp(file.buffer, { limitInputPixels: 16_777_216 })
+          .rotate()
           .resize({
-            width: Math.min(imageMetadata.width, 500),
-            height: Math.min(imageMetadata.height, 500),
+            width: 500,
+            height: 500,
             fit: 'inside',
             withoutEnlargement: true
           })
@@ -2323,52 +2320,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const profileData = userProfileCompletionSchema.parse(req.body);
 
-      // Check for duplicate name (excluding current user)
-      const duplicateName = await storage.checkDuplicateName(
-        profileData.firstName,
-        profileData.lastName,
-        userId
-      );
-      if (duplicateName) {
-        return res.status(400).json({ 
-          error: 'A user with this name already exists. If this is your name, please contact support for assistance.' 
-        });
-      }
-
-      // Check for duplicate address (excluding current user)
-      const duplicateAddress = await storage.checkDuplicateAddress(
-        profileData.address || '',
-        profileData.city || '',
-        profileData.state || '',
-        profileData.zipCode || '',
-        userId
-      );
-      if (duplicateAddress) {
-        return res.status(400).json({ 
-          error: 'A user with this address already exists. Please ensure you are not creating a duplicate account.' 
-        });
-      }
-
-      // Check if handle is available (excluding current user)
-      const existingUser = await storage.getUserByHandle(profileData.handle);
-      if (existingUser && existingUser.id !== userId) {
-        return res.status(400).json({ error: 'Handle is already taken' });
+      // A custom handle is optional. Names and household addresses are not
+      // unique identifiers and must never block legitimate members.
+      if (profileData.handle) {
+        const existingUser = await storage.getUserByHandle(profileData.handle);
+        if (existingUser && existingUser.id !== userId) {
+          return res.status(400).json({ error: 'Handle is already taken' });
+        }
       }
 
       // Update user profile
       const updatedUser = await storage.updateUserProfile(userId, {
-        handle: profileData.handle,
+        handle: profileData.handle || null,
         firstName: profileData.firstName,
         lastName: profileData.lastName,
         nickname: profileData.nickname || null,
         email: profileData.email || null,
-        address: profileData.address,
-        city: profileData.city,
-        state: profileData.state,
-        zipCode: profileData.zipCode,
+        address: profileData.address || null,
+        city: profileData.city || null,
+        state: profileData.state || null,
+        zipCode: profileData.zipCode || null,
         dateOfBirth: profileData.dateOfBirth,
         fanType: profileData.fanType || null,
-        memberCategory: profileData.memberCategory,
+        memberCategory: profileData.memberCategory || null,
         commentsAndSuggestions: profileData.commentsAndSuggestions || null,
         favoriteSports: profileData.favoriteSports ? JSON.stringify(profileData.favoriteSports) : null,
         otherSportComment: profileData.otherSportComment || null,
@@ -2386,7 +2360,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         majorOrDepartment: profileData.majorOrDepartment || null,
         socialLinks: profileData.socialLinks || null,
         addressLine1: profileData.addressLine1 || null,
-        country: profileData.country || 'USA',
+        country: profileData.country || null,
         optInOffers: profileData.optInOffers || false,
       });
 

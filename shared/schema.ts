@@ -997,26 +997,69 @@ export const passwordSchema = z.string()
   .regex(/[0-9]/, "Password must contain at least one number")
   .regex(passwordRequirements.specialCharsRegex, "Password must contain at least one special character (!@#$%^&*()_+-=[]{}|;':\"\\,.<>?/)");
 
-// Backup email validation schema
-export const backupEmailSchema = z.string().email("Please enter a valid email address").optional();
+// Optional form inputs arrive from HTML controls as empty strings. Normalize
+// those values before validation so a field labelled "Optional" is genuinely
+// optional on both the client and server.
+const emptyStringToUndefined = (value: unknown) =>
+  typeof value === "string" && value.trim() === "" ? undefined : value;
+
+const optionalHandleSchema = z.preprocess(
+  emptyStringToUndefined,
+  z.string()
+    .trim()
+    .min(3, "Handle must be at least 3 characters")
+    .max(30, "Handle must be less than 30 characters")
+    .regex(/^[a-zA-Z0-9_]+$/, "Handle can only contain letters, numbers, and underscores")
+    .optional(),
+);
+
+const optionalStateSchema = z.preprocess(
+  emptyStringToUndefined,
+  z.string()
+    .trim()
+    .length(2, "State must be 2 characters")
+    .regex(/^[A-Z]{2}$/, "State must be in format like TX")
+    .optional(),
+);
+
+const optionalZipCodeSchema = z.preprocess(
+  emptyStringToUndefined,
+  z.string().trim().min(5, "ZIP code must be at least 5 characters").max(10).optional(),
+);
+
+const optionalGraduationYearSchema = z.preprocess((value) => {
+  const normalized = emptyStringToUndefined(value);
+  if (typeof normalized === "string") return Number(normalized);
+  return normalized;
+}, z.number().int().min(1950).max(2050, "Please enter a valid graduation year").optional());
+
+// Backup email validation schema. A blank field is valid because backup email
+// is optional; a non-blank value must still be a valid email address.
+export const backupEmailSchema = z.preprocess(
+  emptyStringToUndefined,
+  z.string().trim().email("Please enter a valid email address").optional(),
+);
 
 // User profile completion schema with all required fields and validation
 export const userProfileCompletionSchema = z.object({
-  handle: z.string().min(3, "Handle must be at least 3 characters").max(30, "Handle must be less than 30 characters").regex(/^[a-zA-Z0-9_]+$/, "Handle can only contain letters, numbers, and underscores"),
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
+  handle: optionalHandleSchema,
+  firstName: z.string().trim().min(1, "First name is required"),
+  lastName: z.string().trim().min(1, "Last name is required"),
   nickname: z.string().optional(),
-  email: z.string().email("Please enter a valid email address").optional(),
+  email: z.string().trim().toLowerCase().email("Please enter a valid email address"),
   address: z.string().optional(),
   city: z.string().optional(),
-  state: z.string().length(2, "State must be 2 characters").regex(/^[A-Z]{2}$/, "State must be in format like TX").optional(),
-  zipCode: z.string().min(5, "ZIP code must be at least 5 characters").max(10).optional(),
-  dateOfBirth: z.coerce.date().optional(), // Converts string to Date automatically
-  graduationYear: z.number().int().min(1950).max(2050, "Please enter a valid graduation year").optional(),
+  state: optionalStateSchema,
+  zipCode: optionalZipCodeSchema,
+  dateOfBirth: z.coerce.date(),
+  graduationYear: optionalGraduationYearSchema,
   fanType: z.enum(["Student", "Ex-Student", "Graduate", "Post Graduate", "Faculty", "Staff", "Coog Crazy Fan", "Friend"]).optional(),
   interest: z.string().optional(),
   suggestionBox: z.string().optional(),
-  memberCategory: z.enum(["Student", "Ex-Student", "Graduate", "Post Graduate", "Faculty", "Staff", "Coog Crazy Fan", "Friend"], { required_error: "Please select a member category" }),
+  memberCategory: z.preprocess(
+    emptyStringToUndefined,
+    z.enum(["Student", "Ex-Student", "Graduate", "Post Graduate", "Faculty", "Staff", "Coog Crazy Fan", "Friend"]).optional(),
+  ),
   // Comments and favorite sports
   commentsAndSuggestions: z.string().optional(),
   favoriteSports: z.array(z.enum(["football", "basketball", "other"])).optional(),
@@ -1027,7 +1070,7 @@ export const userProfileCompletionSchema = z.object({
   // Enhanced membership fields
   aboutMe: z.string().max(2000, "About me must be less than 2000 characters").optional(),
   interests: z.string().max(1000, "Interests must be less than 1000 characters").optional(),
-  affiliation: z.enum(["Student", "Ex-Student", "Graduate", "Post Graduate", "Faculty", "Staff", "Coog Crazy Fan", "Friend"]).optional(),
+  affiliation: z.enum(["Student", "Current Student", "Ex-Student", "Graduate", "Post Graduate", "Faculty", "Staff", "Coog Crazy Fan", "Friend"]).optional(),
   defaultAvatarChoice: z.number().int().min(1).max(5, "Avatar choice must be between 1 and 5").optional(),
   majorOrDepartment: z.string().max(120, "Major/Department must be less than 120 characters").optional(),
   socialLinks: z.object({
@@ -1069,12 +1112,16 @@ const optionalNullableUrl = z.string().url('Please enter a valid URL').or(z.lite
 export const userProfileUpdateSchema = z.object({
   firstName: optionalNullableText(100, 'First name must be less than 100 characters'),
   lastName: optionalNullableText(100, 'Last name must be less than 100 characters'),
-  handle: z.string()
-    .min(3, 'Handle must be at least 3 characters')
-    .max(30, 'Handle must be less than 30 characters')
-    .regex(/^[a-zA-Z0-9_]+$/, 'Handle can only contain letters, numbers, and underscores')
-    .nullable()
-    .optional(),
+  handle: z.preprocess(
+    (value) => typeof value === 'string' && value.trim() === '' ? null : value,
+    z.string()
+      .trim()
+      .min(3, 'Handle must be at least 3 characters')
+      .max(30, 'Handle must be less than 30 characters')
+      .regex(/^[a-zA-Z0-9_]+$/, 'Handle can only contain letters, numbers, and underscores')
+      .nullable()
+      .optional(),
+  ),
   nickname: optionalNullableText(100, 'Nickname must be less than 100 characters'),
   title: optionalNullableText(150, 'Title must be less than 150 characters'),
   bio: optionalNullableText(2000, 'Bio must be less than 2000 characters'),
@@ -1122,24 +1169,27 @@ export const userProfileUpdateSchema = z.object({
 
 // Local account registration schema (password-based registration)
 export const localAccountRegistrationSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-  handle: z.string().min(3, "Handle must be at least 3 characters").max(30, "Handle must be less than 30 characters").regex(/^[a-zA-Z0-9_]+$/, "Handle can only contain letters, numbers, and underscores"),
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
+  email: z.string().trim().toLowerCase().email("Please enter a valid email address"),
+  handle: optionalHandleSchema,
+  firstName: z.string().trim().min(1, "First name is required"),
+  lastName: z.string().trim().min(1, "Last name is required"),
   nickname: z.string().optional(),
   password: passwordSchema,
   confirmPassword: z.string(),
   backupEmail: backupEmailSchema,
-  address: z.string().min(1, "Address is required"),
-  city: z.string().min(1, "City is required"),
-  state: z.string().length(2, "State must be 2 characters").regex(/^[A-Z]{2}$/, "State must be in format like TX"),
-  zipCode: z.string().min(5, "ZIP code is required").max(10),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  state: optionalStateSchema,
+  zipCode: optionalZipCodeSchema,
   dateOfBirth: z.coerce.date(),
-  graduationYear: z.number().int().min(1950).max(2050, "Please enter a valid graduation year").optional(),
+  graduationYear: optionalGraduationYearSchema,
   fanType: z.enum(["Student", "Ex-Student", "Graduate", "Post Graduate", "Faculty", "Staff", "Coog Crazy Fan", "Friend"]).optional(),
   interest: z.string().optional(),
   suggestionBox: z.string().optional(),
-  memberCategory: z.enum(["Student", "Ex-Student", "Graduate", "Post Graduate", "Faculty", "Staff", "Coog Crazy Fan", "Friend"], { required_error: "Please select a member category" }),
+  memberCategory: z.preprocess(
+    emptyStringToUndefined,
+    z.enum(["Student", "Ex-Student", "Graduate", "Post Graduate", "Faculty", "Staff", "Coog Crazy Fan", "Friend"]).optional(),
+  ),
   // Comments and favorite sports
   commentsAndSuggestions: z.string().optional(),
   favoriteSports: z.array(z.enum(["football", "basketball", "other"])).optional(),
@@ -1150,7 +1200,7 @@ export const localAccountRegistrationSchema = z.object({
   // Enhanced membership fields
   aboutMe: z.string().max(2000, "About me must be less than 2000 characters").optional(),
   interests: z.string().max(1000, "Interests must be less than 1000 characters").optional(),
-  affiliation: z.enum(["Student", "Ex-Student", "Graduate", "Post Graduate", "Faculty", "Staff", "Coog Crazy Fan", "Friend"]).optional(),
+  affiliation: z.enum(["Student", "Current Student", "Ex-Student", "Graduate", "Post Graduate", "Faculty", "Staff", "Coog Crazy Fan", "Friend"]).optional(),
   defaultAvatarChoice: z.number().int().min(1).max(5, "Avatar choice must be between 1 and 5").optional(),
   majorOrDepartment: z.string().max(120, "Major/Department must be less than 120 characters").optional(),
   socialLinks: z.object({

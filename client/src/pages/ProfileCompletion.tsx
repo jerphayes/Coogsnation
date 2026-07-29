@@ -52,9 +52,10 @@ export default function ProfileCompletion() {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const [uploadedAvatarPath, setUploadedAvatarPath] = useState<string | null>(null);
+  const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
 
-  const handleAvatarFileChange = async (file?: File) => {
-    if (!file) return;
+  const uploadAvatarFile = async (file: File) => {
     setIsUploadingAvatar(true);
     try {
       const formData = new FormData();
@@ -69,6 +70,51 @@ export default function ProfileCompletion() {
       }
       const result = await response.json();
       setUploadedAvatarPath(result.avatarUrl);
+      return result.avatarUrl as string;
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
+  const handleAvatarFileChange = async (file?: File) => {
+    if (!file) {
+      setPendingAvatarFile(null);
+      setAvatarPreviewUrl(null);
+      return;
+    }
+
+    const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+    if (!allowedTypes.has(file.type)) {
+      toast({
+        title: "Unsupported Image",
+        description: "Choose a JPG, PNG, or WebP image.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "Image Too Large",
+        description: "Avatar files must be 2 MB or smaller.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setPendingAvatarFile(file);
+    setAvatarPreviewUrl(URL.createObjectURL(file));
+
+    if (!user) {
+      toast({
+        title: "Avatar Selected",
+        description: "It will be uploaded securely after your account is created.",
+      });
+      return;
+    }
+
+    try {
+      await uploadAvatarFile(file);
       toast({ title: "Avatar Uploaded", description: "Your profile picture has been saved." });
     } catch (error) {
       console.error("Avatar upload failed:", error);
@@ -77,8 +123,6 @@ export default function ProfileCompletion() {
         description: error instanceof Error ? error.message : "Avatar upload failed",
         variant: "destructive",
       });
-    } finally {
-      setIsUploadingAvatar(false);
     }
   };
 
@@ -87,6 +131,12 @@ export default function ProfileCompletion() {
     queryKey: ['/api/auth/user'],
   });
   const isLocalRegistration = !user;
+
+  useEffect(() => {
+    return () => {
+      if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl);
+    };
+  }, [avatarPreviewUrl]);
 
   const form = useForm<ProfileCompletionData | LocalRegistrationData>({
     resolver: zodResolver(isLocalRegistration ? localAccountRegistrationSchema : userProfileCompletionSchema),
@@ -98,11 +148,11 @@ export default function ProfileCompletion() {
       email: '',
       address: '',
       city: '',
-      state: 'TX',
+      state: '' as any,
       zipCode: '',
-      dateOfBirth: new Date(),
-      graduationYear: '' as any, // Use empty string instead of undefined
-      memberCategory: '' as any, // Use empty string instead of undefined
+      dateOfBirth: undefined as any,
+      graduationYear: undefined as any,
+      memberCategory: undefined as any,
       commentsAndSuggestions: '',
       favoriteSports: [] as any,
       otherSportComment: '',
@@ -114,7 +164,7 @@ export default function ProfileCompletion() {
       // New membership fields
       aboutMe: '',
       interests: '',
-      affiliation: '' as any,
+      affiliation: undefined as any,
       defaultAvatarChoice: undefined as any,
       majorOrDepartment: '',
       socialLinks: {
@@ -125,7 +175,7 @@ export default function ProfileCompletion() {
         website: '',
       },
       addressLine1: '',
-      country: 'USA',
+      country: '',
       optInOffers: false,
     },
   });
@@ -142,11 +192,11 @@ export default function ProfileCompletion() {
         email: user.email || '',
         address: user.address || '',
         city: user.city || '',
-        state: user.state || 'TX',
+        state: user.state || '',
         zipCode: user.zipCode || '',
-        dateOfBirth: user.dateOfBirth ? new Date(user.dateOfBirth) : new Date(),
-        graduationYear: user.graduationYear || '',
-        memberCategory: user.memberCategory || '',
+        dateOfBirth: user.dateOfBirth ? new Date(user.dateOfBirth) : undefined,
+        graduationYear: user.graduationYear || undefined,
+        memberCategory: user.memberCategory || undefined,
         commentsAndSuggestions: user.commentsAndSuggestions || '',
         favoriteSports: user.favoriteSports ? JSON.parse(user.favoriteSports) : [],
         otherSportComment: user.otherSportComment || '',
@@ -155,7 +205,7 @@ export default function ProfileCompletion() {
         // New membership fields
         aboutMe: user.aboutMe || '',
         interests: user.interests || '',
-        affiliation: user.affiliation || '',
+        affiliation: user.affiliation || undefined,
         defaultAvatarChoice: user.defaultAvatarChoice || undefined,
         majorOrDepartment: user.majorOrDepartment || '',
         socialLinks: user.socialLinks || {
@@ -166,7 +216,7 @@ export default function ProfileCompletion() {
           website: '',
         },
         addressLine1: user.addressLine1 || '',
-        country: user.country || 'USA',
+        country: user.country || '',
         optInOffers: user.optInOffers || false,
       });
       
@@ -228,14 +278,46 @@ export default function ProfileCompletion() {
         ...data,
         "g-recaptcha-response": recaptchaToken
       };
-      return apiRequest('POST', '/api/auth/register-local', payload);
+      await apiRequest('POST', '/api/auth/register-local', payload);
+
+      // Sign the new member in so an optional avatar selected during signup can
+      // be sent through the authenticated, security-hardened upload endpoint.
+      let signedIn = false;
+      try {
+        await apiRequest('POST', '/api/auth/login-local', {
+          handle: data.email,
+          password: data.password,
+        });
+        signedIn = true;
+      } catch (error) {
+        console.error('Account created, but automatic sign-in failed:', error);
+      }
+
+      let avatarUploadFailed = false;
+      if (pendingAvatarFile && signedIn) {
+        try {
+          await uploadAvatarFile(pendingAvatarFile);
+        } catch (error) {
+          avatarUploadFailed = true;
+          console.error('Post-registration avatar upload failed:', error);
+        }
+      }
+
+      return { avatarUploadFailed, signedIn };
     },
-    onSuccess: () => {
+    onSuccess: ({ avatarUploadFailed, signedIn }) => {
+      if (signedIn) {
+        queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      }
       toast({
         title: 'Account Created Successfully!',
-        description: 'Your CoogsNation account has been created. You can now log in.',
+        description: !signedIn
+          ? 'Your account was created. Please log in to continue and add your avatar.'
+          : avatarUploadFailed
+            ? 'Your account was created and you are signed in. You can retry the avatar upload from your profile.'
+            : 'Your CoogsNation account has been created and you are signed in.',
       });
-      setLocation('/login'); // Would need to create a login page
+      setLocation(signedIn ? '/dashboard' : '/login');
     },
     onError: (error: any) => {
       toast({
@@ -247,7 +329,8 @@ export default function ProfileCompletion() {
   });
 
   const onSubmit = (data: ProfileCompletionData | LocalRegistrationData) => {
-    if (!handleAvailable) {
+    const requestedHandle = typeof data.handle === 'string' ? data.handle.trim() : '';
+    if (requestedHandle && handleAvailable !== true) {
       toast({
         title: 'Handle Not Available',
         description: 'Please choose a different handle.',
@@ -256,15 +339,15 @@ export default function ProfileCompletion() {
       return;
     }
     
-    // Check reCAPTCHA for local registration (disabled for development/testing)
-    // if (isLocalRegistration && !recaptchaToken) {
-    //   toast({
-    //     title: 'reCAPTCHA Required',
-    //     description: 'Please complete the reCAPTCHA verification to continue.',
-    //     variant: 'destructive',
-    //   });
-    //   return;
-    // }
+    const recaptchaConfigured = Boolean(import.meta.env.VITE_RECAPTCHA_SITE_KEY);
+    if (isLocalRegistration && recaptchaConfigured && !recaptchaToken) {
+      toast({
+        title: 'reCAPTCHA Required',
+        description: 'Please complete the reCAPTCHA verification to continue.',
+        variant: 'destructive',
+      });
+      return;
+    }
     
     if (isLocalRegistration) {
       // Include reCAPTCHA token in the form data
@@ -292,18 +375,18 @@ export default function ProfileCompletion() {
             Complete Your CoogsNation Profile
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-            Join the Houston Cougar community! Create your handle and provide member information to get full access to CoogsNation.
+            Join the Houston Cougar community. Only the essentials are required; everything marked optional can be left blank.
           </p>
         </div>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            {/* Handle Creation */}
+            {/* Optional handle and avatar */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <User className="w-5 h-5" />
-                  Create Your Handle
+                  Display Name & Avatar
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -312,7 +395,7 @@ export default function ProfileCompletion() {
                   name="handle"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Handle *</FormLabel>
+                      <FormLabel>Handle (Optional)</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Input
@@ -345,38 +428,45 @@ export default function ProfileCompletion() {
                       </FormControl>
                       <FormMessage />
                       <p className="text-sm text-gray-600">
-                        Your unique handle will be visible to other community members. Use letters, numbers, and underscores only.
+                        Leave this blank to use your name. A custom handle may use letters, numbers, and underscores only.
                       </p>
                     </FormItem>
                   )}
                 />
 
-                {/* Avatar upload is available after authentication. */}
+                {/* Avatar selection works during signup and authenticated edits. */}
                 <div className="mt-6 border-t pt-4">
                   <h4 className="font-medium mb-3 text-gray-900 dark:text-gray-100 flex items-center gap-2">
                     <User className="w-4 h-4" />
                     Profile Avatar (Optional)
                   </h4>
-                  {user ? (
-                    <div className="space-y-3">
-                      <p className="text-sm text-gray-600 dark:text-gray-300">
-                        Upload a JPG, PNG, or WebP image. The server validates and converts it safely.
-                      </p>
-                      <Input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        disabled={isUploadingAvatar}
-                        onChange={(event) => handleAvatarFileChange(event.target.files?.[0])}
-                      />
-                      {uploadedAvatarPath && (
-                        <div className="text-sm text-green-600 dark:text-green-400">✓ Avatar uploaded successfully</div>
-                      )}
-                    </div>
-                  ) : (
+                  <div className="space-y-3">
                     <p className="text-sm text-gray-600 dark:text-gray-300">
-                      Create your account first, then add an avatar from your profile.
+                      Choose a JPG, PNG, or WebP image up to 2 MB. It is validated, stripped of metadata, resized, and safely converted by the server.
                     </p>
-                  )}
+                    <Input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      disabled={isUploadingAvatar}
+                      onChange={(event) => void handleAvatarFileChange(event.target.files?.[0])}
+                      data-testid="input-avatar-file"
+                    />
+                    {avatarPreviewUrl && (
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={avatarPreviewUrl}
+                          alt="Selected avatar preview"
+                          className="h-20 w-20 rounded-full border object-cover"
+                        />
+                        <div className="text-sm text-gray-600 dark:text-gray-300">
+                          {user ? 'Preview of your uploaded avatar.' : 'Preview — this will upload after account creation.'}
+                        </div>
+                      </div>
+                    )}
+                    {uploadedAvatarPath && (
+                      <div className="text-sm text-green-600 dark:text-green-400">✓ Avatar uploaded successfully</div>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -581,19 +671,21 @@ export default function ProfileCompletion() {
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email Address</FormLabel>
-                      <FormControl>
-                        <Input {...field} type="email" placeholder="john@example.com" data-testid="input-email" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {!isLocalRegistration && (
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email Address *</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="email" placeholder="john@example.com" data-testid="input-profile-email" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 <FormField
                   control={form.control}
@@ -605,9 +697,10 @@ export default function ProfileCompletion() {
                         <Input 
                           {...field} 
                           type="date" 
+                          max={new Date().toISOString().split('T')[0]}
                           data-testid="input-dob"
-                          value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : field.value}
-                          onChange={(e) => field.onChange(new Date(e.target.value))}
+                          value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : ''}
+                          onChange={(e) => field.onChange(e.target.value ? new Date(`${e.target.value}T12:00:00.000Z`) : undefined)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -622,7 +715,7 @@ export default function ProfileCompletion() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MapPin className="w-5 h-5" />
-                  Address Information
+                  Address Information (Optional)
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -631,7 +724,7 @@ export default function ProfileCompletion() {
                   name="address"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Street Address *</FormLabel>
+                      <FormLabel>Street Address</FormLabel>
                       <FormControl>
                         <Input {...field} placeholder="123 Main St" data-testid="input-address" />
                       </FormControl>
@@ -646,7 +739,7 @@ export default function ProfileCompletion() {
                     name="city"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>City *</FormLabel>
+                        <FormLabel>City</FormLabel>
                         <FormControl>
                           <Input {...field} placeholder="Houston" data-testid="input-city" />
                         </FormControl>
@@ -660,14 +753,18 @@ export default function ProfileCompletion() {
                     name="state"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>State *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormLabel>State</FormLabel>
+                        <Select
+                          onValueChange={(value) => field.onChange(value === 'not-specified' ? undefined : value)}
+                          value={field.value || 'not-specified'}
+                        >
                           <FormControl>
                             <SelectTrigger data-testid="select-state">
                               <SelectValue placeholder="Select state" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
+                            <SelectItem value="not-specified">Prefer not to say</SelectItem>
                             {US_STATES.map(state => (
                               <SelectItem key={state} value={state}>{state}</SelectItem>
                             ))}
@@ -683,7 +780,7 @@ export default function ProfileCompletion() {
                     name="zipCode"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>ZIP Code *</FormLabel>
+                        <FormLabel>ZIP Code</FormLabel>
                         <FormControl>
                           <Input {...field} placeholder="77204" data-testid="input-zipcode" />
                         </FormControl>
@@ -744,14 +841,18 @@ export default function ProfileCompletion() {
                   name="memberCategory"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Member Category *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <FormLabel>Member Category (Optional)</FormLabel>
+                      <Select
+                        onValueChange={(value) => field.onChange(value === 'not-specified' ? undefined : value)}
+                        value={field.value || 'not-specified'}
+                      >
                         <FormControl>
                           <SelectTrigger data-testid="select-member-category">
                             <SelectValue placeholder="Select your category" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
+                          <SelectItem value="not-specified">Prefer not to say</SelectItem>
                           {MEMBER_CATEGORIES.map(category => (
                             <SelectItem key={category.value} value={category.value}>
                               <div>
@@ -799,15 +900,18 @@ export default function ProfileCompletion() {
                       name="affiliation"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Current Affiliation</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <FormLabel>Current Affiliation (Optional)</FormLabel>
+                          <Select
+                            onValueChange={(value) => field.onChange(value === 'not-specified' ? undefined : value)}
+                            value={field.value || 'not-specified'}
+                          >
                             <FormControl>
                               <SelectTrigger data-testid="select-affiliation">
                                 <SelectValue placeholder="Select your affiliation" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="none">-- Choose --</SelectItem>
+                              <SelectItem value="not-specified">Prefer not to say</SelectItem>
                               <SelectItem value="Current Student">Current Student</SelectItem>
                               <SelectItem value="Ex-Student">Ex-Student</SelectItem>
                               <SelectItem value="Graduate">Graduate</SelectItem>
@@ -1202,8 +1306,9 @@ export default function ProfileCompletion() {
               </CardContent>
             </Card>
 
-            {/* reCAPTCHA for Local Registration - Temporarily disabled for testing */}
-            {/* {isLocalRegistration && (
+            {/* reCAPTCHA appears when a site key is configured. Codespaces can
+                use the explicit non-production server bypass instead. */}
+            {isLocalRegistration && import.meta.env.VITE_RECAPTCHA_SITE_KEY && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -1229,14 +1334,9 @@ export default function ProfileCompletion() {
                       size="normal"
                     />
                   </div>
-                  {!import.meta.env.VITE_RECAPTCHA_SITE_KEY && (
-                    <p className="text-sm text-red-600 mt-2 text-center">
-                      reCAPTCHA site key not configured
-                    </p>
-                  )}
                 </CardContent>
               </Card>
-            )} */}
+            )}
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -1254,10 +1354,16 @@ export default function ProfileCompletion() {
                 type="submit"
                 size="lg"
                 className="w-full max-w-xs bg-red-600 hover:bg-red-700 text-white"
-                disabled={profileCompletionMutation.isPending || !handleAvailable}
+                disabled={
+                  profileCompletionMutation.isPending ||
+                  localRegistrationMutation.isPending ||
+                  isUploadingAvatar ||
+                  isCheckingHandle ||
+                  (Boolean(form.watch('handle')?.trim()) && handleAvailable !== true)
+                }
                 data-testid="button-complete-profile"
               >
-                {profileCompletionMutation.isPending ? (
+                {(profileCompletionMutation.isPending || localRegistrationMutation.isPending) ? (
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                     Completing Profile...
