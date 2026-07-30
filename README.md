@@ -1,4 +1,4 @@
-# CoogsNation Portable Foundation 2.5.1
+# CoogsNation Portable Foundation 2.5.3
 
 CoogsNation is a portable React, Express, TypeScript, PostgreSQL, Socket.IO, and provider-neutral AI application. It is designed to run in GitHub Codespaces, Docker, a managed Node/PostgreSQL platform, or a conventional Linux host without depending on a proprietary application platform.
 

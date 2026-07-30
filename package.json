@@ -15,10 +15,11 @@
     "db:migrate": "node dist/migrate.js",
     "db:migrate:dev": "tsx server/migrate.ts",
     "db:push": "drizzle-kit push",
-    "security:check": "node scripts/security-regression.mjs && node scripts/portable-regression.mjs && node scripts/universal-ai-regression.mjs && node scripts/infrastructure-regression.mjs && tsx scripts/schema-security-check.ts && tsx scripts/profile-form-contract-check.ts && tsx scripts/admin-middleware-check.ts && tsx scripts/auth-regression-check.ts && tsx scripts/universal-ai-check.ts && npm run ai:check",
+    "security:check": "node scripts/security-regression.mjs && node scripts/admin-dashboard-regression.mjs && node scripts/portable-regression.mjs && node scripts/universal-ai-regression.mjs && node scripts/infrastructure-regression.mjs && tsx scripts/schema-security-check.ts && tsx scripts/profile-form-contract-check.ts && tsx scripts/admin-middleware-check.ts && tsx scripts/auth-regression-check.ts && tsx scripts/universal-ai-check.ts && npm run ai:check",
     "portable:check": "node scripts/portable-regression.mjs",
     "ai:check": "node scripts/ai-regression.mjs && tsx scripts/ai-config-check.ts",
-    "audit:prod": "npm audit --omit=dev"
+    "audit:prod": "npm audit --omit=dev",
+    "admin:bootstrap": "tsx scripts/bootstrap-owner.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

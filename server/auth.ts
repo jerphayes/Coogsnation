@@ -388,6 +388,52 @@ export const requireAdmin: RequestHandler = async (req, res, next) => {
   }
 };
 
+/** Return true only for the single configured platform owner. */
+export function isConfiguredOwner(userId: string | null | undefined): boolean {
+  const configuredOwnerId = process.env.OWNER_USER_ID?.trim();
+  return Boolean(configuredOwnerId && userId && configuredOwnerId === userId);
+}
+
+/**
+ * Owner-only authorization for changing administrator access.
+ *
+ * OWNER_USER_ID is deliberately server-side configuration. A database role is
+ * still required, so knowing an ID alone never grants access.
+ */
+export const requireOwner: RequestHandler = async (req, res, next) => {
+  if (!req.isAuthenticated() || !req.user?.id) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const configuredOwnerId = process.env.OWNER_USER_ID?.trim();
+  if (!configuredOwnerId) {
+    return res.status(503).json({ message: "Platform owner is not configured" });
+  }
+
+  try {
+    const dbUser = await storage.getUser(req.user.id);
+    if (!dbUser) return res.status(401).json({ message: "Unauthorized" });
+
+    const rejection = evaluateSessionState(
+      dbUser,
+      (req.session as any)?.sessionVersion,
+    );
+    if (rejection) {
+      req.logout(() => undefined);
+      req.session?.destroy(() => undefined);
+      return res.status(401).json({ message: rejection });
+    }
+
+    if (dbUser.role !== "admin" || dbUser.id !== configuredOwnerId) {
+      return res.status(403).json({ message: "Platform owner access required" });
+    }
+    return next();
+  } catch (error) {
+    console.error("Owner authorization check failed:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
 export const isUHCommunityMember: RequestHandler = async (req, res, next) => {
   if (!req.user?.id) {
     return res.status(401).json({ message: "Authentication required" });

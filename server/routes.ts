@@ -50,6 +50,7 @@ import { PODManagerService, PODHelpers } from "./podServices";
 import { rateLimit } from "express-rate-limit";
 import { getAIService } from "./ai/service";
 import { AIServiceError } from "./ai/types";
+import { registerAdminDashboardRoutes } from "./adminDashboard";
 
 // Helper function to verify Google reCAPTCHA
 async function verifyRecaptcha(recaptchaResponse: string, clientIP?: string): Promise<boolean> {
@@ -253,6 +254,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(403).json({ message: "Invalid request origin" });
     }
   });
+
+  // Owner-controlled administrator dashboard and read-only administrator AI.
+  // Registered after the origin guard so every state-changing action receives
+  // the same CSRF/origin protection as the rest of the authenticated API.
+  registerAdminDashboardRoutes(app);
 
   // Optional social-login aliases. Core email/password authentication is always available.
   app.get("/auth/linkedin", (req, res) => {
@@ -983,61 +989,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin security management endpoints
-  // Unlock user account (admin only - for now checking if user is authenticated, would need proper admin role check)
-  app.post('/api/admin/unlock-account', requireAdmin, async (req: any, res) => {
-    try {
-      const adminUserId = req.user.id;
-      const { userId, handle } = req.body;
-
-      if (!userId && !handle) {
-        return res.status(400).json({ message: "User ID or handle is required" });
-      }
-
-      // Find target user
-      let targetUser;
-      if (userId) {
-        targetUser = await storage.getUser(userId);
-      } else {
-        targetUser = await storage.getUserByHandle(handle);
-      }
-
-      if (!targetUser) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      // Check if account is currently locked
-      const isLocked = await storage.isAccountLocked(targetUser.id);
-      
-      if (!isLocked) {
-        return res.status(400).json({ 
-          message: "Account is not currently locked",
-          accountStatus: "unlocked"
-        });
-      }
-
-      // Unlock the account
-      await storage.unlockUserAccount(targetUser.id);
-      
-      console.log(`[ADMIN] Account unlocked by admin ${adminUserId} for user: ${targetUser.handle} (ID: ${targetUser.id})`);
-      
-      res.json({
-        message: "Account unlocked successfully",
-        user: {
-          id: targetUser.id,
-          handle: targetUser.handle,
-          email: targetUser.email,
-          firstName: targetUser.firstName,
-          lastName: targetUser.lastName
-        },
-        unlockedBy: adminUserId,
-        unlockedAt: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error("Error unlocking account:", error);
-      res.status(500).json({ message: "Failed to unlock account" });
-    }
-  });
+  // Account unlocks are handled by the password-confirmed, transactionally audited
+  // /api/admin/users/:id/unlock route in adminDashboard.ts.
 
   // Get account security status (admin only)
   app.get('/api/admin/account-status/:identifier', requireAdmin, async (req: any, res) => {
@@ -2407,11 +2360,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin routes
-  app.get('/api/admin/activities', requireAdmin, async (_req, res) => {
-    // A real audit log should replace this empty baseline response.
-    res.json([]);
-  });
-
   app.get('/api/admin/stats', requireAdmin, async (req: any, res) => {
     try {
       const stats = await storage.getAdminStats();
@@ -3111,24 +3059,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/admin/ai/status', requireAdmin, async (_req, res) => {
-    try {
-      return res.json(await aiService.adminStatus());
-    } catch (error) {
-      return sendAIError(res, error, "Unable to load AI status");
-    }
-  });
-
-  app.put('/api/admin/ai/knowledge/:id/approval', requireAdmin, async (req, res) => {
-    try {
-      const id = z.coerce.number().int().positive().parse(req.params.id);
-      const approved = z.boolean().parse(req.body?.approved);
-      await aiService.setKnowledgeApproval(id, approved);
-      return res.json({ success: true, id, approved });
-    } catch (error) {
-      return sendAIError(res, error, "Unable to update AI knowledge approval");
-    }
-  });
+  // Private administrator AI routes are registered in adminDashboard.ts.
+  // The accepted first release is read-only and exposes no knowledge-write endpoint.
 
   // Coog Paws Chat Route - Serve Socket.IO real-time chat interface
   const coogPawsHandler = (req: any, res: any) => {

@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 import { db } from "./db";
-import { sql } from "drizzle-orm";
+import { sql, type SQL } from "drizzle-orm";
 
 /**
  * Authentication audit logging.
@@ -28,7 +28,7 @@ export type AuthAuditEventType =
 
 export type AuthAuditOutcome = "success" | "failure" | "blocked";
 
-interface AuthAuditInput {
+export interface AuthAuditInput {
   eventType: AuthAuditEventType;
   outcome: AuthAuditOutcome;
   userId?: string | null;
@@ -53,27 +53,46 @@ function hashValue(value: string | null | undefined): string | null {
     .digest("hex");
 }
 
+interface AuditExecutor {
+  execute(query: SQL): Promise<unknown>;
+}
+
 /**
- * Write an authentication audit event.
+ * Write an audit event and propagate any storage failure.
  *
- * Never throws: audit failure must not break an authentication flow, but it is
- * logged so the gap is visible.
+ * Sensitive administrator mutations use this function inside the same database
+ * transaction as the mutation. That makes the accepted security invariant
+ * enforceable: either the account change and its audit row both commit, or
+ * neither commits.
+ */
+export async function recordRequiredAuthEvent(
+  input: AuthAuditInput,
+  executor: AuditExecutor = db,
+): Promise<void> {
+  await executor.execute(sql`
+    INSERT INTO auth_audit_events
+      (event_type, outcome, user_id, identifier_hash, client_ip_hash, user_agent, detail)
+    VALUES (
+      ${input.eventType},
+      ${input.outcome},
+      ${input.userId ?? null},
+      ${hashValue(input.identifier)},
+      ${hashValue(input.clientIp)},
+      ${input.userAgent ? input.userAgent.slice(0, 255) : null},
+      ${input.detail ?? null}
+    )
+  `);
+}
+
+/**
+ * Best-effort audit writer for ordinary authentication flows.
+ *
+ * Authentication should not become unavailable solely because audit storage is
+ * temporarily unavailable, so this wrapper logs failures instead of throwing.
  */
 export async function recordAuthEvent(input: AuthAuditInput): Promise<void> {
   try {
-    await db.execute(sql`
-      INSERT INTO auth_audit_events
-        (event_type, outcome, user_id, identifier_hash, client_ip_hash, user_agent, detail)
-      VALUES (
-        ${input.eventType},
-        ${input.outcome},
-        ${input.userId ?? null},
-        ${hashValue(input.identifier)},
-        ${hashValue(input.clientIp)},
-        ${input.userAgent ? input.userAgent.slice(0, 255) : null},
-        ${input.detail ?? null}
-      )
-    `);
+    await recordRequiredAuthEvent(input);
   } catch (error) {
     console.error("[AUDIT] Failed to write auth audit event:", (error as Error).message);
   }

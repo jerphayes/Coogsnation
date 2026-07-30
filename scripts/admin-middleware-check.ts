@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 process.env.DATABASE_URL ||= "postgresql://test:test@127.0.0.1:5432/coogsnation_test";
 process.env.SESSION_SECRET ||= "test-only-session-secret-with-sufficient-length";
 
-const [{ storage }, { requireAdmin }] = await Promise.all([
+const [{ storage }, { requireAdmin, requireOwner }] = await Promise.all([
   import("../server/storage"),
   import("../server/auth"),
 ]);
@@ -38,6 +38,7 @@ async function runCase(options: {
   authenticated: boolean;
   userId?: string;
   databaseRole?: "member" | "admin" | null;
+  middleware?: "admin" | "owner";
 }): Promise<{ statusCode: number; nextCalled: boolean }> {
   (storage as any).getUser = async () => {
     if (options.databaseRole === null) return undefined;
@@ -51,7 +52,8 @@ async function runCase(options: {
   const res = makeResponse() as any;
   let nextCalled = false;
 
-  await requireAdmin(req, res, () => {
+  const middleware = options.middleware === "owner" ? requireOwner : requireAdmin;
+  await middleware(req, res, () => {
     nextCalled = true;
   });
 
@@ -74,6 +76,20 @@ try {
   assert.deepEqual(
     await runCase({ authenticated: true, userId: "missing-1", databaseRole: null }),
     { statusCode: 401, nextCalled: false },
+  );
+
+  process.env.OWNER_USER_ID = "owner-1";
+  assert.deepEqual(
+    await runCase({ authenticated: true, userId: "admin-1", databaseRole: "admin", middleware: "owner" }),
+    { statusCode: 403, nextCalled: false },
+  );
+  assert.deepEqual(
+    await runCase({ authenticated: true, userId: "owner-1", databaseRole: "member", middleware: "owner" }),
+    { statusCode: 403, nextCalled: false },
+  );
+  assert.deepEqual(
+    await runCase({ authenticated: true, userId: "owner-1", databaseRole: "admin", middleware: "owner" }),
+    { statusCode: 200, nextCalled: true },
   );
   console.log("Administrator middleware checks passed.");
 } finally {

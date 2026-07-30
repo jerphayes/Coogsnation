@@ -676,6 +676,7 @@ export type SelfUser = SafeUser & Pick<User,
 export type AdminSafeUser = SafeUser & Pick<User,
   | 'email'
   | 'role'
+  | 'accountStatus'
   | 'isLocalAccount'
   | 'emailVerifiedAt'
   | 'scheduledDeletionAt'
@@ -756,6 +757,7 @@ export function createAdminSafeUser(user: User): AdminSafeUser {
     ...createSafeUser(user),
     email: user.email,
     role: user.role,
+    accountStatus: user.accountStatus,
     isLocalAccount: user.isLocalAccount,
     emailVerifiedAt: user.emailVerifiedAt,
     scheduledDeletionAt: user.scheduledDeletionAt,

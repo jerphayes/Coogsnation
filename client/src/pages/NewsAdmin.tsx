@@ -35,8 +35,8 @@ export default function NewsAdmin() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
-  // Check if user has admin privileges (simplified check)
-  const isAdmin = user?.email?.includes("admin") || user?.id === "46031129";
+  // Client visibility mirrors the authoritative server-side database role.
+  const isAdmin = user?.role === "admin";
 
   const { data: articles = [], isLoading } = useQuery<NewsArticleResponse[]>({
     queryKey: ["/api/news"],

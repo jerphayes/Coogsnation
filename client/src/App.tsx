@@ -25,9 +25,7 @@ import NewsAdmin from "@/pages/NewsAdmin";
 import AdvancedProfile from "@/pages/AdvancedProfile";
 import Messages from "@/pages/Messages";
 import EventManagement from "@/pages/EventManagement";
-import AdminDashboard from "@/pages/AdminDashboard";
-import TestAdmin from "@/pages/TestAdmin";
-import SimpleAdminDashboard from "@/pages/SimpleAdminDashboard";
+import OwnerAdminDashboard from "@/pages/OwnerAdminDashboard";
 import LifeHappens from "@/pages/LifeHappens";
 import LifeSolutions from "@/pages/LifeSolutions";
 import Community from "@/pages/Community";
@@ -61,9 +59,8 @@ function Router() {
       <Route path="/profile/advanced" component={AdvancedProfile} />
       <Route path="/messages" component={Messages} />
       <Route path="/event-management" component={EventManagement} />
-      <Route path="/admin" component={SimpleAdminDashboard} />
-      <Route path="/admin-full" component={AdminDashboard} />
-      <Route path="/test-admin" component={TestAdmin} />
+      <Route path="/admin" component={OwnerAdminDashboard} />
+      <Route path="/admin-full" component={OwnerAdminDashboard} />
       <Route path="/life-happens" component={LifeHappens} />
       <Route path="/life-solutions" component={LifeSolutions} />
       <Route path="/community" component={Community} />

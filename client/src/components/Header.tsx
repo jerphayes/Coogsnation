@@ -92,6 +92,15 @@ export function Header() {
               >
                 Dashboard
               </Link>
+              {user?.role === "admin" && (
+                <Link
+                  href="/admin"
+                  className="text-red-400 font-bold hover:text-red-300 transition-colors"
+                  data-testid="link-admin-dashboard"
+                >
+                  Admin
+                </Link>
+              )}
               <button
                 onClick={async () => {
                   localStorage.removeItem('guestMode');
