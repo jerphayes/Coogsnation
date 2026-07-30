@@ -40,7 +40,7 @@ export class OpenAICompatibleProvider implements AIProvider {
       body: JSON.stringify({
         model: this.model,
         messages: request.messages,
-        max_tokens: request.maxOutputTokens,
+        [this.name === "openai" && this.model.startsWith("gpt-5") ? "max_completion_tokens" : "max_tokens"]: request.maxOutputTokens,
         temperature: request.temperature,
         stream: false,
       }),
@@ -70,7 +70,7 @@ export class OpenAICompatibleProvider implements AIProvider {
       body: JSON.stringify({
         model: this.model,
         messages: request.messages,
-        max_tokens: request.maxOutputTokens,
+        [this.name === "openai" && this.model.startsWith("gpt-5") ? "max_completion_tokens" : "max_tokens"]: request.maxOutputTokens,
         temperature: request.temperature,
         stream: true,
       }),
