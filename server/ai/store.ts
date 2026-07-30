@@ -49,14 +49,8 @@ export class AIStore {
     }
 
     if (this.config.monthlyBudgetUsd > 0) {
-      if (this.config.inputCostPerMillionTokens <= 0 && this.config.outputCostPerMillionTokens <= 0) {
-        throw new AIServiceError(
-          "AI monthly budget requires token cost settings",
-          "BUDGET_CONFIGURATION_ERROR",
-          503,
-          false,
-        );
-      }
+      // v3 records the selected provider's estimated cost on every interaction.
+      // The global public-AI ceiling therefore works across OpenAI and Gemini.
       const monthly = await pool.query(
         `SELECT COALESCE(SUM(estimated_cost_micros), 0)::bigint AS cost_micros
          FROM ai_interactions

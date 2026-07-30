@@ -1,4 +1,4 @@
-# CoogsNation Portable Foundation 2.5.3
+# CoogsNation v3.0.0 — Dual-Provider AI and Commerce-Ready Foundation
 
 CoogsNation is a portable React, Express, TypeScript, PostgreSQL, Socket.IO, and provider-neutral AI application. It is designed to run in GitHub Codespaces, Docker, a managed Node/PostgreSQL platform, or a conventional Linux host without depending on a proprietary application platform.
 
@@ -10,7 +10,7 @@ CoogsNation is a portable React, Express, TypeScript, PostgreSQL, Socket.IO, and
 - **Sessions:** PostgreSQL-backed Express sessions
 - **Authentication:** built-in email/password; optional Facebook and LinkedIn providers
 - **Realtime:** authenticated Socket.IO
-- **AI:** OpenAI-compatible providers, Anthropic, DeepSeek, xAI, Ollama, and custom compatible endpoints
+- **AI:** OpenAI primary conversation plus a native Gemini 3.5 Flash-Lite multimedia specialist, with Anthropic, DeepSeek, xAI, Ollama, and custom compatible fallbacks
 - **Packaging:** npm, Docker, Docker Compose, Dev Containers, and GitHub Codespaces
 
 ## Required validation gate
@@ -157,18 +157,68 @@ BACKUP_ENCRYPTION_PASSPHRASE='...' \
 
 A backup is not considered proven until a restore test succeeds.
 
-## Universal AI configuration
+## CoogsNation Public AI v3.0
 
-AI remains disabled unless explicitly enabled:
+The public assistant is one user experience backed by a server-side router:
+
+```text
+Member request
+    |
+    +-- ordinary text --------------------> OpenAI primary conversation
+    |
+    +-- image/video/audio/PDF/YouTube ----> Gemini multimedia specialist
+    |
+    +-- shopping intent ------------------> approved commerce catalog context
+```
+
+The router never exposes provider keys to the browser. Public AI and private Administrator AI remain separately configured and audited.
+
+### Primary OpenAI conversation
 
 ```env
 AI_ENABLED=true
-AI_PROVIDER=deepseek
-AI_MODEL=your-provider-model-name
-AI_API_KEY=your-secret-key
+AI_PROVIDER=openai
+AI_MODEL=gpt-5.4-nano
+AI_BASE_URL=https://api.openai.com/v1
+AI_API_KEY=your-public-openai-key
+AI_MONTHLY_BUDGET_USD=10
+AI_INPUT_COST_PER_MILLION_TOKENS=0.20
+AI_OUTPUT_COST_PER_MILLION_TOKENS=1.25
 ```
 
-Supported provider values:
+### Gemini multimedia specialist
+
+```env
+AI_GEMINI_ENABLED=true
+AI_GEMINI_MODEL=gemini-3.5-flash-lite
+AI_GEMINI_API_KEY=your-separate-gemini-key
+AI_GEMINI_YOUTUBE_ENABLED=true
+AI_GEMINI_UPLOADS_ENABLED=true
+```
+
+Gemini is selected automatically when a member attaches approved media or a public HTTPS YouTube URL. Members may also choose Gemini explicitly when `AI_ROUTER_ALLOW_USER_CHOICE=true`. Uploaded media is held only in memory for the active request; CoogsNation does not write it to disk or the AI learning table.
+
+Supported upload types are allowlisted in `AI_GEMINI_ALLOWED_MEDIA_MIME_TYPES`. The server verifies common file signatures, caps uploads at `AI_GEMINI_MAX_MEDIA_BYTES`, and rejects mismatched or unsupported files.
+
+### Provider-neutral commerce foundation
+
+```env
+COMMERCE_PROVIDER=local
+AI_COMMERCE_CATALOG_CONTEXT_ENABLED=true
+```
+
+The local provider reads the existing CoogsNation product catalog. To activate Shopify Storefront product discovery later:
+
+```env
+COMMERCE_PROVIDER=shopify
+SHOPIFY_STORE_DOMAIN=your-store.myshopify.com
+SHOPIFY_STOREFRONT_ACCESS_TOKEN=your-server-side-storefront-token
+SHOPIFY_STOREFRONT_API_VERSION=2026-07
+```
+
+The v3.0 AI may search and recommend approved products. Product search is the only commerce capability exposed through the new provider-neutral service in this release. AI cart reads or mutations, checkout generation, price changes, discounts, order placement, payment handling, and Shopify administration remain disabled. Those actions require a separate human-confirmation workflow before they can be accepted.
+
+### Supported primary provider values
 
 - `openai`
 - `anthropic`
@@ -177,7 +227,7 @@ Supported provider values:
 - `ollama`
 - `custom`
 
-The application keeps provider credentials on the server and includes authentication, rate limits, timeouts, concurrency controls, token limits, budget controls, fail-closed moderation, plain-text output handling, and administrator approval for learned answers by default.
+The application includes authentication, rate limits, timeouts, concurrency controls, token limits, aggregate public-AI budget controls, fail-closed moderation, plain-text output handling, and administrator approval for learned answers by default.
 
 ## Security and operations
 

@@ -11,20 +11,32 @@ const requiredFiles = [
   "server/ai/providerFactory.ts",
   "server/ai/providers/openAICompatible.ts",
   "server/ai/providers/anthropic.ts",
+  "server/ai/providers/gemini.ts",
   "server/ai/service.ts",
   "server/ai/store.ts",
+  "server/publicAI.ts",
+  "server/commerce/service.ts",
+  "server/commerce/providers/shopify.ts",
   "migrations/0002_universal_ai.sql",
 ];
 for (const file of requiredFiles) if (!fs.existsSync(path.join(root, file))) fail(`missing ${file}`);
 
 const config = read("server/ai/config.ts");
 for (const provider of ["openai", "anthropic", "deepseek", "xai", "ollama", "custom"]) {
-  if (!config.includes(`"${provider}"`)) fail(`provider ${provider} not supported`);
+  if (!config.includes(`"${provider}"`)) fail(`primary provider ${provider} not supported`);
 }
+if (!config.includes('provider: "gemini"') || !config.includes("loadGeminiAIConfig")) fail("native Gemini specialist configuration missing");
 if (!config.includes("AI_LEARNING_REQUIRE_APPROVAL")) fail("approval-only learning control missing");
+if (!config.includes("AI_GEMINI_API_KEY")) fail("separate Gemini public key configuration missing");
+if (config.includes("ADMIN_AI_API_KEY")) fail("public AI config must not read the administrator AI key");
 
-const routes = read("server/routes.ts");
-for (const route of ["/api/ask", "/api/moderate-post", "/api/vote", "/api/ai/chat", "/api/admin/ai/status"]) {
+const routes = [
+  read("server/routes.ts"),
+  read("server/publicAI.ts"),
+  read("server/adminDashboard.ts"),
+  read("server/commerce/routes.ts"),
+].join("\n");
+for (const route of ["/api/ask", "/api/moderate-post", "/api/vote", "/api/ai/chat", "/api/ai/v3/chat", "/api/ai/v3/status", "/api/admin/ai/status"]) {
   if (!routes.includes(route)) fail(`route ${route} missing`);
 }
 if (!routes.includes('io.of("/ai")')) fail("AI streaming namespace missing");
@@ -37,7 +49,19 @@ if (!store.includes("ai_knowledge_feedback")) fail("one-vote-per-user learning f
 if (!store.includes("learningRequireApproval")) fail("approval-only lookup enforcement missing");
 
 const env = read(".env.example");
-for (const key of ["AI_PROVIDER", "AI_MODEL", "AI_BASE_URL", "AI_DAILY_USER_REQUEST_LIMIT", "AI_MONTHLY_BUDGET_USD", "AI_STORE_CONVERSATIONS", "AI_LEARNING_REQUIRE_APPROVAL"]) {
+for (const key of [
+  "AI_PROVIDER",
+  "AI_MODEL",
+  "AI_BASE_URL",
+  "AI_DAILY_USER_REQUEST_LIMIT",
+  "AI_MONTHLY_BUDGET_USD",
+  "AI_STORE_CONVERSATIONS",
+  "AI_LEARNING_REQUIRE_APPROVAL",
+  "AI_GEMINI_ENABLED",
+  "AI_GEMINI_MODEL",
+  "AI_GEMINI_API_KEY",
+  "COMMERCE_PROVIDER",
+]) {
   if (!env.includes(`${key}=`)) fail(`environment setting ${key} missing`);
 }
 

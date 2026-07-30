@@ -34,13 +34,16 @@ export class OpenAICompatibleProvider implements AIProvider {
   }
 
   async complete(request: AICompletionRequest): Promise<AICompletion> {
+    if (request.media?.length) {
+      throw new AIServiceError("Multimedia requests must be routed to Gemini", "MEDIA_PROVIDER_MISMATCH", 400, false);
+    }
     const response = await fetch(endpoint(this.config.baseUrl, "chat/completions"), {
       method: "POST",
       headers: this.headers(),
       body: JSON.stringify({
         model: this.model,
         messages: request.messages,
-        max_tokens: request.maxOutputTokens,
+        [this.name === "openai" && this.model.startsWith("gpt-5") ? "max_completion_tokens" : "max_tokens"]: request.maxOutputTokens,
         temperature: request.temperature,
         stream: false,
       }),
@@ -64,13 +67,16 @@ export class OpenAICompatibleProvider implements AIProvider {
   }
 
   async stream(request: AICompletionRequest, onChunk: (chunk: string) => void | Promise<void>): Promise<AICompletion> {
+    if (request.media?.length) {
+      throw new AIServiceError("Multimedia requests must be routed to Gemini", "MEDIA_PROVIDER_MISMATCH", 400, false);
+    }
     const response = await fetch(endpoint(this.config.baseUrl, "chat/completions"), {
       method: "POST",
       headers: this.headers(),
       body: JSON.stringify({
         model: this.model,
         messages: request.messages,
-        max_tokens: request.maxOutputTokens,
+        [this.name === "openai" && this.model.startsWith("gpt-5") ? "max_completion_tokens" : "max_tokens"]: request.maxOutputTokens,
         temperature: request.temperature,
         stream: true,
       }),

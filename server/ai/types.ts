@@ -1,4 +1,5 @@
-export type AIProviderName = "openai" | "anthropic" | "deepseek" | "xai" | "ollama" | "custom";
+export type PrimaryAIProviderName = "openai" | "anthropic" | "deepseek" | "xai" | "ollama" | "custom";
+export type AIProviderName = PrimaryAIProviderName | "gemini";
 
 export type AIMessageRole = "system" | "user" | "assistant";
 
@@ -7,10 +8,28 @@ export interface AIMessage {
   content: string;
 }
 
+export type AIProviderPreference = "auto" | "primary" | "gemini";
+
+export interface AIInlineMedia {
+  kind: "inline";
+  mimeType: string;
+  data: string;
+  name?: string;
+  sizeBytes?: number;
+}
+
+export interface AIYouTubeMedia {
+  kind: "youtube";
+  url: string;
+}
+
+export type AIMediaInput = AIInlineMedia | AIYouTubeMedia;
+
 export interface AICompletionRequest {
   messages: AIMessage[];
   maxOutputTokens: number;
   temperature: number;
+  media?: AIMediaInput[];
 }
 
 export interface AIUsage {

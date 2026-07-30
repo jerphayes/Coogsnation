@@ -24,6 +24,12 @@ try {
   }
 
   process.env.AI_ENABLED = "true";
+  process.env.AI_PROVIDER = "gemini";
+  process.env.AI_MODEL = "gemini-3.5-flash-lite";
+  process.env.AI_API_KEY = "test-key";
+  assert.throws(() => loadAIConfig(), /Unsupported AI_PROVIDER/);
+
+  process.env.AI_ENABLED = "true";
   process.env.AI_PROVIDER = "openai";
   process.env.AI_MODEL = "";
   process.env.AI_API_KEY = "test-key";

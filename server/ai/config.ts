@@ -1,8 +1,8 @@
-import type { AIProviderName } from "./types";
+import type { AIProviderPreference, PrimaryAIProviderName } from "./types";
 
 export interface AIConfig {
   enabled: boolean;
-  provider: AIProviderName;
+  provider: PrimaryAIProviderName;
   model: string;
   baseUrl: string;
   apiKey?: string;
@@ -28,7 +28,32 @@ export interface AIConfig {
   anthropicVersion: string;
 }
 
-const PROVIDERS = new Set<AIProviderName>([
+export interface GeminiAIConfig {
+  enabled: boolean;
+  provider: "gemini";
+  model: string;
+  baseUrl: string;
+  apiKey?: string;
+  timeoutMs: number;
+  maxOutputChars: number;
+  maxOutputTokens: number;
+  inputCostPerMillionTokens: number;
+  outputCostPerMillionTokens: number;
+  youtubeEnabled: boolean;
+  uploadsEnabled: boolean;
+  maxMediaBytes: number;
+  allowedMediaMimeTypes: string[];
+  systemPrompt: string;
+}
+
+export interface AIRouterConfig {
+  defaultProvider: Exclude<AIProviderPreference, "auto">;
+  allowUserChoice: boolean;
+  autoRouteMedia: boolean;
+  gemini: GeminiAIConfig;
+}
+
+const PRIMARY_PROVIDERS = new Set<PrimaryAIProviderName>([
   "openai",
   "anthropic",
   "deepseek",
@@ -51,7 +76,7 @@ function normalizeBaseUrl(value: string): string {
   return value.trim().replace(/\/+$/, "");
 }
 
-function defaultBaseUrl(provider: AIProviderName): string {
+function defaultBaseUrl(provider: PrimaryAIProviderName): string {
   switch (provider) {
     case "openai":
       return "https://api.openai.com/v1";
@@ -68,7 +93,7 @@ function defaultBaseUrl(provider: AIProviderName): string {
   }
 }
 
-function providerApiKey(provider: AIProviderName): string | undefined {
+function providerApiKey(provider: PrimaryAIProviderName): string | undefined {
   if (process.env.AI_API_KEY) return process.env.AI_API_KEY;
   switch (provider) {
     case "openai": return process.env.OPENAI_API_KEY;
@@ -81,8 +106,8 @@ function providerApiKey(provider: AIProviderName): string | undefined {
 }
 
 export function loadAIConfig(): AIConfig {
-  const rawProvider = (process.env.AI_PROVIDER || "openai").toLowerCase() as AIProviderName;
-  if (!PROVIDERS.has(rawProvider)) {
+  const rawProvider = (process.env.AI_PROVIDER || "openai").toLowerCase() as PrimaryAIProviderName;
+  if (!PRIMARY_PROVIDERS.has(rawProvider)) {
     throw new Error(`Unsupported AI_PROVIDER: ${rawProvider}`);
   }
 
@@ -116,7 +141,7 @@ export function loadAIConfig(): AIConfig {
     maxOutputTokens: parseNumber(process.env.AI_MAX_OUTPUT_TOKENS, 800, 1),
     temperature: Math.min(parseNumber(process.env.AI_TEMPERATURE, 0.3, 0), 2),
     systemPrompt: process.env.AI_SYSTEM_PROMPT?.trim() ||
-      "You are the CoogsNation AI Assistant. Help authenticated community members with CoogsNation features, University of Houston community topics, and general questions. Be accurate, concise, respectful, and transparent when uncertain. Never claim to have performed an action you did not perform.",
+      "You are the CoogsNation public AI Assistant. Help authenticated community members with CoogsNation features, University of Houston community topics, product discovery, and general questions. You are not an administrator and cannot access private administrative data. Be accurate, concise, respectful, and transparent when uncertain. Never claim to have performed an action you did not perform.",
     dailyUserRequestLimit: parseNumber(process.env.AI_DAILY_USER_REQUEST_LIMIT, 50, 1),
     dailyUserTokenLimit: parseNumber(process.env.AI_DAILY_USER_TOKEN_LIMIT, 100_000, 1),
     monthlyBudgetUsd: parseNumber(process.env.AI_MONTHLY_BUDGET_USD, 0, 0),
@@ -134,7 +159,60 @@ export function loadAIConfig(): AIConfig {
   };
 }
 
-export function getPublicAIConfig(config: AIConfig) {
+export function loadGeminiAIConfig(): GeminiAIConfig {
+  const enabled = parseBoolean(process.env.AI_GEMINI_ENABLED, false);
+  const model = (process.env.AI_GEMINI_MODEL || "gemini-3.5-flash-lite").trim();
+  const baseUrl = normalizeBaseUrl(
+    process.env.AI_GEMINI_BASE_URL || "https://generativelanguage.googleapis.com/v1beta",
+  );
+  const apiKey = process.env.AI_GEMINI_API_KEY?.trim()
+    || process.env.GEMINI_API_KEY?.trim()
+    || process.env.GOOGLE_API_KEY?.trim()
+    || undefined;
+
+  if (enabled) {
+    if (!model) throw new Error("AI_GEMINI_MODEL must be set when AI_GEMINI_ENABLED=true");
+    if (!baseUrl) throw new Error("AI_GEMINI_BASE_URL must be set when AI_GEMINI_ENABLED=true");
+    if (!apiKey) throw new Error("AI_GEMINI_API_KEY must be configured when AI_GEMINI_ENABLED=true");
+  }
+
+  const allowedMediaMimeTypes = (process.env.AI_GEMINI_ALLOWED_MEDIA_MIME_TYPES
+    || "image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime,audio/mpeg,audio/wav,application/pdf")
+    .split(",")
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+
+  return {
+    enabled,
+    provider: "gemini",
+    model,
+    baseUrl,
+    apiKey,
+    timeoutMs: parseNumber(process.env.AI_GEMINI_TIMEOUT_MS, 90_000, 1_000),
+    maxOutputChars: parseNumber(process.env.AI_GEMINI_MAX_OUTPUT_CHARS, 30_000, 1_000),
+    maxOutputTokens: parseNumber(process.env.AI_GEMINI_MAX_OUTPUT_TOKENS, 1_200, 1),
+    inputCostPerMillionTokens: parseNumber(process.env.AI_GEMINI_INPUT_COST_PER_MILLION_TOKENS, 0.30, 0),
+    outputCostPerMillionTokens: parseNumber(process.env.AI_GEMINI_OUTPUT_COST_PER_MILLION_TOKENS, 2.50, 0),
+    youtubeEnabled: parseBoolean(process.env.AI_GEMINI_YOUTUBE_ENABLED, true),
+    uploadsEnabled: parseBoolean(process.env.AI_GEMINI_UPLOADS_ENABLED, true),
+    maxMediaBytes: parseNumber(process.env.AI_GEMINI_MAX_MEDIA_BYTES, 25 * 1024 * 1024, 1),
+    allowedMediaMimeTypes,
+    systemPrompt: process.env.AI_GEMINI_SYSTEM_PROMPT?.trim() ||
+      "You are the CoogsNation multimedia specialist. Analyze only the image, audio, video, PDF, or public YouTube material supplied with the member's request. Describe what is supported by the media, cite timestamps when useful, distinguish observation from inference, and say when evidence is insufficient. Never access or claim access to administrator systems, private user data, credentials, or payment information.",
+  };
+}
+
+export function loadAIRouterConfig(): AIRouterConfig {
+  const configuredDefault = (process.env.AI_ROUTER_DEFAULT || "primary").toLowerCase();
+  return {
+    defaultProvider: configuredDefault === "gemini" ? "gemini" : "primary",
+    allowUserChoice: parseBoolean(process.env.AI_ROUTER_ALLOW_USER_CHOICE, true),
+    autoRouteMedia: parseBoolean(process.env.AI_ROUTER_AUTO_MEDIA, true),
+    gemini: loadGeminiAIConfig(),
+  };
+}
+
+export function getPublicAIConfig(config: AIConfig, router = loadAIRouterConfig()) {
   return {
     enabled: config.enabled,
     provider: config.enabled ? config.provider : null,
@@ -145,5 +223,18 @@ export function getPublicAIConfig(config: AIConfig) {
     learningEnabled: config.learningEnabled,
     learningRequireApproval: config.learningRequireApproval,
     moderationEnabled: config.moderationMode !== "disabled",
+    routing: {
+      defaultProvider: router.defaultProvider,
+      allowUserChoice: router.allowUserChoice,
+      autoRouteMedia: router.autoRouteMedia,
+      gemini: {
+        enabled: router.gemini.enabled,
+        model: router.gemini.enabled ? router.gemini.model : null,
+        youtubeEnabled: router.gemini.enabled && router.gemini.youtubeEnabled,
+        uploadsEnabled: router.gemini.enabled && router.gemini.uploadsEnabled,
+        maxMediaBytes: router.gemini.maxMediaBytes,
+        allowedMediaMimeTypes: router.gemini.allowedMediaMimeTypes,
+      },
+    },
   };
 }

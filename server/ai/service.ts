@@ -1,8 +1,22 @@
 import { randomUUID } from "crypto";
-import { loadAIConfig, getPublicAIConfig, type AIConfig } from "./config";
+import {
+  getPublicAIConfig,
+  loadAIConfig,
+  loadAIRouterConfig,
+  type AIConfig,
+  type AIRouterConfig,
+} from "./config";
 import { createAIProvider } from "./providerFactory";
 import { AIStore } from "./store";
-import { AIServiceError, type AICompletion, type AIModerationResult } from "./types";
+import { getCommerceService, type CommerceService } from "../commerce/service";
+import {
+  AIServiceError,
+  type AICompletion,
+  type AIMediaInput,
+  type AIModerationResult,
+  type AIProvider,
+  type AIProviderPreference,
+} from "./types";
 import {
   buildMessages,
   calculateCostMicros,
@@ -19,31 +33,51 @@ export interface AIAnswer {
   provider: string;
   model: string;
   conversationId: string;
+  routeReason: "approved_knowledge" | "primary_text" | "gemini_requested" | "gemini_media" | "gemini_default";
   usage: { inputTokens: number; outputTokens: number };
 }
 
-interface AskInput {
+export interface AskInput {
   userId: string;
   message: string;
   conversationId?: string;
   requestType?: "chat" | "stream";
+  providerPreference?: AIProviderPreference;
+  media?: AIMediaInput[];
+}
+
+interface SelectedProvider {
+  provider: AIProvider;
+  routeReason: Exclude<AIAnswer["routeReason"], "approved_knowledge">;
+  maxOutputTokens: number;
+  systemPrompt: string;
+  inputCostPerMillionTokens: number;
+  outputCostPerMillionTokens: number;
 }
 
 export class UniversalAIService {
   readonly config: AIConfig;
-  private readonly provider;
-  private readonly store;
+  readonly routerConfig: AIRouterConfig;
+  private readonly primaryProvider: AIProvider;
+  private readonly geminiProvider: AIProvider | null;
+  private readonly store: AIStore;
+  private readonly commerce: CommerceService;
   private readonly activeByUser = new Map<string, number>();
   private readonly socketWindows = new Map<string, { startedAt: number; count: number }>();
 
-  constructor(config = loadAIConfig()) {
+  constructor(config = loadAIConfig(), routerConfig = loadAIRouterConfig()) {
     this.config = config;
-    this.provider = createAIProvider(config);
+    this.routerConfig = routerConfig;
+    this.primaryProvider = createAIProvider(config);
+    this.geminiProvider = routerConfig.gemini.enabled
+      ? createAIProvider(routerConfig.gemini)
+      : null;
     this.store = new AIStore(config);
+    this.commerce = getCommerceService();
   }
 
   publicStatus() {
-    return getPublicAIConfig(this.config);
+    return getPublicAIConfig(this.config, this.routerConfig);
   }
 
   private assertEnabled(): void {
@@ -64,6 +98,86 @@ export class UniversalAIService {
       );
     }
     return cleaned;
+  }
+
+  private validateMedia(media: AIMediaInput[] | undefined): AIMediaInput[] {
+    if (!media?.length) return [];
+    if (!this.routerConfig.gemini.enabled || !this.geminiProvider) {
+      throw new AIServiceError("Gemini multimedia analysis is not configured", "GEMINI_DISABLED", 503, false);
+    }
+    if (media.length > 2) {
+      throw new AIServiceError("A maximum of two media items is allowed per request", "TOO_MANY_MEDIA_ITEMS", 400, false);
+    }
+    for (const item of media) {
+      if (item.kind === "youtube") {
+        if (!this.routerConfig.gemini.youtubeEnabled) {
+          throw new AIServiceError("YouTube analysis is disabled", "YOUTUBE_DISABLED", 503, false);
+        }
+        continue;
+      }
+      if (!this.routerConfig.gemini.uploadsEnabled) {
+        throw new AIServiceError("Media uploads are disabled", "MEDIA_UPLOADS_DISABLED", 503, false);
+      }
+      const mime = item.mimeType.toLowerCase();
+      if (!this.routerConfig.gemini.allowedMediaMimeTypes.includes(mime)) {
+        throw new AIServiceError(`Unsupported media type: ${mime}`, "UNSUPPORTED_MEDIA_TYPE", 400, false);
+      }
+      if (item.sizeBytes && item.sizeBytes > this.routerConfig.gemini.maxMediaBytes) {
+        throw new AIServiceError("Media file exceeds the configured size limit", "MEDIA_TOO_LARGE", 400, false);
+      }
+      if (!item.data) {
+        throw new AIServiceError("Media data is missing", "INVALID_MEDIA", 400, false);
+      }
+    }
+    return media;
+  }
+
+  private selectProvider(input: Pick<AskInput, "providerPreference" | "media">): SelectedProvider {
+    const media = input.media || [];
+    const requested = this.routerConfig.allowUserChoice
+      ? (input.providerPreference || "auto")
+      : "auto";
+
+    const selectGemini = (routeReason: SelectedProvider["routeReason"]): SelectedProvider => {
+      if (!this.geminiProvider || !this.routerConfig.gemini.enabled) {
+        throw new AIServiceError("Gemini multimedia analysis is not configured", "GEMINI_DISABLED", 503, false);
+      }
+      return {
+        provider: this.geminiProvider,
+        routeReason,
+        maxOutputTokens: this.routerConfig.gemini.maxOutputTokens,
+        systemPrompt: `${this.config.systemPrompt}\n\n${this.routerConfig.gemini.systemPrompt}`,
+        inputCostPerMillionTokens: this.routerConfig.gemini.inputCostPerMillionTokens,
+        outputCostPerMillionTokens: this.routerConfig.gemini.outputCostPerMillionTokens,
+      };
+    };
+
+    if (requested === "gemini") return selectGemini("gemini_requested");
+    if (requested === "primary") {
+      if (media.length) {
+        throw new AIServiceError("Uploaded media and YouTube URLs require Gemini", "MEDIA_REQUIRES_GEMINI", 400, false);
+      }
+      return {
+        provider: this.primaryProvider,
+        routeReason: "primary_text",
+        maxOutputTokens: this.config.maxOutputTokens,
+        systemPrompt: this.config.systemPrompt,
+        inputCostPerMillionTokens: this.config.inputCostPerMillionTokens,
+        outputCostPerMillionTokens: this.config.outputCostPerMillionTokens,
+      };
+    }
+
+    if (media.length && this.routerConfig.autoRouteMedia) return selectGemini("gemini_media");
+    if (this.routerConfig.defaultProvider === "gemini") return selectGemini("gemini_default");
+
+    return {
+      provider: this.primaryProvider,
+      routeReason: "primary_text",
+      maxOutputTokens: this.config.maxOutputTokens,
+      systemPrompt: this.config.systemPrompt,
+      inputCostPerMillionTokens: this.config.inputCostPerMillionTokens,
+      outputCostPerMillionTokens: this.config.outputCostPerMillionTokens,
+    };
   }
 
   private async withUserSlot<T>(userId: string, operation: () => Promise<T>): Promise<T> {
@@ -94,32 +208,51 @@ export class UniversalAIService {
     current.count += 1;
   }
 
-  private completionRequest(message: string, knowledge: Array<{ question: string; answer: string }>) {
+  private completionRequest(
+    message: string,
+    knowledge: Array<{ question: string; answer: string }>,
+    selected: SelectedProvider,
+    media: AIMediaInput[],
+  ) {
     return {
-      messages: buildMessages(this.config.systemPrompt, message, knowledge),
-      maxOutputTokens: this.config.maxOutputTokens,
+      messages: buildMessages(selected.systemPrompt, message, knowledge),
+      maxOutputTokens: selected.maxOutputTokens,
       temperature: this.config.temperature,
+      media,
     };
   }
 
-  private costFor(completion: AICompletion): number {
+  private costFor(completion: AICompletion, selected: SelectedProvider): number {
     return calculateCostMicros(
       completion.usage.inputTokens,
       completion.usage.outputTokens,
-      this.config.inputCostPerMillionTokens,
-      this.config.outputCostPerMillionTokens,
+      selected.inputCostPerMillionTokens,
+      selected.outputCostPerMillionTokens,
     );
+  }
+
+  private auditPrompt(message: string, media: AIMediaInput[]): string {
+    if (!media.length) return message;
+    const summary = media.map((item) => item.kind === "youtube"
+      ? "youtube-url"
+      : `${item.mimeType}:${item.sizeBytes || "unknown-size"}`,
+    ).join(",");
+    return `${message}\n[media:${summary}]`;
   }
 
   async ask(input: AskInput): Promise<AIAnswer> {
     this.assertEnabled();
     const message = this.validateInput(input.message);
+    const media = this.validateMedia(input.media);
+    const selected = this.selectProvider({ providerPreference: input.providerPreference, media });
     const conversationId = input.conversationId || `conv_${randomUUID()}`;
     const requestId = randomUUID();
+    const promptForAudit = this.auditPrompt(message, media);
 
     return this.withUserSlot(input.userId, async () => {
       await this.store.assertQuota(input.userId);
-      const trusted = await this.store.findTrustedAnswer(message);
+      const mayUseKnowledge = media.length === 0 && (input.providerPreference || "auto") !== "gemini";
+      const trusted = mayUseKnowledge ? await this.store.findTrustedAnswer(message) : null;
       if (trusted) {
         const usage = { inputTokens: estimateTokens(message), outputTokens: estimateTokens(trusted.answer) };
         await this.store.recordInteraction({
@@ -129,7 +262,7 @@ export class UniversalAIService {
           requestType: input.requestType || "chat",
           provider: "knowledge",
           model: "approved-community-answer",
-          prompt: message,
+          prompt: promptForAudit,
           response: trusted.answer,
           inputTokens: usage.inputTokens,
           outputTokens: usage.outputTokens,
@@ -144,16 +277,20 @@ export class UniversalAIService {
           provider: "knowledge",
           model: "approved-community-answer",
           conversationId,
+          routeReason: "approved_knowledge",
           usage,
         };
       }
 
-      const knowledge = await this.store.findRelevantKnowledge(message, 3);
-      const completionRequest = this.completionRequest(message, knowledge);
+      const [knowledge, commerceKnowledge] = await Promise.all([
+        media.length ? Promise.resolve([]) : this.store.findRelevantKnowledge(message, 3),
+        this.commerce.contextForAI(message),
+      ]);
+      const completionRequest = this.completionRequest(message, [...knowledge, ...commerceKnowledge], selected, media);
       try {
-        const completion = await this.provider.complete(completionRequest);
+        const completion = await selected.provider.complete(completionRequest);
         const answer = sanitizeAIText(completion.text, this.config.maxOutputChars);
-        const knowledgeId = await this.store.saveCandidate({
+        const knowledgeId = media.length ? null : await this.store.saveCandidate({
           question: message,
           answer,
           context: "chat",
@@ -168,11 +305,11 @@ export class UniversalAIService {
           requestType: input.requestType || "chat",
           provider: completion.provider,
           model: completion.model,
-          prompt: message,
+          prompt: promptForAudit,
           response: answer,
           inputTokens: completion.usage.inputTokens,
           outputTokens: completion.usage.outputTokens,
-          estimatedCostMicros: this.costFor(completion),
+          estimatedCostMicros: this.costFor(completion, selected),
           status: "success",
         });
         return {
@@ -183,6 +320,7 @@ export class UniversalAIService {
           provider: completion.provider,
           model: completion.model,
           conversationId,
+          routeReason: selected.routeReason,
           usage: completion.usage,
         };
       } catch (error) {
@@ -194,9 +332,9 @@ export class UniversalAIService {
           userId: input.userId,
           conversationId,
           requestType: input.requestType || "chat",
-          provider: this.config.provider,
-          model: this.config.model,
-          prompt: message,
+          provider: selected.provider.name,
+          model: selected.provider.model,
+          prompt: promptForAudit,
           inputTokens: estimateMessageTokens(completionRequest.messages),
           outputTokens: 0,
           estimatedCostMicros: 0,
@@ -214,12 +352,16 @@ export class UniversalAIService {
   ): Promise<AIAnswer> {
     this.assertEnabled();
     const message = this.validateInput(input.message);
+    const media = this.validateMedia(input.media);
+    const selected = this.selectProvider({ providerPreference: input.providerPreference, media });
     const conversationId = input.conversationId || `conv_${randomUUID()}`;
     const requestId = randomUUID();
+    const promptForAudit = this.auditPrompt(message, media);
 
     return this.withUserSlot(input.userId, async () => {
       await this.store.assertQuota(input.userId);
-      const trusted = await this.store.findTrustedAnswer(message);
+      const mayUseKnowledge = media.length === 0 && (input.providerPreference || "auto") !== "gemini";
+      const trusted = mayUseKnowledge ? await this.store.findTrustedAnswer(message) : null;
       if (trusted) {
         for (const chunk of trusted.answer.match(/.{1,120}(?:\s|$)/g) || [trusted.answer]) {
           await onChunk(chunk);
@@ -232,7 +374,7 @@ export class UniversalAIService {
           requestType: "stream",
           provider: "knowledge",
           model: "approved-community-answer",
-          prompt: message,
+          prompt: promptForAudit,
           response: trusted.answer,
           inputTokens: usage.inputTokens,
           outputTokens: usage.outputTokens,
@@ -247,15 +389,19 @@ export class UniversalAIService {
           provider: "knowledge",
           model: "approved-community-answer",
           conversationId,
+          routeReason: "approved_knowledge",
           usage,
         };
       }
 
-      const knowledge = await this.store.findRelevantKnowledge(message, 3);
-      const completionRequest = this.completionRequest(message, knowledge);
+      const [knowledge, commerceKnowledge] = await Promise.all([
+        media.length ? Promise.resolve([]) : this.store.findRelevantKnowledge(message, 3),
+        this.commerce.contextForAI(message),
+      ]);
+      const completionRequest = this.completionRequest(message, [...knowledge, ...commerceKnowledge], selected, media);
       try {
-        const completion = await this.provider.stream(completionRequest, onChunk);
-        const knowledgeId = await this.store.saveCandidate({
+        const completion = await selected.provider.stream(completionRequest, onChunk);
+        const knowledgeId = media.length ? null : await this.store.saveCandidate({
           question: message,
           answer: completion.text,
           context: "stream",
@@ -270,11 +416,11 @@ export class UniversalAIService {
           requestType: "stream",
           provider: completion.provider,
           model: completion.model,
-          prompt: message,
+          prompt: promptForAudit,
           response: completion.text,
           inputTokens: completion.usage.inputTokens,
           outputTokens: completion.usage.outputTokens,
-          estimatedCostMicros: this.costFor(completion),
+          estimatedCostMicros: this.costFor(completion, selected),
           status: "success",
         });
         return {
@@ -285,6 +431,7 @@ export class UniversalAIService {
           provider: completion.provider,
           model: completion.model,
           conversationId,
+          routeReason: selected.routeReason,
           usage: completion.usage,
         };
       } catch (error) {
@@ -296,9 +443,9 @@ export class UniversalAIService {
           userId: input.userId,
           conversationId,
           requestType: "stream",
-          provider: this.config.provider,
-          model: this.config.model,
-          prompt: message,
+          provider: selected.provider.name,
+          model: selected.provider.model,
+          prompt: promptForAudit,
           inputTokens: estimateMessageTokens(completionRequest.messages),
           outputTokens: 0,
           estimatedCostMicros: 0,
@@ -322,8 +469,8 @@ export class UniversalAIService {
       await this.store.assertQuota(userId);
       try {
         let result: AIModerationResult;
-        if (this.config.moderationMode === "provider" && this.provider.moderate) {
-          result = await this.provider.moderate(input);
+        if (this.config.moderationMode === "provider" && this.primaryProvider.moderate) {
+          result = await this.primaryProvider.moderate(input);
         } else {
           const moderationRequest = {
             messages: [
@@ -336,7 +483,7 @@ export class UniversalAIService {
             maxOutputTokens: Math.min(300, this.config.maxOutputTokens),
             temperature: 0,
           };
-          const completion = await this.provider.complete(moderationRequest);
+          const completion = await this.primaryProvider.complete(moderationRequest);
           const jsonText = completion.text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
           let parsed: any;
           try {

@@ -2,10 +2,12 @@ import { randomUUID } from "node:crypto";
 import { pool } from "./db";
 import { createAIProvider } from "./ai/providerFactory";
 import type { AIConfig } from "./ai/config";
-import { AIServiceError, type AIProviderName } from "./ai/types";
+import { AIServiceError, type PrimaryAIProviderName } from "./ai/types";
+
+type AdminAIProviderName = PrimaryAIProviderName;
 import { calculateCostMicros, estimateMessageTokens, sanitizeAIText } from "./ai/utils";
 
-const SUPPORTED_PROVIDERS = new Set<AIProviderName>([
+const SUPPORTED_PROVIDERS = new Set<AdminAIProviderName>([
   "openai",
   "anthropic",
   "deepseek",
@@ -24,7 +26,7 @@ function parseNumber(value: string | undefined, fallback: number, minimum = 0): 
   return Number.isFinite(parsed) && parsed >= minimum ? parsed : fallback;
 }
 
-function defaultBaseUrl(provider: AIProviderName): string {
+function defaultBaseUrl(provider: AdminAIProviderName): string {
   switch (provider) {
     case "openai": return "https://api.openai.com/v1";
     case "anthropic": return "https://api.anthropic.com";
@@ -37,7 +39,7 @@ function defaultBaseUrl(provider: AIProviderName): string {
 
 export interface AdminAIConfig {
   enabled: boolean;
-  provider: AIProviderName;
+  provider: AdminAIProviderName;
   model: string;
   baseUrl: string;
   apiKey?: string;
@@ -53,7 +55,7 @@ export interface AdminAIConfig {
 }
 
 export function loadAdminAIConfig(): AdminAIConfig {
-  const provider = (process.env.ADMIN_AI_PROVIDER || "openai").toLowerCase() as AIProviderName;
+  const provider = (process.env.ADMIN_AI_PROVIDER || "openai").toLowerCase() as AdminAIProviderName;
   if (!SUPPORTED_PROVIDERS.has(provider)) {
     throw new Error(`Unsupported ADMIN_AI_PROVIDER: ${provider}`);
   }

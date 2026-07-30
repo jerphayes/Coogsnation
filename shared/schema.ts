@@ -1529,14 +1529,25 @@ export const aiLearningDataSchema = z.object({
   createdAt: z.date(),
 });
 
+export const aiProviderPreferenceSchema = z.enum(["auto", "primary", "gemini"]);
+
 export const aiQuestionSchema = z.object({
   question: z.string().trim().min(1, "Question is required").max(4000, "Question too long"),
   conversationId: z.string().trim().max(100).regex(/^[a-zA-Z0-9_-]+$/, "Invalid conversation ID").optional(),
+  providerPreference: aiProviderPreferenceSchema.optional().default("auto"),
 }).strict();
 
 export const aiChatRequestSchema = z.object({
   message: z.string().trim().min(1, "Message is required").max(4000, "Message too long"),
   conversationId: z.string().trim().max(100).regex(/^[a-zA-Z0-9_-]+$/, "Invalid conversation ID").optional(),
+  providerPreference: aiProviderPreferenceSchema.optional().default("auto"),
+}).strict();
+
+export const aiV3ChatRequestSchema = z.object({
+  message: z.string().trim().min(1, "Message is required").max(4000, "Message too long"),
+  conversationId: z.string().trim().max(100).regex(/^[a-zA-Z0-9_-]+$/, "Invalid conversation ID").optional(),
+  providerPreference: aiProviderPreferenceSchema.optional().default("auto"),
+  youtubeUrl: z.string().trim().url("Invalid YouTube URL").max(500).optional().or(z.literal("")),
 }).strict();
 
 export const aiModerationRequestSchema = z.object({
@@ -1555,7 +1566,9 @@ export const aiFeedbackSchema = z.object({
 export type AIChatMessage = z.infer<typeof aiChatMessageSchema>;
 export type AIConversation = z.infer<typeof aiConversationSchema>;
 export type AILearningData = z.infer<typeof aiLearningDataSchema>;
+export type AIProviderPreferenceRequest = z.infer<typeof aiProviderPreferenceSchema>;
 export type AIQuestionRequest = z.infer<typeof aiQuestionSchema>;
 export type AIChatRequest = z.infer<typeof aiChatRequestSchema>;
+export type AIV3ChatRequest = z.infer<typeof aiV3ChatRequestSchema>;
 export type AIModerationRequest = z.infer<typeof aiModerationRequestSchema>;
 export type AIFeedback = z.infer<typeof aiFeedbackSchema>;

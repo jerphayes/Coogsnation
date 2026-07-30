@@ -51,6 +51,8 @@ import { rateLimit } from "express-rate-limit";
 import { getAIService } from "./ai/service";
 import { AIServiceError } from "./ai/types";
 import { registerAdminDashboardRoutes } from "./adminDashboard";
+import { registerPublicAIRoutes } from "./publicAI";
+import { registerCommerceRoutes } from "./commerce/routes";
 
 // Helper function to verify Google reCAPTCHA
 async function verifyRecaptcha(recaptchaResponse: string, clientIP?: string): Promise<boolean> {
@@ -259,6 +261,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Registered after the origin guard so every state-changing action receives
   // the same CSRF/origin protection as the rest of the authenticated API.
   registerAdminDashboardRoutes(app);
+  registerPublicAIRoutes(app, { aiService, isAuthenticated, aiLimiter });
+  registerCommerceRoutes(app, isAuthenticated);
 
   // Optional social-login aliases. Core email/password authentication is always available.
   app.get("/auth/linkedin", (req, res) => {
@@ -2954,6 +2958,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: req.user.id,
         message: validated.question,
         conversationId: validated.conversationId,
+        providerPreference: validated.providerPreference,
       });
       return res.json(result);
     } catch (error) {
@@ -3033,6 +3038,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: req.user.id,
         message: validated.message,
         conversationId: validated.conversationId,
+        providerPreference: validated.providerPreference,
       });
       return res.json({
         id: result.knowledgeId || result.requestId,
@@ -3040,6 +3046,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         source: result.source,
         provider: result.provider,
         model: result.model,
+        routeReason: result.routeReason,
         requestId: result.requestId,
         conversationId: result.conversationId,
         usage: result.usage,
@@ -3341,6 +3348,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             userId,
             message: validated.message,
             conversationId,
+            providerPreference: validated.providerPreference,
             requestType: "stream",
           },
           async (chunk) => {
@@ -3362,6 +3370,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           source: result.source,
           provider: result.provider,
           model: result.model,
+          routeReason: result.routeReason,
           requestId: result.requestId,
           usage: result.usage,
         });

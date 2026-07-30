@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { MessageCircle, Send, X, Minimize2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { MessageCircle, Send, X, Minimize2, Paperclip, Youtube, Sparkles } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -12,14 +13,42 @@ interface Message {
   source?: 'faq' | 'learned' | 'provider' | 'ai' | 'error';
   provider?: string;
   model?: string;
+  routeReason?: string;
 }
+
+interface PublicAIStatus {
+  enabled: boolean;
+  provider: string | null;
+  model: string | null;
+  routing?: {
+    allowUserChoice: boolean;
+    gemini: {
+      enabled: boolean;
+      model: string | null;
+      youtubeEnabled: boolean;
+      uploadsEnabled: boolean;
+      maxMediaBytes: number;
+      allowedMediaMimeTypes: string[];
+    };
+  };
+}
+
+type ProviderPreference = 'auto' | 'primary' | 'gemini';
+
+const routeLabels: Record<string, string> = {
+  approved_knowledge: 'Community knowledge',
+  primary_text: 'OpenAI conversation',
+  gemini_requested: 'Gemini selected',
+  gemini_media: 'Gemini multimedia',
+  gemini_default: 'Gemini default',
+};
 
 export function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: "Hi! I'm the CoogsNation AI Assistant. I can help you with questions about our community, UH sports, and platform features. What would you like to know?",
+      text: "Hi! I'm the CoogsNation AI Assistant. I use OpenAI for everyday conversation and can route images, video, PDFs, audio, and public YouTube links to Gemini when configured.",
       sender: 'ai',
       timestamp: new Date(),
       source: 'ai'
@@ -28,81 +57,100 @@ export function ChatWidget() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId] = useState(() => `conv_${crypto.randomUUID()}`);
+  const [providerPreference, setProviderPreference] = useState<ProviderPreference>('auto');
+  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [showMedia, setShowMedia] = useState(false);
+  const [status, setStatus] = useState<PublicAIStatus | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    scrollToBottom();
+    fetch('/api/ai/v3/status')
+      .then((response) => response.json())
+      .then((data) => setStatus(data.ai || null))
+      .catch(() => setStatus(null));
+  }, []);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  const gemini = status?.routing?.gemini;
+  const mediaEnabled = Boolean(gemini?.enabled && (gemini.uploadsEnabled || gemini.youtubeEnabled));
 
   const sendMessage = async () => {
     const question = input.trim();
     if (!question || isLoading) return;
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      text: question,
-      sender: 'user',
-      timestamp: new Date()
-    };
+    const attachmentText = [
+      mediaFile ? `Attached: ${mediaFile.name}` : '',
+      youtubeUrl.trim() ? 'YouTube link attached' : '',
+    ].filter(Boolean).join(' • ');
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, {
+      id: Date.now().toString(),
+      text: attachmentText ? `${question}\n${attachmentText}` : question,
+      sender: 'user',
+      timestamp: new Date(),
+    }]);
     setInput('');
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/ask', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ question, conversationId }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || "AI request failed");
+      if (mediaFile && gemini?.maxMediaBytes && mediaFile.size > gemini.maxMediaBytes) {
+        throw new Error(`File exceeds the ${Math.round(gemini.maxMediaBytes / 1024 / 1024)} MB limit`);
       }
 
-      const aiMessage: Message = {
+      const form = new FormData();
+      form.append('message', question);
+      form.append('conversationId', conversationId);
+      form.append('providerPreference', providerPreference);
+      if (youtubeUrl.trim()) form.append('youtubeUrl', youtubeUrl.trim());
+      if (mediaFile) form.append('media', mediaFile);
+
+      const response = await fetch('/api/ai/v3/chat', {
+        method: 'POST',
+        body: form,
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'AI request failed');
+
+      setMessages((prev) => [...prev, {
         id: (Date.now() + 1).toString(),
-        text: data.answer || "I'm sorry, I couldn't process your question.",
+        text: data.answer || data.response || "I'm sorry, I couldn't process your question.",
         sender: 'ai',
         timestamp: new Date(),
         source: data.source || 'provider',
         provider: data.provider,
         model: data.model,
-      };
-
-      setMessages(prev => [...prev, aiMessage]);
+        routeReason: data.routeReason,
+      }]);
+      setYoutubeUrl('');
+      setMediaFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (error) {
       console.error('Chat error:', error);
-      const errorMessage: Message = {
+      setMessages((prev) => [...prev, {
         id: (Date.now() + 1).toString(),
-        text: "I'm experiencing technical difficulties. Please try again later.",
+        text: error instanceof Error ? error.message : "I'm experiencing technical difficulties. Please try again later.",
         sender: 'ai',
         timestamp: new Date(),
         source: 'error'
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      }]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
+  const handleKeyPress = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
       sendMessage();
     }
   };
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
+  const formatTime = (date: Date) => date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   if (!isOpen) {
     return (
@@ -120,69 +168,45 @@ export function ChatWidget() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-80 md:w-96">
+    <div className="fixed bottom-4 right-4 z-50 w-[22rem] md:w-[28rem]">
       <Card className="shadow-2xl border-2 border-gray-200">
         <CardHeader className="bg-uh-red text-white p-4 flex flex-row items-center justify-between rounded-t-lg">
           <CardTitle className="text-lg font-semibold flex items-center gap-2">
-            <MessageCircle size={20} />
-            Ask CoogsNation AI
+            <Sparkles size={20} />
+            CoogsNation AI v3.0
           </CardTitle>
           <div className="flex gap-1">
-            <Button
-              onClick={() => setIsOpen(false)}
-              variant="ghost"
-              size="sm"
-              className="text-white hover:bg-red-700 p-1 h-8 w-8"
-              data-testid="button-chat-minimize"
-              aria-label="Minimize chat"
-            >
+            <Button onClick={() => setIsOpen(false)} variant="ghost" size="sm" className="text-white hover:bg-red-700 p-1 h-8 w-8" aria-label="Minimize chat">
               <Minimize2 size={16} />
             </Button>
-            <Button
-              onClick={() => setIsOpen(false)}
-              variant="ghost"
-              size="sm" 
-              className="text-white hover:bg-red-700 p-1 h-8 w-8"
-              data-testid="button-chat-close"
-              aria-label="Close chat"
-            >
+            <Button onClick={() => setIsOpen(false)} variant="ghost" size="sm" className="text-white hover:bg-red-700 p-1 h-8 w-8" aria-label="Close chat">
               <X size={16} />
             </Button>
           </div>
         </CardHeader>
-        
+
         <CardContent className="p-0">
-          {/* Messages Area */}
           <div className="h-80 overflow-y-auto p-4 bg-gray-50" data-testid="chat-messages">
             <div className="space-y-3">
               {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-xs p-3 rounded-lg shadow-sm ${
-                      message.sender === 'user'
-                        ? 'bg-uh-red text-white'
-                        : message.source === 'error'
-                        ? 'bg-red-100 text-red-800 border border-red-200'
-                        : message.source === 'faq'
-                        ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                        : 'bg-white text-gray-800 border border-gray-200'
-                    }`}
-                    data-testid={`message-${message.sender}-${message.id}`}
-                  >
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                      {message.text}
-                    </p>
-                    <div className={`text-xs mt-1 opacity-70 ${
-                      message.sender === 'user' ? 'text-red-100' : 'text-gray-500'
-                    }`}>
+                <div key={message.id} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[90%] p-3 rounded-lg shadow-sm ${
+                    message.sender === 'user'
+                      ? 'bg-uh-red text-white'
+                      : message.source === 'error'
+                      ? 'bg-red-100 text-red-800 border border-red-200'
+                      : message.source === 'faq'
+                      ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                      : 'bg-white text-gray-800 border border-gray-200'
+                  }`}>
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
+                    <div className={`text-xs mt-1 opacity-70 ${message.sender === 'user' ? 'text-red-100' : 'text-gray-500'}`}>
                       {formatTime(message.timestamp)}
                       {message.source === 'faq' && ' • FAQ'}
-                      {message.source === 'ai' && ' • AI'}
-                      {message.source === 'provider' && ` • ${message.provider || 'AI'}`}
+                      {message.source === 'ai' && ' • AI router'}
                       {message.source === 'learned' && ' • Community knowledge'}
+                      {message.source === 'provider' && ` • ${message.provider || 'AI'}${message.model ? ` / ${message.model}` : ''}`}
+                      {message.routeReason && ` • ${routeLabels[message.routeReason] || message.routeReason}`}
                     </div>
                   </div>
                 </div>
@@ -192,11 +216,11 @@ export function ChatWidget() {
                   <div className="bg-white text-gray-800 border border-gray-200 p-3 rounded-lg shadow-sm">
                     <div className="flex items-center space-x-2">
                       <div className="animate-pulse flex space-x-1">
-                        <div className="rounded-full bg-gray-400 h-2 w-2"></div>
-                        <div className="rounded-full bg-gray-400 h-2 w-2"></div>
-                        <div className="rounded-full bg-gray-400 h-2 w-2"></div>
+                        <div className="rounded-full bg-gray-400 h-2 w-2" />
+                        <div className="rounded-full bg-gray-400 h-2 w-2" />
+                        <div className="rounded-full bg-gray-400 h-2 w-2" />
                       </div>
-                      <span className="text-sm text-gray-600">AI is thinking...</span>
+                      <span className="text-sm text-gray-600">Routing and analyzing...</span>
                     </div>
                   </div>
                 </div>
@@ -205,30 +229,77 @@ export function ChatWidget() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input Area */}
-          <div className="border-t border-gray-200 p-4 bg-white rounded-b-lg">
+          <div className="border-t border-gray-200 p-4 bg-white rounded-b-lg space-y-3">
+            <div className="flex gap-2 items-center">
+              <select
+                value={providerPreference}
+                onChange={(event) => setProviderPreference(event.target.value as ProviderPreference)}
+                className="h-9 flex-1 rounded-md border border-gray-300 bg-white px-2 text-xs"
+                aria-label="AI provider preference"
+              >
+                <option value="auto">Auto route</option>
+                <option value="primary">OpenAI conversation</option>
+                <option value="gemini" disabled={!gemini?.enabled}>Gemini multimedia</option>
+              </select>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowMedia((value) => !value)}
+                disabled={!mediaEnabled}
+                title={mediaEnabled ? 'Add image, video, audio, PDF, or YouTube URL' : 'Gemini multimedia is not configured'}
+              >
+                <Paperclip size={15} className="mr-1" /> Media
+              </Button>
+            </div>
+
+            {showMedia && mediaEnabled && (
+              <div className="rounded-md border border-gray-200 p-3 space-y-2 bg-gray-50">
+                {gemini?.youtubeEnabled && (
+                  <div className="flex items-center gap-2">
+                    <Youtube size={16} className="text-red-600 shrink-0" />
+                    <Input
+                      value={youtubeUrl}
+                      onChange={(event) => setYoutubeUrl(event.target.value)}
+                      placeholder="Public YouTube URL"
+                      className="h-9 text-xs"
+                    />
+                  </div>
+                )}
+                {gemini?.uploadsEnabled && (
+                  <div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept={gemini.allowedMediaMimeTypes.join(',')}
+                      onChange={(event) => setMediaFile(event.target.files?.[0] || null)}
+                      className="block w-full text-xs text-gray-600 file:mr-3 file:rounded file:border-0 file:bg-gray-200 file:px-3 file:py-2 file:text-xs file:font-medium"
+                    />
+                    <p className="mt-1 text-[11px] text-gray-500">
+                      Maximum {Math.round(gemini.maxMediaBytes / 1024 / 1024)} MB. Files are sent for this request and are not stored by CoogsNation.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="flex gap-2">
               <Textarea
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(event) => setInput(event.target.value)}
                 onKeyDown={handleKeyPress}
-                placeholder="Type your question about CoogsNation..."
-                className="flex-1 min-h-[40px] max-h-[120px] resize-none focus:ring-uh-red focus:border-uh-red"
-                disabled={isLoading}
+                placeholder="Ask about CoogsNation, products, or attached media..."
+                className="flex-1 min-h-[42px] max-h-[120px] resize-none focus:ring-uh-red focus:border-uh-red"
+                disabled={isLoading || status?.enabled === false}
                 maxLength={4000}
                 data-testid="input-chat-message"
               />
-              <Button
-                onClick={sendMessage}
-                disabled={!input.trim() || isLoading}
-                className="bg-uh-red hover:bg-red-700 text-white px-4 self-end"
-                data-testid="button-chat-send"
-              >
+              <Button onClick={sendMessage} disabled={!input.trim() || isLoading || status?.enabled === false} className="bg-uh-red hover:bg-red-700 text-white px-4 self-end">
                 <Send size={16} />
               </Button>
             </div>
-            <div className="mt-2 text-xs text-gray-500 text-center">
-              AI can make mistakes. Do not share passwords, financial data, or confidential information.
+            <div className="text-xs text-gray-500 text-center">
+              OpenAI handles everyday chat. Gemini handles selected multimedia. AI can make mistakes; never share passwords, payment data, or confidential information.
             </div>
           </div>
         </CardContent>
