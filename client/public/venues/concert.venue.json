@@ -1,0 +1,97 @@
+{
+  "$comment": "A venue defined entirely as data. No class, no build step, no engine change. Loaded by JSONVenue via loadVenue('concert').",
+  "id": "concert",
+  "label": "Generic Arena — Concert Mode",
+  "category": "concert",
+  "spanBleed": 0.05,
+
+  "footprint": { "coreX": 18, "coreZ": 6, "cornerRadius": 13, "referenceRadius": 28 },
+
+  "tiers": [
+    {
+      "id": "floor", "label": "General Admission Floor", "sectionPrefix": 0,
+      "d0": 3, "d1": 8, "y0": 0.4, "y1": 0.4, "rows": 5,
+      "spans": "full", "sectionsPerSpan": 12, "vip": false, "basePrice": 95
+    },
+    {
+      "id": "lower", "label": "Lower Bowl", "sectionPrefix": 100,
+      "d0": 10, "d1": 22, "y0": 3.4, "y1": 12.5, "rows": 15,
+      "spans": "full", "sectionsPerSpan": 22, "vip": false, "basePrice": 140
+    },
+    {
+      "id": "box", "label": "Box Level", "sectionPrefix": 200,
+      "d0": 24, "d1": 27, "y0": 15, "y1": 17.2, "rows": 4,
+      "spans": ["west", "east"], "sectionsPerSpan": 7, "vip": true, "basePrice": 320
+    },
+    {
+      "id": "upper", "label": "Upper Bowl", "sectionPrefix": 300,
+      "d0": 29, "d1": 40, "y0": 20, "y1": 30, "rows": 14,
+      "spans": ["west", "east", "south"], "sectionsPerSpan": 12, "vip": false, "basePrice": 55
+    }
+  ],
+
+  "sectionNaming": {
+    "floor": { "style": "letters", "prefix": "GA-" },
+    "box":   { "style": "prefixed", "prefix": "BOX " }
+  },
+
+  "surface": {
+    "recipe": "stage",
+    "width": 26,
+    "depth": 12,
+    "height": 1.8,
+    "at": [-24, 0],
+    "truss": { "height": 15, "bays": 8 },
+    "screens": 2
+  },
+
+  "props": [
+    {
+      "recipe": "slab",
+      "length": 34,
+      "width": 26,
+      "color": "#1b1f26",
+      "roughness": 0.95
+    }
+  ],
+
+  "structure": {
+    "facade":    { "offset": 43, "height": 24, "portals": 14, "portalHeight": 6 },
+    "concourse": { "level1": 6, "level2": 18, "width": 8 },
+    "roof":      { "offset": 44, "apexHeight": 38, "rimHeight": 25 },
+    "tunnels":   { "count": 8, "width": 3.6, "height": 4.2, "atRow": 0.5 },
+    "elevators": { "count": 4, "shaftWidth": 3.4 },
+    "approach":  { "poleLights": 12, "radius": [110, 230] },
+    "videoBoards": [
+      { "id": "stage-left",  "end": "centre", "width": 9, "height": 5, "y": 19 }
+    ],
+    "ribbonBoards": [
+      { "id": "lower-fascia", "tier": "lower", "height": 0.9, "atFront": true }
+    ]
+  },
+
+  "lighting": {
+    "preset": "indoor",
+    "fixtures": {
+      "type": "catwalk",
+      "rings": [
+        { "radius": 20, "height": 26, "count": 14 },
+        { "radius": 11, "height": 28, "count": 8 }
+      ]
+    }
+  },
+
+  "camera": {
+    "orbitTarget": [0, 8, 0],
+    "orbitMin": 12,
+    "orbitMax": 280,
+    "home": [-58, 42, -64],
+    "spectator": { "min": 16, "max": 64, "target": [-18, 4, 0] },
+    "broadcast": { "radius": 56, "height": 18, "period": 65 }
+  },
+
+  "seating": { "pitch": 0.47, "aisleHalfWidth": 0.58 },
+  "crowd":   { "fillRate": 0.94 },
+
+  "pricing": { "rowDecay": 0.5, "lateralDecay": 0.35, "round": 5 }
+}

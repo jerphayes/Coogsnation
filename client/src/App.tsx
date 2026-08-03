@@ -37,6 +37,12 @@ import CoogpawsChat from "@/pages/CoogpawsChat";
 import Login from "@/pages/Login";
 import LoginEmail from "@/pages/LoginEmail";
 import MemberDashboard from "@/pages/MemberDashboard";
+import { lazy, Suspense } from "react";
+
+/* The immersive venue is code-split: Three.js and the Virtual Venue Engine
+ * (~700 KB) download only when a member actually enters a venue. Every other
+ * CoogsNation page keeps its current load profile. */
+const Venue = lazy(() => import("@/pages/Venue"));
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -74,6 +80,20 @@ function Router() {
       <Route path="/join" component={ProfileCompletion} />
       <Route path="/member-dashboard" component={MemberDashboard} />
       <Route path="/live-sports" component={LiveSports} />
+      <Route path="/venues/:venueId">
+        {(params) => (
+          <Suspense fallback={<div className="p-8 text-center text-sm">Loading venue…</div>}>
+            <Venue key={params.venueId} />
+          </Suspense>
+        )}
+      </Route>
+      <Route path="/venues">
+        {() => (
+          <Suspense fallback={<div className="p-8 text-center text-sm">Loading venue…</div>}>
+            <Venue />
+          </Suspense>
+        )}
+      </Route>
       <Route path="/coogpaws-chat" component={CoogpawsChat} />
       <Route path="/forums/categories/:categoryId" component={ForumCategory} />
       <Route path="/forums/topics/:topicId" component={ForumTopic} />

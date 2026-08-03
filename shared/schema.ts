@@ -601,6 +601,43 @@ export const coogpawsMessagesRelations = relations(coogpawsMessages, ({ one }) =
 
 // Export types
 export type UpsertUser = typeof users.$inferInsert;
+/**
+ * Virtual Venue Engine — persistent seat ownership.
+ *
+ * The engine owns RUNTIME seat state (occupancy, avatars, the digital twin).
+ * This table is the PERSISTENT record, owned by CoogsNation. The engine never
+ * reads or writes it directly; every access goes through IStorage via the
+ * venue API adapters.
+ *
+ * `seatPersistentId` is derived by the engine from venue structure
+ * (`seat:<venue>:<tier>:<section>:<row>:<number>`) rather than randomly
+ * assigned, so a seat keeps its history across venue rebuilds.
+ */
+export const venueSeatClaims = pgTable(
+  "venue_seat_claims",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    venueId: varchar("venue_id", { length: 32 }).notNull(),
+    seatPersistentId: varchar("seat_persistent_id", { length: 160 }).notNull(),
+    seatIndex: integer("seat_index").notNull(),
+    section: varchar("section", { length: 32 }).notNull(),
+    row: integer("row").notNull(),
+    seatNumber: integer("seat_number").notNull(),
+    userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    displayName: varchar("display_name", { length: 120 }).notNull(),
+    claimedAt: timestamp("claimed_at").defaultNow().notNull(),
+  },
+  (table) => [
+    // One claim per seat, enforced by the database rather than by the engine.
+    unique("venue_seat_claims_seat_unique").on(table.venueId, table.seatPersistentId),
+    index("venue_seat_claims_venue_idx").on(table.venueId),
+    index("venue_seat_claims_user_idx").on(table.userId),
+  ],
+);
+
+export type VenueSeatClaimRecord = typeof venueSeatClaims.$inferSelect;
+export type InsertVenueSeatClaim = typeof venueSeatClaims.$inferInsert;
+
 export type User = typeof users.$inferSelect;
 
 // User identity types  

@@ -53,6 +53,7 @@ import { AIServiceError } from "./ai/types";
 import { registerAdminDashboardRoutes } from "./adminDashboard";
 import { registerPublicAIRoutes } from "./publicAI";
 import { registerCommerceRoutes } from "./commerce/routes";
+import { registerVenueRoutes } from "./venue/routes";
 
 // Helper function to verify Google reCAPTCHA
 async function verifyRecaptcha(recaptchaResponse: string, clientIP?: string): Promise<boolean> {
@@ -263,6 +264,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerAdminDashboardRoutes(app);
   registerPublicAIRoutes(app, { aiService, isAuthenticated, aiLimiter });
   registerCommerceRoutes(app, isAuthenticated);
+  registerVenueRoutes(app, isAuthenticated);
 
   // Optional social-login aliases. Core email/password authentication is always available.
   app.get("/auth/linkedin", (req, res) => {

@@ -71,6 +71,9 @@ import {
   type AchievementLevel,
   getAchievementLevel,
   checkForNewAchievement,
+  venueSeatClaims,
+  type VenueSeatClaimRecord,
+  type InsertVenueSeatClaim,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, like, isNull, isNotNull, gte, lte } from "drizzle-orm";
@@ -288,6 +291,13 @@ export interface IStorage {
   reportUser(report: InsertCoogpawsReport): Promise<CoogpawsReport>;
   getUserReports(userId: string): Promise<CoogpawsReport[]>;
   getReportsByStatus(status: string): Promise<CoogpawsReport[]>;
+  // Virtual Venue Engine — persistent seat ownership.
+  // The engine holds runtime seat state; these are the only persistence
+  // operations it can reach, and it reaches them through an adapter.
+  getVenueSeatClaims(venueId: string): Promise<VenueSeatClaimRecord[]>;
+  getVenueSeatClaimForUser(venueId: string, userId: string): Promise<VenueSeatClaimRecord | undefined>;
+  claimVenueSeat(claim: InsertVenueSeatClaim): Promise<VenueSeatClaimRecord | null>;
+  releaseVenueSeat(venueId: string, seatPersistentId: string, userId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2196,6 +2206,77 @@ export class DatabaseStorage implements IStorage {
       .where(eq(coogpawsReports.status, status))
       .orderBy(desc(coogpawsReports.createdAt));
   }
+  /* ══════════════════════════════════════════════════════════════════════
+   * Virtual Venue Engine — persistent seat ownership
+   * ════════════════════════════════════════════════════════════════════ */
+
+  async getVenueSeatClaims(venueId: string): Promise<VenueSeatClaimRecord[]> {
+    return await db
+      .select()
+      .from(venueSeatClaims)
+      .where(eq(venueSeatClaims.venueId, venueId));
+  }
+
+  async getVenueSeatClaimForUser(
+    venueId: string,
+    userId: string,
+  ): Promise<VenueSeatClaimRecord | undefined> {
+    const [claim] = await db
+      .select()
+      .from(venueSeatClaims)
+      .where(and(eq(venueSeatClaims.venueId, venueId), eq(venueSeatClaims.userId, userId)))
+      .limit(1);
+    return claim;
+  }
+
+  /**
+   * Claim a seat. A user holds at most one seat per venue, so an existing
+   * claim is released first — moving seats is the common case, and forcing the
+   * client to send two requests would open a window where the user holds none.
+   *
+   * Returns null when the seat is already held by someone else. The unique
+   * index is the real guard: two simultaneous claims cannot both succeed, and
+   * the loser gets null rather than an exception.
+   */
+  async claimVenueSeat(claim: InsertVenueSeatClaim): Promise<VenueSeatClaimRecord | null> {
+    return await db.transaction(async (tx) => {
+      await tx
+        .delete(venueSeatClaims)
+        .where(
+          and(eq(venueSeatClaims.venueId, claim.venueId), eq(venueSeatClaims.userId, claim.userId)),
+        );
+
+      const [inserted] = await tx
+        .insert(venueSeatClaims)
+        .values(claim)
+        .onConflictDoNothing({
+          target: [venueSeatClaims.venueId, venueSeatClaims.seatPersistentId],
+        })
+        .returning();
+
+      return inserted ?? null;
+    });
+  }
+
+  /** Release a seat. Scoped to the owner so one user cannot evict another. */
+  async releaseVenueSeat(
+    venueId: string,
+    seatPersistentId: string,
+    userId: string,
+  ): Promise<boolean> {
+    const released = await db
+      .delete(venueSeatClaims)
+      .where(
+        and(
+          eq(venueSeatClaims.venueId, venueId),
+          eq(venueSeatClaims.seatPersistentId, seatPersistentId),
+          eq(venueSeatClaims.userId, userId),
+        ),
+      )
+      .returning();
+    return released.length > 0;
+  }
+
 }
 
 export const storage = new DatabaseStorage();
