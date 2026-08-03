@@ -1,0 +1,87 @@
+services:
+  database:
+    image: postgres:16
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-coogs}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-coogs_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-coogsnation}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-coogs} -d ${POSTGRES_DB:-coogsnation}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  app:
+    build:
+      context: .
+      target: development
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: development
+      PORT: 5000
+      APP_ORIGIN: ${APP_ORIGIN:-http://localhost:5000}
+      TRUST_PROXY: ${TRUST_PROXY:-false}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-coogs}:${POSTGRES_PASSWORD:-coogs_dev_password}@database:5432/${POSTGRES_DB:-coogsnation}
+      DATA_DIR: /app/data
+      UPLOADS_DIR: /app/data/uploads
+    command:
+      - sh
+      - -c
+      - >
+        if [ "$${DATABASE_BOOTSTRAP:-false}" = "true" ]; then
+          npm run db:bootstrap;
+        fi &&
+        npm run db:migrate:dev &&
+        npm run dev
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - app_data:/app/data
+    networks:
+      - frontend
+      - backend
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5000/healthz', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+    internal: true
+
+volumes:
+  postgres_data:
+  app_data:
