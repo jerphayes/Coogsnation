@@ -192,66 +192,8 @@ npm run db:migrate:dev
 echo "Checking authentication/database connectivity..."
 npm run auth:doctor
 
-# Permanently synchronize the registered Codespaces owner.
-if [ -n "${COOGSNATION_OWNER_EMAIL:-}" ]; then
-  OWNER_ID="$(
-    docker compose exec -T \
-      -e PGOPTIONS="-c app.owner_email=$COOGSNATION_OWNER_EMAIL" \
-      database \
-      psql -U coogs -d coogsnation -v ON_ERROR_STOP=1 -Atc "
-        WITH owner_row AS (
-          UPDATE users
-          SET role = 'admin',
-              session_version =
-                CASE
-                  WHEN role IS DISTINCT FROM 'admin'
-                  THEN session_version + 1
-                  ELSE session_version
-                END
-          WHERE lower(email) =
-                lower(current_setting('app.owner_email', true))
-          RETURNING id
-        )
-        SELECT id FROM owner_row LIMIT 1;
-      "
-  )"
-
-  if [ -n "$OWNER_ID" ]; then
-    export OWNER_ID
-
-    python3 <<'PY_OWNER'
-from pathlib import Path
-import os
-
-path = Path(".env")
-owner_id = os.environ["OWNER_ID"].strip()
-lines = path.read_text().splitlines()
-
-output = []
-updated = False
-
-for line in lines:
-    if line.startswith("OWNER_USER_ID="):
-        output.append(f"OWNER_USER_ID={owner_id}")
-        updated = True
-    else:
-        output.append(line)
-
-if not updated:
-    output.append(f"OWNER_USER_ID={owner_id}")
-
-path.write_text("\n".join(output).rstrip() + "\n")
-print("Owner administrator access synchronized.")
-PY_OWNER
-
-    unset OWNER_ID
-  else
-    echo "Owner account is not registered in this database yet."
-    echo "Register it once, then rerun npm run codespace:start."
-  fi
-else
-  echo "WARNING: COOGSNATION_OWNER_EMAIL is unavailable."
-fi
+# Synchronize the permanent Codespaces owner safely.
+node scripts/sync-owner.mjs
 
 # Avoid starting a duplicate server.
 if curl -fsS http://127.0.0.1:5000/healthz >/dev/null 2>&1; then
