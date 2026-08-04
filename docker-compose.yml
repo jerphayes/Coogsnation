@@ -22,6 +22,7 @@ services:
       - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
     networks:
       - backend
+      - devhost
     security_opt:
       - no-new-privileges:true
     logging:
@@ -86,6 +87,9 @@ networks:
   backend:
     driver: bridge
     internal: true
+
+  devhost:
+    driver: bridge
 
 volumes:
   postgres_data:

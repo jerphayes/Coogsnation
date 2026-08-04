@@ -109,3 +109,23 @@ assert.equal(
 );
 
 console.log("Registration and profile-completion optional-field checks passed.");
+
+const memberDashboardPath = resolve(process.cwd(), "client/src/pages/MemberDashboard.tsx");
+const memberDashboardSource = readFileSync(memberDashboardPath, "utf8");
+const appSource = readFileSync(resolve(process.cwd(), "client/src/App.tsx"), "utf8");
+
+assert.equal(
+  memberDashboardSource.includes('href="/profile/local"'),
+  false,
+  "MemberDashboard must not link to the removed /profile/local route",
+);
+assert.ok(
+  memberDashboardSource.includes('href="/complete-profile"'),
+  "MemberDashboard profile actions must link to /complete-profile",
+);
+assert.ok(
+  appSource.includes('path="/complete-profile"'),
+  "App router must expose the /complete-profile route",
+);
+
+console.log("Member dashboard profile-route checks passed.");

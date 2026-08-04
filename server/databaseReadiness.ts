@@ -78,7 +78,7 @@ export async function assertDatabaseReady(): Promise<void> {
 
 export async function checkDatabaseHealth(): Promise<DatabaseHealth> {
   try {
-    await pool.query({ text: "SELECT 1", query_timeout: 2_000 });
+    await pool.query("SELECT 1");
     return { ok: true };
   } catch (error) {
     return { ok: false, message: errorMessage(error) };
