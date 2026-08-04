@@ -26,7 +26,8 @@
     "venue:basketball": "node scripts/venue-engine/basketball-acceptance.mjs",
     "venue:integration": "node scripts/venue-engine/integration.mjs",
     "venue:check": "npm run venue:conformance && npm run venue:smoke && npm run venue:basketball && npm run venue:integration && npm run venue:bridge",
-    "venue:bridge": "node scripts/venue-engine/bridge-check.mjs"
+    "venue:bridge": "node scripts/venue-engine/bridge-check.mjs",
+    "codespace:start": "bash scripts/codespace-start.sh"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
