@@ -21,6 +21,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import type { Server } from "http";
+import { assertDatabaseReady, checkDatabaseHealth } from "./databaseReadiness";
 
 const app = express();
 let activeServer: Server | null = null;
@@ -65,8 +66,17 @@ process.on("uncaughtException", (error) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-app.get("/healthz", (_req, res) => {
-  res.status(shuttingDown ? 503 : 200).json({ status: shuttingDown ? "shutting_down" : "ok" });
+app.get("/healthz", async (_req, res) => {
+  if (shuttingDown) {
+    return res.status(503).json({ status: "shutting_down", database: "unknown" });
+  }
+
+  const database = await checkDatabaseHealth();
+  if (!database.ok) {
+    return res.status(503).json({ status: "degraded", database: "unavailable" });
+  }
+
+  return res.status(200).json({ status: "ok", database: "ok" });
 });
 
 // Authentication and the authoritative session middleware are configured in setupAuth().
@@ -90,6 +100,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  await assertDatabaseReady();
   const server = await registerRoutes(app);
   activeServer = server;
 

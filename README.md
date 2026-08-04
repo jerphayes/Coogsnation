@@ -56,8 +56,12 @@ Requirements: Node.js 22+, npm 10+, and PostgreSQL 16+.
 
 ```bash
 cp .env.example .env
-# Set DATABASE_URL and SESSION_SECRET in .env.
+# Set a long SESSION_SECRET in .env. The development DATABASE_URL and
+# POSTGRES_PASSWORD defaults already match each other.
 npm ci --no-audit --no-fund
+# Start only PostgreSQL; it is exposed to 127.0.0.1 for Codespaces/local use.
+docker compose up -d database
+npm run auth:doctor
 # Run once only when the database has no CoogsNation schema yet:
 npm run db:bootstrap
 # Run on every revision to apply pending numbered migrations:
@@ -67,6 +71,10 @@ npm run dev
 ```
 
 `db:bootstrap` is Drizzle schema synchronization for a completely new development database. Do not run it automatically after initialization. `db:migrate:dev` applies only pending numbered SQL migrations from the TypeScript source runner and records them in `coogsnation_migrations`.
+
+The development Compose file publishes PostgreSQL only on `127.0.0.1`, never on the LAN or public Codespaces port. If `POSTGRES_HOST_PORT` is changed, update the port in `DATABASE_URL` to match. Production Compose does not publish PostgreSQL. The server verifies the authentication tables and required columns before listening; a bad database URL or missed migration therefore fails at startup instead of appearing later as a grey Join button or generic login 500.
+
+For an existing Docker data volume, use the password that originally initialized PostgreSQL. Changing `POSTGRES_PASSWORD` in `.env` does not retroactively change the password stored inside an existing volume. `npm run auth:doctor` detects disagreement between the local `DATABASE_URL` and the Compose `POSTGRES_*` settings before the application starts.
 
 ## Production Docker deployment
 

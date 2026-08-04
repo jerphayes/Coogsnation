@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -47,6 +47,8 @@ export default function ProfileCompletion() {
   const { toast } = useToast();
   const [isCheckingHandle, setIsCheckingHandle] = useState(false);
   const [handleAvailable, setHandleAvailable] = useState<boolean | null>(null);
+  const [handleCheckError, setHandleCheckError] = useState<string | null>(null);
+  const handleCheckController = useRef<AbortController | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
@@ -54,6 +56,10 @@ export default function ProfileCompletion() {
   const [uploadedAvatarPath, setUploadedAvatarPath] = useState<string | null>(null);
   const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => handleCheckController.current?.abort();
+  }, []);
 
   const uploadAvatarFile = async (file: File) => {
     setIsUploadingAvatar(true);
@@ -222,24 +228,55 @@ export default function ProfileCompletion() {
       
       // Automatically check handle availability for existing users
       if (handle && handle.length >= 3) {
-        checkHandle(handle);
+        void checkHandle(handle);
       }
     }
   }, [user, form]);
 
-  // Check handle availability
+  // Check handle availability. Abort the previous request so an older response
+  // cannot overwrite the result for the member's newest input.
   const checkHandle = async (handle: string) => {
-    if (handle.length < 3) return;
-    setIsCheckingHandle(true);
-    try {
-      const response = await fetch(`/api/auth/check-handle?handle=${encodeURIComponent(handle)}`);
-      const data = await response.json();
-      setHandleAvailable(data.available);
-    } catch (error) {
-      console.error('Error checking handle:', error);
+    const normalizedHandle = handle.trim();
+    if (normalizedHandle.length < 3) {
+      handleCheckController.current?.abort();
       setHandleAvailable(null);
-    } finally {
+      setHandleCheckError(null);
       setIsCheckingHandle(false);
+      return;
+    }
+
+    handleCheckController.current?.abort();
+    const controller = new AbortController();
+    handleCheckController.current = controller;
+    setHandleAvailable(null);
+    setHandleCheckError(null);
+    setIsCheckingHandle(true);
+
+    try {
+      const response = await fetch(
+        `/api/auth/check-handle?handle=${encodeURIComponent(normalizedHandle)}`,
+        { signal: controller.signal },
+      );
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || typeof data.available !== 'boolean') {
+        throw new Error(data.message || 'Handle availability service is unavailable.');
+      }
+      if (!controller.signal.aborted) {
+        setHandleAvailable(data.available);
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') return;
+      console.error('Error checking handle:', error);
+      if (!controller.signal.aborted) {
+        setHandleAvailable(null);
+        setHandleCheckError(
+          error instanceof Error ? error.message : 'Unable to verify this handle right now.',
+        );
+      }
+    } finally {
+      if (handleCheckController.current === controller) {
+        setIsCheckingHandle(false);
+      }
     }
   };
 
@@ -405,10 +442,13 @@ export default function ProfileCompletion() {
                             onChange={(e) => {
                               field.onChange(e);
                               const value = e.target.value;
-                              if (value && value.length >= 3) {
-                                checkHandle(value);
+                              if (value.trim().length >= 3) {
+                                void checkHandle(value);
                               } else {
+                                handleCheckController.current?.abort();
                                 setHandleAvailable(null);
+                                setHandleCheckError(null);
+                                setIsCheckingHandle(false);
                               }
                             }}
                             className="pr-24"
@@ -430,6 +470,11 @@ export default function ProfileCompletion() {
                       <p className="text-sm text-gray-600">
                         Leave this blank to use your name. A custom handle may use letters, numbers, and underscores only.
                       </p>
+                      {handleCheckError && (
+                        <p className="text-sm text-red-600" role="alert" data-testid="handle-check-error">
+                          {handleCheckError} Clear the optional handle to continue, or retry after the service is available.
+                        </p>
+                      )}
                     </FormItem>
                   )}
                 />

@@ -15,6 +15,11 @@ services:
       retries: 20
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    # Development only: allow Node running directly in Codespaces/local host
+    # to reach this database. Binding to 127.0.0.1 prevents LAN/public access.
+    # Production Compose intentionally does not publish PostgreSQL.
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
     networks:
       - backend
     security_opt:

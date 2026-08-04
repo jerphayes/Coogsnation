@@ -25,6 +25,9 @@ const devAppBlock = devCompose.split(/\n  app:\n/)[1]?.split(/\nnetworks:\n/)[0]
 assert(!devAppBlock.includes("cap_drop:"), "development app must not drop all capabilities on a bind mount");
 assert(!devCompose.includes('command: ["sh", "-c", "npm run db:bootstrap'), "development bootstrap must not run unconditionally");
 assert(devCompose.includes("internal: true"), "PostgreSQL backend network must be internal");
+assert(devCompose.includes('"127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"'), "development PostgreSQL must bind only to loopback for host/Codespaces access");
+const prodDatabaseBlock = prodCompose.split(/\n  database:\n/)[1]?.split(/\n  migrate:\n/)[0] ?? "";
+assert(!prodDatabaseBlock.includes("ports:"), "production PostgreSQL must not publish a host port");
 assert(devCompose.includes("/healthz"), "app healthcheck must use /healthz");
 assert(prodCompose.includes('restart: unless-stopped'), "production services must have restart policy");
 assert(prodCompose.includes('max-size: "10m"'), "production logs must be rotated");

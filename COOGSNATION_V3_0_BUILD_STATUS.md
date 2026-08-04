@@ -1,36 +1,58 @@
-# CoogsNation v3.0.0 — Full Build Status
+# CoogsNation v3.0.0 — Integrated Master Build Status
 
 ## Included
 
-- OpenAI as the primary public conversational provider.
-- Native Gemini 3.5 Flash-Lite specialist for approved images, video, audio, PDFs, and public YouTube URLs.
-- Server-side provider routing with automatic media selection and optional member provider choice.
-- Strict separation among public OpenAI, public Gemini, and private Administrator AI credentials.
-- Existing owner-controlled administrator dashboard and read-only Administrator AI.
-- Provider-neutral commerce foundation with local catalog and optional Shopify product search.
-- Shopify cart mutation, checkout generation, discounts, payments, order placement, and Shopify administration remain disabled until explicit confirmation controls are implemented.
+- OpenAI primary public conversation and Gemini multimedia routing.
+- Owner-controlled administrator dashboard and isolated read-only Administrator AI.
+- Provider-neutral commerce foundation and integrated virtual venue engine.
+- Authentication runtime repair for Codespaces/local development:
+  - loopback-only PostgreSQL host access in development;
+  - matching example database credentials;
+  - idempotent PostgreSQL session-table migration;
+  - database/schema readiness before HTTP startup;
+  - database-aware `/healthz`;
+  - visible, race-safe handle availability checks;
+  - `npm run auth:doctor` environment/connectivity diagnostics.
 - Package and interface version 3.0.0.
+
+See `AUTHENTICATION_RUNTIME_FIX_V3_0.md` for the exact repair and existing-volume guidance.
 
 ## Validation completed in the packaging environment
 
-Passed static checks:
+Passed:
 
+- Authentication runtime regression checks
 - Security regression checks
 - Administrator dashboard regression checks
 - CoogsNation v3.0 AI router regression checks
 - Portable foundation checks
 - Universal AI static regression checks
 - Infrastructure regression checks
+- AI static regression checks
+- Docker Compose YAML parsing for development and production
+- TypeScript/TSX parser validation across 168 source files
+- JavaScript syntax validation across 60 engine and regression files
+- Authentication doctor backtests:
+  - mismatched credentials rejected;
+  - unreachable database rejected;
+  - reachable matching endpoint accepted.
 
 ## Validation still required in Codespaces
 
-The packaging environment did not contain installed npm dependencies, so dependency-backed checks were not run here. Before accepting or pushing the build, run:
+This packaging environment has neither Docker/PostgreSQL nor a complete npm dependency installation. `npm ci` was attempted, but its internal package mirror returned `404` for the locked `zod@3.24.2` tarball. Therefore the dependency-backed TypeScript build, live PostgreSQL migration, real signup/login/session persistence, and browser test must be run in Codespaces.
+
+Required release gate:
 
 ```bash
-npm ci --no-audit --no-fund
+docker compose up -d database
+npm run auth:doctor
+npm run db:migrate:dev
 npm run security:check
 npm run check
 npm run build
+npm run dev
 ```
 
-Then configure separate public OpenAI and Gemini keys in `.env`, restart the server, and perform live routing tests. No API keys or `.env` file are included in this archive.
+For a completely new empty database, run `npm run db:bootstrap` once before `npm run db:migrate:dev`.
+
+No API keys, `.env`, database data, passwords, or other secrets are included in this archive.
