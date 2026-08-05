@@ -37,6 +37,38 @@ else
   echo "Existing .env preserved"
 fi
 
+# Gemini API key comes from GitHub Codespaces secrets.
+if [ -n "${GEMINI_API_KEY:-}" ]; then
+  export GEMINI_API_KEY
+
+  python3 <<'PY_GEMINI'
+from pathlib import Path
+import os
+
+path = Path(".env")
+key = os.environ["GEMINI_API_KEY"].strip()
+lines = path.read_text().splitlines() if path.exists() else []
+
+output = []
+updated = False
+
+for line in lines:
+    if line.startswith("GEMINI_API_KEY="):
+        output.append(f"GEMINI_API_KEY={key}")
+        updated = True
+    else:
+        output.append(line)
+
+if not updated:
+    output.append(f"GEMINI_API_KEY={key}")
+
+path.write_text("\n".join(output).rstrip() + "\n")
+print("Gemini API configuration loaded securely.")
+PY_GEMINI
+else
+  echo "WARNING: GEMINI_API_KEY is unavailable."
+fi
+
 # The API key must come from GitHub Codespaces secrets.
 if [ -z "${OPENAI_API_KEY:-}" ]; then
   echo
