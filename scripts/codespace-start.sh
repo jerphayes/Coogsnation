@@ -53,14 +53,30 @@ output = []
 updated = False
 
 for line in lines:
-    if line.startswith("GEMINI_API_KEY="):
-        output.append(f"GEMINI_API_KEY={key}")
+    if line.startswith("AI_GEMINI_API_KEY="):
+        output.append(f"AI_GEMINI_API_KEY={key}")
         updated = True
     else:
         output.append(line)
 
 if not updated:
-    output.append(f"GEMINI_API_KEY={key}")
+    output.append(f"AI_GEMINI_API_KEY={key}")
+
+# Ensure Gemini is enabled and has a model.
+settings = {
+    "AI_GEMINI_ENABLED": "true",
+    "AI_GEMINI_MODEL": "gemini-3.5-flash-lite",
+}
+
+for name, value in settings.items():
+    found = False
+    for index, line in enumerate(output):
+        if line.startswith(f"{name}="):
+            output[index] = f"{name}={value}"
+            found = True
+            break
+    if not found:
+        output.append(f"{name}={value}")
 
 path.write_text("\n".join(output).rstrip() + "\n")
 print("Gemini API configuration loaded securely.")
