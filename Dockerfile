@@ -12,7 +12,11 @@ CMD ["npm", "run", "dev"]
 # TypeScript, security regression checks, or the production build fail.
 FROM dependencies AS validated-build
 COPY . .
-RUN npm run check && npm run security:check && npm run build
+# The image build runs the STATIC gate only. `npm run validate` additionally
+# runs the multi-user lounge regression, which opens a real TCP listener — a
+# Docker build layer is not a place to depend on that. CI and local release
+# testing run the full `npm run validate`.
+RUN npm run validate:static
 
 FROM node:22-bookworm-slim AS runtime
 ENV NODE_ENV=production

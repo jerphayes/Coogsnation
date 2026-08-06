@@ -1,0 +1,23 @@
+[
+  {
+    "id": "partner-product-id",
+    "siteKeys": ["coogsnation"],
+    "schoolKeys": ["houston"],
+    "title": "Approved licensed product title",
+    "description": "Use the partner-approved description.",
+    "merchant": "Authorized Partner",
+    "collection": "legacy-jewelry",
+    "categories": ["class rings", "fine jewelry"],
+    "tags": ["high-value", "class-ring"],
+    "imageUrl": "https://partner.example/approved-image.jpg",
+    "productUrl": "https://partner.example/affiliate-destination",
+    "priceAmount": "999.00",
+    "currencyCode": "USD",
+    "licenseStatus": "officially_licensed",
+    "highValue": true,
+    "purchaseMode": "affiliate_redirect",
+    "ctaLabel": "Shop at Authorized Partner",
+    "disclosure": "Sold and fulfilled by Authorized Partner. CoogsNation may earn a commission.",
+    "active": false
+  }
+]

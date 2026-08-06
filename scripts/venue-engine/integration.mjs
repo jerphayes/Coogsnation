@@ -54,7 +54,7 @@ const ok = (l, c, d = '') => {
   if (c) { pass++; } else { fail++; console.log(`  FAIL  ${l}${d ? ' → ' + d : ''}`); }
 };
 
-const VENUES = ['football', 'basketball', 'baseball', 'concert'];
+const VENUES = ['football', 'basketball', 'baseball', 'concert', 'coogpaws'];
 const results = [];
 
 console.log('\nFULL INTEGRATION — every venue, one engine, identical code path\n');
@@ -113,8 +113,14 @@ for (const id of VENUES) {
   ok(`${id}: census sums to capacity`,
      Object.values(census).reduce((a, b) => a + b, 0) === seats.count);
 
-  const placed = testAvatars.placeRandom(25);
-  ok(`${id}: avatars seat through the production path`, placed.length === 25, `${placed.length}/25`);
+  /* Clamp to capacity. The literal 25 assumed every venue is a stadium; a
+   * lounge has eight seats, so the old assertion failed on a venue that was
+   * behaving correctly. Asking for more avatars than seats is the harness's
+   * error, not the venue's. */
+  const wanted = Math.min(25, seats.count);
+  const placed = testAvatars.placeRandom(wanted);
+  ok(`${id}: avatars seat through the production path`,
+     placed.length === wanted, `${placed.length}/${wanted}`);
 
   for (let f = 0; f < 120; f++) {
     const dt = 1 / 60, el = f / 60;

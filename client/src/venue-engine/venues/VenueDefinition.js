@@ -82,6 +82,14 @@ export class VenueDefinition {
 
     /** Optional overrides for engine CROWD defaults. */
     this.crowd = opts.crowd || {};
+
+    /**
+     * Optional overrides for simulated network occupancy while the mock
+     * transport is in use: `{ initialUsers, joinsPerMinute, leavesPerMinute }`.
+     * A lounge sets these to 0 so the room starts empty and fills with real
+     * members only. Omitted keys fall back to NETWORK.mock.
+     */
+    this.simulation = opts.simulation || {};
   }
 
   /* ======================================================================
@@ -146,6 +154,42 @@ export class VenueDefinition {
 
   /** Called every frame. Hook for animated surfaces (scoreboards, stage rigs). */
   update(dt, elapsed) {}
+
+  /* ======================================================================
+   * PRESENTATION OPTIONS (ADR-020)
+   *
+   * The seam for an application control that changes what a venue SHOWS
+   * without changing what it IS: a projection selector, house lights, a
+   * scoreboard mode. Before this existed the only inbound channel was the
+   * event bridge, which is application-outbound by construction, so a venue
+   * with a control surface had no way to receive one except by the page
+   * reaching through `session` into the module graph — exactly the erosion
+   * the typed boundary exists to prevent.
+   *
+   * Generic on purpose. The engine neither defines nor validates option keys;
+   * it forwards them to the venue and reports what came back. A venue that
+   * declares no options is unaffected, which is every venue shipped today.
+   *
+   * Options are PRESENTATION ONLY. They must never gate access, alter seat
+   * identity, or change anything persisted — the engine performs no
+   * authorization decisions, and an option is not a permission.
+   * ==================================================================== */
+
+  /**
+   * Declare the options this venue accepts.
+   * @returns {Array<{key:string, label:string, kind:'enum'|'toggle',
+   *                  values?: Array<{value:string,label:string}>,
+   *                  value: string|boolean}>}
+   */
+  options() { return []; }
+
+  /**
+   * Apply an option. Return true if it was recognised AND applied.
+   * @param {string} key
+   * @param {string|boolean} value
+   * @returns {boolean}
+   */
+  setOption(key, value) { return false; }
 
   /* ======================================================================
    * VALIDATION

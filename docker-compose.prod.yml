@@ -38,14 +38,7 @@ services:
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB}
-    command:
-      - sh
-      - -c
-      - >
-        if [ "$${DATABASE_BOOTSTRAP:-false}" = "true" ]; then
-          npm run db:bootstrap;
-        fi &&
-        npm run db:migrate
+    command: ["npm", "run", "db:migrate"]
     networks:
       - backend
     security_opt:

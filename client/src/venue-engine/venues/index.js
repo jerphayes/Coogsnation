@@ -46,6 +46,12 @@ export const VENUE_REGISTRY = {
     kind: 'class',
     load: () => import('./BaseballField.js').then(m => new m.BaseballField())
   },
+  coogpaws: {
+    label: 'Coog Paws Lounge',
+    category: 'lounge',
+    kind: 'class',
+    load: () => import('./CoogPawsLounge.js').then(m => new m.CoogPawsLounge())
+  },
   concert: {
     label: 'Generic Arena — Concert Mode',
     category: 'concert',

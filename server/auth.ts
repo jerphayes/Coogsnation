@@ -311,7 +311,7 @@ export async function setupAuth(app: Express): Promise<RequestHandler> {
  *   Incrementing users.session_version invalidates every outstanding session
  *   (password reset/change, suspension, explicit security revocation).
  */
-function evaluateSessionState(
+export function evaluateSessionState(
   dbUser: { accountStatus?: string | null; sessionVersion?: number | null },
   sessionVersionAtLogin: number | undefined,
 ): string | null {
@@ -432,50 +432,4 @@ export const requireOwner: RequestHandler = async (req, res, next) => {
     console.error("Owner authorization check failed:", error);
     return res.status(500).json({ message: "Internal Server Error" });
   }
-};
-
-export const isUHCommunityMember: RequestHandler = async (req, res, next) => {
-  if (!req.user?.id) {
-    return res.status(401).json({ message: "Authentication required" });
-  }
-
-  try {
-    const dbUser = await storage.getUser(req.user.id);
-    if (!dbUser) return res.status(401).json({ message: "User not found" });
-
-    const userEmail = dbUser.email?.toLowerCase();
-    if (!userEmail) {
-      return res.status(403).json({
-        message: "UH Community Access Required",
-        details: "Associate an official UH email address with your account.",
-      });
-    }
-
-    const uhDomains = ["@uh.edu", "@cougarnet.uh.edu", "@central.uh.edu", "@uhcl.edu", "@uhd.edu", "@uhv.edu"];
-    if (!uhDomains.some((domain) => userEmail.endsWith(domain))) {
-      return res.status(403).json({
-        message: "UH Community Access Required",
-        details: "This feature is reserved for verified University of Houston community members.",
-      });
-    }
-
-    if (!dbUser.firstName || !dbUser.lastName) {
-      return res.status(403).json({
-        message: "Complete Profile Required",
-        details: "Complete your basic profile information to continue.",
-      });
-    }
-
-    return next();
-  } catch (error) {
-    console.error("UH verification failed:", error);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-};
-
-export const requireUHAuthentication: RequestHandler = (req, res, next) => {
-  isAuthenticated(req, res, (authenticationError?: unknown) => {
-    if (authenticationError) return next(authenticationError);
-    return isUHCommunityMember(req, res, next);
-  });
 };

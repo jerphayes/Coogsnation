@@ -1,82 +1,87 @@
+import type { ReactNode } from "react";
 import { Link } from "wouter";
+import { FORUM_NAVIGATION, forumCategoryPath } from "@/lib/forumNavigation";
 
 export function Footer() {
   return (
-    <footer className="bg-uh-black text-white py-12 mt-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+    <footer className="mt-16 bg-uh-black py-12 text-white">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
           <div>
-            <div className="flex items-center mb-4">
-              <div className="w-10 h-10 bg-uh-red rounded-lg flex items-center justify-center mr-3">
-                <span className="text-white font-bold">UH</span>
+            <div className="mb-4 flex items-center">
+              <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-lg bg-uh-red">
+                <span className="font-bold text-white">CN</span>
               </div>
               <div>
-                <h3 className="font-bold text-lg">CoogsNation</h3>
-                <p className="text-gray-300 text-sm">Houston Cougar Community</p>
+                <h3 className="text-lg font-bold">CoogsNation</h3>
+                <p className="text-sm text-gray-300">Houston Cougar Community</p>
               </div>
             </div>
-            <p className="text-gray-300 text-sm mb-4">
-              The premier online community for University of Houston fans, students, alumni, and supporters.
+            <p className="text-sm text-gray-300">
+              An independent online community for University of Houston fans, students, alumni, and supporters.
             </p>
-            <div className="flex space-x-4">
-              <a href="#" className="text-gray-300 hover:text-white transition-colors">
-                <i className="fab fa-facebook text-xl"></i>
-              </a>
-              <a href="#" className="text-gray-300 hover:text-white transition-colors">
-                <i className="fab fa-twitter text-xl"></i>
-              </a>
-              <a href="#" className="text-gray-300 hover:text-white transition-colors">
-                <i className="fab fa-instagram text-xl"></i>
-              </a>
-              <a href="#" className="text-gray-300 hover:text-white transition-colors">
-                <i className="fab fa-youtube text-xl"></i>
-              </a>
-            </div>
-          </div>
-          
-          <div>
-            <h4 className="font-semibold mb-4">Community</h4>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="/forums" className="text-gray-300 hover:text-white transition-colors">Forums</Link></li>
-              <li><Link href="/members" className="text-gray-300 hover:text-white transition-colors">Members</Link></li>
-              <li><Link href="/community" className="text-gray-300 hover:text-white transition-colors">Groups</Link></li>
-              <li><Link href="/events" className="text-gray-300 hover:text-white transition-colors">Events</Link></li>
-              <li><Link href="/terms" className="text-gray-300 hover:text-white transition-colors">Rules</Link></li>
-            </ul>
-          </div>
-          
-          <div>
-            <h4 className="font-semibold mb-4">Sports</h4>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="/forums/categories/1" className="text-gray-300 hover:text-white transition-colors">Football</Link></li>
-              <li><Link href="/forums/categories/2" className="text-gray-300 hover:text-white transition-colors">Basketball</Link></li>
-              <li><Link href="/forums/categories/3" className="text-gray-300 hover:text-white transition-colors">Baseball</Link></li>
-              <li><Link href="/forums/categories/5" className="text-gray-300 hover:text-white transition-colors">Recruiting</Link></li>
-              <li><a href="https://uhcougars.com/sports/football/schedule" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-white transition-colors">Schedules</a></li>
-            </ul>
           </div>
 
-          <div>
-            <h4 className="font-semibold mb-4">Resources</h4>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="/news" className="text-gray-300 hover:text-white transition-colors">News</Link></li>
-              <li><Link href="/store" className="text-gray-300 hover:text-white transition-colors">Store</Link></li>
-              <li><Link href="/community" className="text-gray-300 hover:text-white transition-colors">Alumni Network</Link></li>
-              <li><Link href="/life-happens" className="text-gray-300 hover:text-white transition-colors">Support</Link></li>
-              <li><Link href="/terms" className="text-gray-300 hover:text-white transition-colors">Privacy</Link></li>
-            </ul>
-          </div>
+          <FooterSection title="Community">
+            <FooterLink href="/forums">Standard Board</FooterLink>
+            <FooterLink href="/coogpaws-chat">Coog Paws Lounge</FooterLink>
+            <FooterLink href={forumCategoryPath(FORUM_NAVIGATION.waterCooler.slug)}>Water Cooler</FooterLink>
+            <FooterLink href="/members">Members</FooterLink>
+            <FooterLink href="/events">Events</FooterLink>
+          </FooterSection>
+
+          <FooterSection title="Sports">
+            <FooterLink href={forumCategoryPath(FORUM_NAVIGATION.football.slug)}>Football</FooterLink>
+            <FooterLink href={forumCategoryPath(FORUM_NAVIGATION.basketball.slug)}>Basketball</FooterLink>
+            <FooterLink href={forumCategoryPath(FORUM_NAVIGATION.baseball.slug)}>Baseball</FooterLink>
+            <FooterLink href={forumCategoryPath(FORUM_NAVIGATION.recruiting.slug)}>Recruiting</FooterLink>
+            <li>
+              <a
+                href="https://uhcougars.com/calendar"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-300 transition-colors hover:text-white"
+              >
+                Official schedules
+              </a>
+            </li>
+          </FooterSection>
+
+          <FooterSection title="Resources">
+            <FooterLink href="/news">News</FooterLink>
+            <FooterLink href="/store">Store</FooterLink>
+            <FooterLink href="/messages">Messages</FooterLink>
+            <FooterLink href="/life-happens">Support</FooterLink>
+            <FooterLink href="/terms">Terms and privacy</FooterLink>
+          </FooterSection>
         </div>
-        
-        <div className="border-t border-gray-700 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-gray-400 text-sm">
-            © 2024 CoogsNation.com. All rights reserved. Not affiliated with the University of Houston.
+
+        <div className="mt-8 flex flex-col items-center justify-between border-t border-gray-700 pt-8 md:flex-row">
+          <p className="text-sm text-gray-400">
+            © {new Date().getFullYear()} CoogsNation.com. All rights reserved. Not affiliated with the University of Houston.
           </p>
-          <p className="text-gray-400 text-sm mt-2 md:mt-0">
-            Whose House? Coogs' House! 🐾
-          </p>
+          <p className="mt-2 text-sm text-gray-400 md:mt-0">Whose House? Coogs&apos; House! 🐾</p>
         </div>
       </div>
     </footer>
+  );
+}
+
+function FooterSection(props: { title: string; children: ReactNode }) {
+  return (
+    <div>
+      <h4 className="mb-4 font-semibold">{props.title}</h4>
+      <ul className="space-y-2 text-sm">{props.children}</ul>
+    </div>
+  );
+}
+
+function FooterLink(props: { href: string; children: ReactNode }) {
+  return (
+    <li>
+      <Link href={props.href} className="text-gray-300 transition-colors hover:text-white">
+        {props.children}
+      </Link>
+    </li>
   );
 }

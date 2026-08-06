@@ -1,30 +1,23 @@
-export type CommerceProviderName = "local" | "shopify";
+import type {
+  CommerceProviderCapability,
+  CommerceProviderName,
+  StorefrontProduct,
+} from "@shared/commerce";
 
-export interface CommerceProduct {
-  id: string;
-  title: string;
-  description: string;
-  priceAmount?: string;
-  currencyCode?: string;
-  imageUrl?: string;
-  productUrl?: string;
-  availableForSale?: boolean;
-  provider: CommerceProviderName;
-}
+export type CommerceProviderFilter = {
+  siteKey: string;
+  schoolKey: string;
+  query?: string;
+  collection?: string;
+  limit: number;
+};
 
-export interface CommerceCapabilities {
-  provider: CommerceProviderName;
-  configured: boolean;
-  productSearch: boolean;
-  productDetails: boolean;
-  cartRead: boolean;
-  cartMutation: boolean;
-  checkoutUrl: boolean;
-  note: string;
+export interface InternalCommerceProduct extends StorefrontProduct {
+  destinationUrl?: string;
 }
 
 export interface CommerceProvider {
   readonly name: CommerceProviderName;
-  capabilities(): CommerceCapabilities;
-  searchProducts(query: string, limit: number): Promise<CommerceProduct[]>;
+  capabilities(): CommerceProviderCapability;
+  listProducts(filter: CommerceProviderFilter): Promise<InternalCommerceProduct[]>;
 }

@@ -1,6 +1,8 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
+import { FORUM_NAVIGATION, forumCategoryPath } from "@/lib/forumNavigation";
 
 export default function Community() {
   return (
@@ -48,7 +50,7 @@ export default function Community() {
               </div>
               <h3 className="text-xl font-bold text-uh-black mb-3">Water Cooler Talk</h3>
               <p className="text-gray-600 mb-6">Casual conversations and general discussions about campus life</p>
-              <Link href="/forums/categories/23">
+              <Link href={forumCategoryPath(FORUM_NAVIGATION.waterCooler.slug)}>
                 <Button className="w-full bg-blue-600 hover:bg-blue-700">
                   Start Chatting
                 </Button>
@@ -111,7 +113,7 @@ export default function Community() {
               <i className="fas fa-calendar-alt text-4xl text-uh-red mb-4"></i>
               <h3 className="text-xl font-bold mb-4">Campus Events</h3>
               <p className="text-gray-600 mb-6">Stay updated on campus events, meetups, and social gatherings</p>
-              <Link href="/forums/categories/campus-events">
+              <Link href={forumCategoryPath(FORUM_NAVIGATION.campusEvents.slug)}>
                 <Button variant="outline" className="border-uh-red text-uh-red hover:bg-uh-red hover:text-white">
                   View Events
                 </Button>
@@ -122,15 +124,16 @@ export default function Community() {
               <i className="fas fa-graduation-cap text-4xl text-uh-red mb-4"></i>
               <h3 className="text-xl font-bold mb-4">Alumni Network</h3>
               <p className="text-gray-600 mb-6">Connect with UH alumni and build professional relationships</p>
-              <Link href="/forums/categories/22">
+              <Link href="/members">
                 <Button variant="outline" className="border-uh-red text-uh-red hover:bg-uh-red hover:text-white">
-                  Network
+                  Browse Members
                 </Button>
               </Link>
             </div>
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

@@ -2,17 +2,18 @@ import type { Express } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
 import { Server as SocketIOServer } from "socket.io";
+import { registerLoungeNamespace } from "./lounge/rooms";
 import { storage } from "./storage";
 import { recordAuthEvent, clientIpOf, userAgentOf } from "./authAudit";
-import { setupAuth, isAuthenticated, requireAdmin, requireUHAuthentication } from "./auth";
+import { setupAuth, isAuthenticated, requireAdmin, evaluateSessionState } from "./auth";
 import {
   insertForumTopicSchema,
   insertForumPostSchema,
+  insertForumPostReportSchema,
   updateForumTopicSchema,
   updateForumPostSchema,
   insertNewsCommentSchema,
   insertEventSchema,
-  insertShoppingCartSchema,
   insertNotificationSchema,
   insertCampusLocationSchema,
   userProfileCompletionSchema,
@@ -23,11 +24,6 @@ import {
   passwordResetVerifyMfaSchema,
   passwordResetCompleteSchema,
   phoneNumberSchema,
-  insertCoogpawsProfileSchema,
-  insertCoogpawsSwipeSchema,
-  insertCoogpawsMessageSchema,
-  insertCoogpawsBlockSchema,
-  insertCoogpawsReportSchema,
   createSafeUser,
   createSelfUser,
   createAdminSafeUser,
@@ -46,7 +42,6 @@ import { checkForNewAchievement, achievementLevels, getNextAchievement } from "@
 import { PasswordService } from "./passwordService";
 import { mfaService } from "./mfaService";
 import { FileStorageService, FileNotFoundError } from "./fileStorage";
-import { PODManagerService, PODHelpers } from "./podServices";
 import { rateLimit } from "express-rate-limit";
 import { getAIService } from "./ai/service";
 import { AIServiceError } from "./ai/types";
@@ -263,7 +258,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // the same CSRF/origin protection as the rest of the authenticated API.
   registerAdminDashboardRoutes(app);
   registerPublicAIRoutes(app, { aiService, isAuthenticated, aiLimiter });
-  registerCommerceRoutes(app, isAuthenticated);
+  registerCommerceRoutes(app);
   registerVenueRoutes(app, isAuthenticated);
 
   // Optional social-login aliases. Core email/password authentication is always available.
@@ -1236,8 +1231,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/forums/categories/:categoryId/topics', async (req, res) => {
     try {
-      const categoryId = parseInt(req.params.categoryId);
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+      const categoryId = Number(req.params.categoryId);
+      if (!Number.isInteger(categoryId) || categoryId < 1) {
+        return res.status(400).json({ message: "Invalid forum category" });
+      }
+
+      const category = await storage.getForumCategory(categoryId);
+      if (!category || category.slug === "coogpaws") {
+        return res.status(404).json({ message: "Forum category not found" });
+      }
+
+      const requestedLimit = req.query.limit ? Number(req.query.limit) : 20;
+      const limit = Number.isInteger(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 100) : 20;
       const topics = await storage.getForumTopicsByCategory(categoryId, limit);
       res.json(topics);
     } catch (error) {
@@ -1274,6 +1279,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         slug: `${slug}-${Date.now()}`, // Add timestamp for uniqueness
         authorId: userId,
       });
+
+      const category = await storage.getForumCategory(validatedData.categoryId);
+      if (!category || category.slug === "coogpaws") {
+        return res.status(400).json({ message: "A valid active forum category is required" });
+      }
       
       const topic = await storage.createForumTopic(validatedData);
       
@@ -1311,6 +1321,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         authorId: userId,
       });
+
+      const topic = await storage.getForumTopic(validatedData.topicId);
+      if (!topic) {
+        return res.status(404).json({ message: "Topic not found" });
+      }
+      if (topic.isLocked) {
+        return res.status(409).json({ message: "This topic is locked" });
+      }
+      const category = await storage.getForumCategory(topic.categoryId);
+      if (!category || category.slug === "coogpaws") {
+        return res.status(404).json({ message: "Forum category not found" });
+      }
       
       const post = await storage.createForumPost(validatedData);
       
@@ -1326,6 +1348,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error creating forum post:", error);
       res.status(500).json({ message: "Failed to create forum post" });
+    }
+  });
+
+  app.post('/api/forums/posts/:postId/report', isAuthenticated, async (req: any, res) => {
+    try {
+      const postId = Number(req.params.postId);
+      if (!Number.isInteger(postId) || postId < 1) {
+        return res.status(400).json({ message: "Invalid forum post" });
+      }
+
+      const post = await storage.getForumPost(postId);
+      if (!post || post.isDeleted) {
+        return res.status(404).json({ message: "Forum post not found" });
+      }
+
+      const rateLimitKey = `forum_report_${req.user.id}`;
+      const rateLimitCheck = await storage.checkRateLimit(rateLimitKey, "forum_post_report", 5, 60);
+      if (!rateLimitCheck.allowed) {
+        return res.status(429).json({ message: "Too many reports. Please wait before submitting another." });
+      }
+
+      const validatedData = insertForumPostReportSchema.parse({
+        ...req.body,
+        postId,
+      });
+      const report = await storage.createForumPostReport({
+        ...validatedData,
+        reportedById: req.user.id,
+      });
+      await storage.recordRateLimitAttempt(rateLimitKey, "forum_post_report");
+      res.status(201).json({ report, message: "Report submitted for moderator review" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid report", errors: error.errors });
+      }
+      console.error("Error reporting forum post:", error);
+      res.status(500).json({ message: "Failed to submit report" });
     }
   });
 
@@ -1516,389 +1575,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Products routes
-  app.get('/api/products', async (req, res) => {
-    try {
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
-      const products = await storage.getProducts(limit);
-      res.json(products);
-    } catch (error) {
-      console.error("Error fetching products:", error);
-      res.status(500).json({ message: "Failed to fetch products" });
-    }
-  });
-
-  app.get('/api/products/:productId', async (req, res) => {
-    try {
-      const productId = parseInt(req.params.productId);
-      const product = await storage.getProduct(productId);
-      if (!product) {
-        return res.status(404).json({ message: "Product not found" });
-      }
-      res.json(product);
-    } catch (error) {
-      console.error("Error fetching product:", error);
-      res.status(500).json({ message: "Failed to fetch product" });
-    }
-  });
-
-  // POD (Print on Demand) Store Routes
-  // Initialize POD configuration on startup
-  PODHelpers.logApiStatus();
-
-  /**
-   * ==========================
-   * WEAR YOUR PRIDE (Printful)
-   * ==========================
-   * Apparel: Polos, Jackets, Embroidered Hats
-   */
-  app.get('/api/store/wear-your-pride', async (req, res) => {
-    try {
-      console.log('[API] Fetching Wear Your Pride products from Printful...');
-      const result = await PODManagerService.fetchCategoryProducts('wear-your-pride');
-      
-      if (!result.success) {
-        console.warn('[API] Printful API issue:', result.error);
-        return res.status(503).json({ 
-          error: 'Unable to fetch products at this time',
-          category: result.category,
-          products: [],
-          note: result.error || 'Service temporarily unavailable'
-        });
-      }
-
-      // Sync products to database and get local product IDs for cart integration
-      let syncedProducts = result.products;
-      if (result.products.length > 0) {
-        console.log(`[API] Syncing ${result.products.length} Printful products to database...`);
-        
-        try {
-          const syncPromises = result.products.map(product =>
-            storage.syncPODProduct(product, 'printful', 'Wear Your Pride')
-          );
-          const localProducts = await Promise.all(syncPromises);
-          console.log('[API] Successfully synced Printful products to database');
-          
-          // Map provider products to their local database products for cart compatibility
-          syncedProducts = result.products.map((product, index) => ({
-            ...product,
-            localId: localProducts[index].id, // Add local DB ID for cart operations
-          }));
-        } catch (syncError) {
-          console.error('[API] Error syncing Printful products:', syncError);
-          // Continue even if sync fails - we still have the API data
-        }
-      }
-
-      res.json({
-        category: result.category,
-        products: syncedProducts.map(p => ({
-          id: (p as any).localId || p.id, // Use local DB ID for cart compatibility, fallback to provider ID
-          name: p.name,
-          description: p.description,
-          price: p.price,
-          image: p.image,
-          category: p.category,
-          type: p.type,
-          provider: p.provider,
-          url: `/store/wear-your-pride/${(p as any).localId || p.id}`,
-        })),
-      });
-
-    } catch (error: any) {
-      console.error('[API] Error in wear-your-pride endpoint:', error);
-      res.status(500).json({ 
-        error: 'Failed to fetch Wear Your Pride items',
-        details: error.message || 'Unknown error'
-      });
-    }
-  });
-
-  /**
-   * ==========================
-   * EVERYDAY ALUMNI (Teelaunch)
-   * ==========================
-   * Engraved mugs, tumblers, plaques
-   */
-  app.get('/api/store/everyday-alumni', async (req, res) => {
-    try {
-      console.log('[API] Fetching Everyday Alumni products from Teelaunch...');
-      const result = await PODManagerService.fetchCategoryProducts('everyday-alumni');
-      
-      if (!result.success) {
-        console.warn('[API] Teelaunch API issue:', result.error);
-        return res.status(503).json({ 
-          error: 'Unable to fetch products at this time',
-          category: result.category,
-          products: [],
-          note: result.error || 'Service temporarily unavailable'
-        });
-      }
-
-      // Sync products to database and get local product IDs for cart integration
-      let syncedProducts = result.products;
-      if (result.products.length > 0) {
-        console.log(`[API] Syncing ${result.products.length} Teelaunch products to database...`);
-        
-        try {
-          const syncPromises = result.products.map(product =>
-            storage.syncPODProduct(product, 'teelaunch', 'Everyday Alumni')
-          );
-          const localProducts = await Promise.all(syncPromises);
-          console.log('[API] Successfully synced Teelaunch products to database');
-          
-          // Map provider products to their local database products for cart compatibility
-          syncedProducts = result.products.map((product, index) => ({
-            ...product,
-            localId: localProducts[index].id, // Add local DB ID for cart operations
-          }));
-        } catch (syncError) {
-          console.error('[API] Error syncing Teelaunch products:', syncError);
-        }
-      }
-
-      res.json({
-        category: result.category,
-        products: syncedProducts.map(p => ({
-          id: (p as any).localId || p.id, // Use local DB ID for cart compatibility, fallback to provider ID
-          name: p.name,
-          description: p.description,
-          price: p.price,
-          image: p.image,
-          category: p.category,
-          type: p.type,
-          provider: p.provider,
-          url: `/store/everyday-alumni/${(p as any).localId || p.id}`,
-        })),
-      });
-
-    } catch (error: any) {
-      console.error('[API] Error in everyday-alumni endpoint:', error);
-      res.status(500).json({ 
-        error: 'Failed to fetch Everyday Alumni items',
-        details: error.message || 'Unknown error'
-      });
-    }
-  });
-
-  /**
-   * ==========================
-   * KEEPSAKES & GIFTS (Trendsi)
-   * ==========================
-   * Premium jewelry and accessories
-   */
-  app.get('/api/store/keepsakes-gifts', async (req, res) => {
-    try {
-      console.log('[API] Fetching Keepsakes & Gifts products from Trendsi...');
-      const result = await PODManagerService.fetchCategoryProducts('keepsakes-gifts');
-      
-      if (!result.success) {
-        console.warn('[API] Trendsi API issue:', result.error);
-        return res.status(503).json({ 
-          error: 'Unable to fetch products at this time',
-          category: result.category,
-          products: [],
-          note: result.error || 'Service temporarily unavailable'
-        });
-      }
-
-      // Sync products to database and get local product IDs for cart integration
-      let syncedProducts = result.products;
-      if (result.products.length > 0) {
-        console.log(`[API] Syncing ${result.products.length} Trendsi products to database...`);
-        
-        try {
-          const syncPromises = result.products.map(product =>
-            storage.syncPODProduct(product, 'trendsi', 'Keepsakes & Gifts')
-          );
-          const localProducts = await Promise.all(syncPromises);
-          console.log('[API] Successfully synced Trendsi products to database');
-          
-          // Map provider products to their local database products for cart compatibility
-          syncedProducts = result.products.map((product, index) => ({
-            ...product,
-            localId: localProducts[index].id, // Add local DB ID for cart operations
-          }));
-        } catch (syncError) {
-          console.error('[API] Error syncing Trendsi products:', syncError);
-        }
-      }
-
-      res.json({
-        category: result.category,
-        products: syncedProducts.map(p => ({
-          id: (p as any).localId || p.id, // Use local DB ID for cart compatibility, fallback to provider ID
-          name: p.name,
-          description: p.description,
-          price: p.price,
-          image: p.image,
-          category: p.category,
-          type: p.type,
-          provider: p.provider,
-          url: `/store/keepsakes-gifts/${(p as any).localId || p.id}`,
-        })),
-      });
-
-    } catch (error: any) {
-      console.error('[API] Error in keepsakes-gifts endpoint:', error);
-      res.status(500).json({ 
-        error: 'Failed to fetch Keepsakes & Gifts items',
-        details: error.message || 'Unknown error'
-      });
-    }
-  });
-
-  /**
-   * ==========================
-   * LIMITED EDITIONS (Placeholders)
-   * ==========================
-   * Subcategories ready for future integrations
-   */
-
-  // Native Jewelry
-  app.get('/api/store/limited-editions/native-jewelry', async (req, res) => {
-    try {
-      const result = await PODManagerService.fetchLimitedEditionProducts('native-jewelry');
-      res.json({
-        category: result.category,
-        products: result.products,
-        note: result.error || 'Future supplier API integration pending',
-      });
-    } catch (error: any) {
-      console.error('[API] Error in native-jewelry endpoint:', error);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  });
-
-  // Neo-Western Boots
-  app.get('/api/store/limited-editions/neo-western-boots', async (req, res) => {
-    try {
-      const result = await PODManagerService.fetchLimitedEditionProducts('neo-western-boots');
-      res.json({
-        category: result.category,
-        products: result.products,
-        note: result.error || 'Future supplier API integration pending',
-      });
-    } catch (error: any) {
-      console.error('[API] Error in neo-western-boots endpoint:', error);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  });
-
-  // Navajo Blanket Series
-  app.get('/api/store/limited-editions/navajo-blanket-series', async (req, res) => {
-    try {
-      const result = await PODManagerService.fetchLimitedEditionProducts('navajo-blanket-series');
-      res.json({
-        category: result.category,
-        products: result.products,
-        note: result.error || 'Future supplier API integration pending',
-      });
-    } catch (error: any) {
-      console.error('[API] Error in navajo-blanket-series endpoint:', error);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  });
-
-  // Legacy Rings & Pendants
-  app.get('/api/store/limited-editions/legacy-rings', async (req, res) => {
-    try {
-      const result = await PODManagerService.fetchLimitedEditionProducts('legacy-rings');
-      res.json({
-        category: result.category,
-        products: result.products,
-        note: result.error || 'Future supplier API integration pending',
-      });
-    } catch (error: any) {
-      console.error('[API] Error in legacy-rings endpoint:', error);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  });
-
-  // Alumni Artifacts
-  app.get('/api/store/limited-editions/alumni-artifacts', async (req, res) => {
-    try {
-      const result = await PODManagerService.fetchLimitedEditionProducts('alumni-artifacts');
-      res.json({
-        category: result.category,
-        products: result.products,
-        note: result.error || 'Future supplier API integration pending',
-      });
-    } catch (error: any) {
-      console.error('[API] Error in alumni-artifacts endpoint:', error);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  });
-
-  // Get all POD categories at once
-  app.get('/api/store/all-categories', async (req, res) => {
-    try {
-      console.log('[API] Fetching all POD categories...');
-      const results = await PODManagerService.fetchAllCategories();
-      
-      // Transform results for frontend consumption
-      const response = results.map(result => ({
-        category: result.category,
-        success: result.success,
-        products: result.products.map(p => ({
-          id: p.id,
-          name: p.name,
-          description: p.description,
-          price: p.price,
-          image: p.image,
-          category: p.category,
-          type: p.type,
-          provider: p.provider,
-        })),
-        error: result.error,
-        productCount: result.products.length,
-      }));
-
-      res.json({
-        categories: response,
-        summary: {
-          totalCategories: results.length,
-          totalProducts: results.reduce((sum, r) => sum + r.products.length, 0),
-          successfulCategories: results.filter(r => r.success).length,
-        }
-      });
-
-    } catch (error: any) {
-      console.error('[API] Error in all-categories endpoint:', error);
-      res.status(500).json({ 
-        error: 'Failed to fetch store categories',
-        details: error.message || 'Unknown error'
-      });
-    }
-  });
-
-  // Get cached POD products from database
-  app.get('/api/store/cached-products', async (req, res) => {
-    try {
-      const { provider, category } = req.query;
-      const products = await storage.getPODProducts(
-        provider as string, 
-        category as string
-      );
-      
-      res.json({
-        source: 'database_cache',
-        products: products,
-        count: products.length,
-        filters: {
-          provider: provider || 'all',
-          category: category || 'all',
-        }
-      });
-
-    } catch (error: any) {
-      console.error('[API] Error fetching cached products:', error);
-      res.status(500).json({ 
-        error: 'Failed to fetch cached products',
-        details: error.message || 'Unknown error'
-      });
-    }
-  });
+  // Legacy custom product and POD routes retired. The active storefront is registered under /api/commerce.
 
   // Community stats routes
   app.get('/api/community/stats', async (req, res) => {
@@ -1937,118 +1614,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Shopping cart routes
-  app.get('/api/cart', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const cartItems = await storage.getCartItems(userId);
-      res.json(cartItems);
-    } catch (error) {
-      console.error("Error fetching cart items:", error);
-      res.status(500).json({ message: "Failed to fetch cart items" });
-    }
-  });
-
-  app.post('/api/cart', isAuthenticated, async (req: any, res) => {
-    try {
-      const validatedData = insertShoppingCartSchema.parse({
-        ...req.body,
-        userId: req.user.id,
-      });
-      const cartItem = await storage.addToCart(validatedData);
-      res.status(201).json(cartItem);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      console.error("Error adding to cart:", error);
-      res.status(500).json({ message: "Failed to add to cart" });
-    }
-  });
-
-  app.put('/api/cart/:itemId', isAuthenticated, async (req: any, res) => {
-    try {
-      const itemId = parseInt(req.params.itemId);
-      const { quantity } = req.body;
-      const updatedItem = await storage.updateCartQuantity(itemId, quantity);
-      res.json(updatedItem);
-    } catch (error) {
-      console.error("Error updating cart item:", error);
-      res.status(500).json({ message: "Failed to update cart item" });
-    }
-  });
-
-  app.delete('/api/cart/:itemId', isAuthenticated, async (req: any, res) => {
-    try {
-      const itemId = parseInt(req.params.itemId);
-      await storage.removeFromCart(itemId);
-      res.json({ message: "Item removed from cart" });
-    } catch (error) {
-      console.error("Error removing cart item:", error);
-      res.status(500).json({ message: "Failed to remove cart item" });
-    }
-  });
-
-  // Checkout route
-  app.post('/api/checkout', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const { promoCode } = req.body;
-      
-      // Get cart items
-      const cartItems = await storage.getCartItems(userId);
-      if (!cartItems || cartItems.length === 0) {
-        return res.status(400).json({ message: "Cart is empty" });
-      }
-
-      // Calculate totals
-      const subtotal = cartItems.reduce((total, item: any) => {
-        return total + (parseFloat(item.product.price) * item.quantity);
-      }, 0);
-      
-      const tax = subtotal * 0.0825; // 8.25% Texas sales tax
-      const shipping = subtotal > 50 ? 0 : 9.99;
-      const total = subtotal + tax + shipping;
-
-      // Create order
-      const orderData = {
-        userId,
-        subtotalAmount: subtotal.toFixed(2),
-        taxAmount: tax.toFixed(2),
-        shippingAmount: shipping.toFixed(2),
-        totalAmount: total.toFixed(2),
-        status: 'pending',
-        promoCode: promoCode || null,
-      };
-
-      // Create order items
-      const orderItemsData = cartItems.map((item: any) => ({
-        orderId: 0, // Will be set by storage
-        productId: item.productId,
-        quantity: item.quantity,
-        price: item.product.price,
-      }));
-
-      const order = await storage.createOrder(orderData, orderItemsData);
-      
-      // Clear cart
-      await storage.clearCart(userId);
-
-      // Create notification
-      await storage.createNotification({
-        userId,
-        type: 'order',
-        title: 'Order Confirmed',
-        message: `Your order #${order.id} has been placed successfully!`,
-        isRead: false,
-      });
-
-      res.status(201).json({ orderId: order.id, order });
-    } catch (error) {
-      console.error("Error during checkout:", error);
-      res.status(500).json({ message: "Checkout failed" });
-    }
-  });
+  // Legacy local cart and fake checkout routes retired. Shopify and partner merchants own checkout.
 
   // User routes
   app.get('/api/users/:userId/orders', isAuthenticated, async (req: any, res) => {
@@ -2167,9 +1733,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Recent forum activity for dashboard
   app.get('/api/forums/recent', async (req, res) => {
     try {
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
-      // Get recent topics with category and author info
-      const topics = await storage.getForumTopicsByCategory(1, limit); // Simplified for now
+      const requestedLimit = req.query.limit ? Number(req.query.limit) : 10;
+      const limit = Number.isInteger(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 50) : 10;
+      const topics = await storage.getRecentForumTopics(limit);
       res.json(topics);
     } catch (error) {
       console.error("Error fetching recent forum activity:", error);
@@ -2420,490 +1986,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Coogpaws Dating App Routes
-  
-  // Get user's Coogpaws profile
-  app.get('/api/coogpaws/profile', requireUHAuthentication, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      
-      // Check rate limit - max 300 profile reads per hour
-      const rateLimitCheck = await storage.checkRateLimit(
-        `profile_read_${userId}`, 
-        'profile_read', 
-        300, 
-        60
-      );
-      
-      if (!rateLimitCheck.allowed) {
-        return res.status(429).json({ 
-          message: "Rate limit exceeded. Please wait before accessing profile again.",
-          remainingTime: rateLimitCheck.remainingTime
-        });
-      }
-      
-      const profile = await storage.getCoogpawsProfile(userId);
-      
-      // Record rate limit attempt after successful read
-      await storage.recordRateLimitAttempt(`profile_read_${userId}`, 'profile_read');
-      
-      res.json(profile);
-    } catch (error: any) {
-      console.error("Error fetching Coogpaws profile:", error);
-      res.status(500).json({ message: "Failed to fetch profile" });
-    }
-  });
-
-  // Create or update Coogpaws profile
-  app.post('/api/coogpaws/profile', requireUHAuthentication, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      
-      // Check rate limit - max 10 profile updates per hour
-      const rateLimitCheck = await storage.checkRateLimit(
-        `profile_update_${userId}`, 
-        'profile_update', 
-        10, 
-        60
-      );
-      
-      if (!rateLimitCheck.allowed) {
-        return res.status(429).json({ 
-          message: "Rate limit exceeded. Please wait before updating profile again.",
-          remainingTime: rateLimitCheck.remainingTime
-        });
-      }
-      
-      const validatedData = insertCoogpawsProfileSchema.parse(req.body);
-      
-      // Check if profile already exists
-      const existingProfile = await storage.getCoogpawsProfile(userId);
-      
-      let profile;
-      if (existingProfile) {
-        profile = await storage.updateCoogpawsProfile(userId, validatedData);
-      } else {
-        profile = await storage.createCoogpawsProfile({
-          ...validatedData,
-          userId,
-        });
-      }
-      
-      // Record rate limit attempt after successful update
-      await storage.recordRateLimitAttempt(`profile_update_${userId}`, 'profile_update');
-      
-      res.json(profile);
-    } catch (error: any) {
-      console.error("Error saving Coogpaws profile:", error);
-      if (error.name === 'ZodError') {
-        return res.status(400).json({ message: "Invalid profile data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to save profile" });
-    }
-  });
-
-  // Get profiles to swipe on (exclude already swiped and own profile)
-  app.get('/api/coogpaws/profiles', requireUHAuthentication, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      
-      // Check rate limit - max 200 profile browsing requests per hour
-      const rateLimitCheck = await storage.checkRateLimit(
-        `profiles_browse_${userId}`, 
-        'profiles_browse', 
-        200, 
-        60
-      );
-      
-      if (!rateLimitCheck.allowed) {
-        return res.status(429).json({ 
-          message: "Rate limit exceeded. Please wait before browsing more profiles.",
-          remainingTime: rateLimitCheck.remainingTime
-        });
-      }
-      
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
-      
-      const profiles = await storage.getActiveCoogpawsProfiles(userId, limit);
-      
-      // Record rate limit attempt after successful browse
-      await storage.recordRateLimitAttempt(`profiles_browse_${userId}`, 'profiles_browse');
-      
-      res.json(profiles);
-    } catch (error: any) {
-      console.error("Error fetching Coogpaws profiles:", error);
-      res.status(500).json({ message: "Failed to fetch profiles" });
-    }
-  });
-
-  // Record a swipe (like or pass)
-  app.post('/api/coogpaws/swipe', requireUHAuthentication, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const validatedData = insertCoogpawsSwipeSchema.parse(req.body);
-      
-      // Verify the swiper is the authenticated user
-      if (validatedData.swiperId !== userId) {
-        return res.status(403).json({ message: "Cannot swipe on behalf of another user" });
-      }
-
-      // Check rate limit - max 100 swipes per hour
-      const rateLimitCheck = await storage.checkRateLimit(
-        `swipe_${userId}`, 
-        'swipe', 
-        100, 
-        60
-      );
-      
-      if (!rateLimitCheck.allowed) {
-        return res.status(429).json({ 
-          message: "Rate limit exceeded. Please wait before swiping more profiles.",
-          remainingTime: rateLimitCheck.remainingTime
-        });
-      }
-
-      // Check if user has already swiped on this profile
-      const hasAlreadySwiped = await storage.hasUserSwiped(userId, validatedData.swipedUserId);
-      if (hasAlreadySwiped) {
-        return res.status(400).json({ message: "You have already swiped on this profile" });
-      }
-
-      // Record the swipe (storage automatically handles match creation)
-      const swipe = await storage.recordSwipe(validatedData);
-      
-      // Check if a match was created (only for likes)
-      let match = null;
-      let isMatch = false;
-      if (validatedData.isLike) {
-        // Check if this swipe resulted in a match
-        const userMatches = await storage.getUserMatches(userId);
-        const newMatch = userMatches.find(m => 
-          (m.user1Id === userId && m.user2Id === validatedData.swipedUserId) ||
-          (m.user2Id === userId && m.user1Id === validatedData.swipedUserId)
-        );
-        
-        if (newMatch) {
-          isMatch = true;
-          match = newMatch;
-        }
-      }
-
-      // Record rate limit attempt after successful swipe
-      await storage.recordRateLimitAttempt(`swipe_${userId}`, 'swipe');
-      
-      res.json({ 
-        swipe, 
-        isMatch, 
-        match: isMatch ? match : undefined 
-      });
-    } catch (error: any) {
-      console.error("Error recording swipe:", error);
-      if (error.name === 'ZodError') {
-        return res.status(400).json({ message: "Invalid swipe data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to record swipe" });
-    }
-  });
-
-  // Get user's matches
-  app.get('/api/coogpaws/matches', requireUHAuthentication, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      
-      // Check rate limit - max 100 match queries per hour
-      const rateLimitCheck = await storage.checkRateLimit(
-        `matches_query_${userId}`, 
-        'matches_query', 
-        100, 
-        60
-      );
-      
-      if (!rateLimitCheck.allowed) {
-        return res.status(429).json({ 
-          message: "Rate limit exceeded. Please wait before checking matches again.",
-          remainingTime: rateLimitCheck.remainingTime
-        });
-      }
-      
-      const matches = await storage.getUserMatches(userId);
-      
-      // Enhance matches with user profile data
-      const enhancedMatches = await Promise.all(matches.map(async (match) => {
-        const otherUserId = match.user1Id === userId ? match.user2Id : match.user1Id;
-        const otherUser = await storage.getUser(otherUserId);
-        const otherProfile = await storage.getCoogpawsProfile(otherUserId);
-        
-        return {
-          ...match,
-          otherUser: otherUser ? createSafeUser(otherUser) : null,
-          otherProfile,
-        };
-      }));
-
-      // Record rate limit attempt after successful match query
-      await storage.recordRateLimitAttempt(`matches_query_${userId}`, 'matches_query');
-
-      res.json(enhancedMatches);
-    } catch (error: any) {
-      console.error("Error fetching matches:", error);
-      res.status(500).json({ message: "Failed to fetch matches" });
-    }
-  });
-
-  // Get messages for a specific match
-  app.get('/api/coogpaws/messages/:matchId', requireUHAuthentication, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const matchId = parseInt(req.params.matchId);
-      
-      // Check rate limit - max 200 message reads per hour
-      const rateLimitCheck = await storage.checkRateLimit(
-        `message_read_${userId}`, 
-        'message_read', 
-        200, 
-        60
-      );
-      
-      if (!rateLimitCheck.allowed) {
-        return res.status(429).json({ 
-          message: "Rate limit exceeded. Please wait before reading more messages.",
-          remainingTime: rateLimitCheck.remainingTime
-        });
-      }
-      
-      // Verify user is part of this match and match is active
-      const match = await storage.getMatch(matchId);
-      if (!match || (match.user1Id !== userId && match.user2Id !== userId)) {
-        return res.status(403).json({ message: "Access denied to this conversation" });
-      }
-      
-      if (!match.isActive) {
-        return res.status(410).json({ message: "This conversation is no longer available" });
-      }
-
-      const messages = await storage.getMatchMessages(matchId);
-      
-      // Mark messages as read for this user
-      await storage.markMessagesAsRead(matchId, userId);
-      
-      // Record rate limit attempt after successful message read
-      await storage.recordRateLimitAttempt(`message_read_${userId}`, 'message_read');
-      
-      res.json(messages);
-    } catch (error: any) {
-      console.error("Error fetching messages:", error);
-      res.status(500).json({ message: "Failed to fetch messages" });
-    }
-  });
-
-  // Send a message to a match
-  app.post('/api/coogpaws/messages', requireUHAuthentication, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const validatedData = insertCoogpawsMessageSchema.parse(req.body);
-      
-      // Verify the sender is the authenticated user
-      if (validatedData.senderId !== userId) {
-        return res.status(403).json({ message: "Cannot send messages on behalf of another user" });
-      }
-
-      // Check rate limit - max 50 messages per hour
-      const rateLimitCheck = await storage.checkRateLimit(
-        `message_${userId}`, 
-        'message', 
-        50, 
-        60
-      );
-      
-      if (!rateLimitCheck.allowed) {
-        return res.status(429).json({ 
-          message: "Rate limit exceeded. Please wait before sending more messages.",
-          remainingTime: rateLimitCheck.remainingTime
-        });
-      }
-
-      // Verify user is part of this match and match is active
-      const match = await storage.getMatch(validatedData.matchId);
-      if (!match || (match.user1Id !== userId && match.user2Id !== userId)) {
-        return res.status(403).json({ message: "Access denied to this conversation" });
-      }
-      
-      if (!match.isActive) {
-        return res.status(410).json({ message: "This conversation is no longer available" });
-      }
-      
-      // Basic content validation (prevent empty/whitespace-only messages)
-      if (!validatedData.content.trim()) {
-        return res.status(400).json({ message: "Message content cannot be empty" });
-      }
-
-      const message = await storage.sendMessage(validatedData);
-      
-      // Record rate limit attempt after successful message send
-      await storage.recordRateLimitAttempt(`message_${userId}`, 'message');
-      
-      res.json(message);
-    } catch (error: any) {
-      console.error("Error sending message:", error);
-      if (error.name === 'ZodError') {
-        return res.status(400).json({ message: "Invalid message data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to send message" });
-    }
-  });
-
-  // Get unread message count for user
-  app.get('/api/coogpaws/unread-count', requireUHAuthentication, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      
-      // Check rate limit - max 600 unread count checks per hour
-      const rateLimitCheck = await storage.checkRateLimit(
-        `unread_count_${userId}`, 
-        'unread_count', 
-        600, 
-        60
-      );
-      
-      if (!rateLimitCheck.allowed) {
-        return res.status(429).json({ 
-          message: "Rate limit exceeded. Please wait before checking unread count again.",
-          remainingTime: rateLimitCheck.remainingTime
-        });
-      }
-      
-      const count = await storage.getUnreadMessageCount(userId);
-      
-      // Record rate limit attempt after successful count check
-      await storage.recordRateLimitAttempt(`unread_count_${userId}`, 'unread_count');
-      
-      res.json({ count });
-    } catch (error: any) {
-      console.error("Error fetching unread count:", error);
-      res.status(500).json({ message: "Failed to fetch unread count" });
-    }
-  });
-
-  // Delete/deactivate Coogpaws profile
-  app.delete('/api/coogpaws/profile', requireUHAuthentication, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      
-      // Check rate limit - max 3 profile deletions per hour (very restrictive for destructive action)
-      const rateLimitCheck = await storage.checkRateLimit(
-        `profile_delete_${userId}`, 
-        'profile_delete', 
-        3, 
-        60
-      );
-      
-      if (!rateLimitCheck.allowed) {
-        return res.status(429).json({ 
-          message: "Rate limit exceeded. Please wait before attempting profile deletion again.",
-          remainingTime: rateLimitCheck.remainingTime
-        });
-      }
-      
-      await storage.deleteCoogpawsProfile(userId);
-      
-      // Record rate limit attempt after successful deletion
-      await storage.recordRateLimitAttempt(`profile_delete_${userId}`, 'profile_delete');
-      
-      res.json({ message: "Profile deleted successfully" });
-    } catch (error: any) {
-      console.error("Error deleting Coogpaws profile:", error);
-      res.status(500).json({ message: "Failed to delete profile" });
-    }
-  });
-
-  // Block a user
-  app.post('/api/coogpaws/block', requireUHAuthentication, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const validatedData = insertCoogpawsBlockSchema.parse(req.body);
-      
-      // Verify the blocker is the authenticated user
-      if (validatedData.blockerId !== userId) {
-        return res.status(403).json({ message: "Cannot block on behalf of another user" });
-      }
-
-      // Prevent self-blocking
-      if (validatedData.blockerId === validatedData.blockedUserId) {
-        return res.status(400).json({ message: "Cannot block yourself" });
-      }
-
-      // Check rate limit - max 10 blocks per hour
-      const rateLimitCheck = await storage.checkRateLimit(
-        `block_${userId}`, 
-        'block', 
-        10, 
-        60
-      );
-      
-      if (!rateLimitCheck.allowed) {
-        return res.status(429).json({ 
-          message: "Rate limit exceeded. Please wait before blocking more users.",
-          remainingTime: rateLimitCheck.remainingTime
-        });
-      }
-
-      const block = await storage.blockUser(validatedData);
-      await storage.recordRateLimitAttempt(`block_${userId}`, 'block');
-      
-      res.json({ block, message: "User blocked successfully" });
-    } catch (error: any) {
-      console.error("Error blocking user:", error);
-      if (error.name === 'ZodError') {
-        return res.status(400).json({ message: "Invalid block data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to block user" });
-    }
-  });
-
-  // Report a user
-  app.post('/api/coogpaws/report', requireUHAuthentication, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const validatedData = insertCoogpawsReportSchema.parse(req.body);
-      
-      // Verify the reporter is the authenticated user
-      if (validatedData.reporterId !== userId) {
-        return res.status(403).json({ message: "Cannot report on behalf of another user" });
-      }
-
-      // Prevent self-reporting
-      if (validatedData.reporterId === validatedData.reportedUserId) {
-        return res.status(400).json({ message: "Cannot report yourself" });
-      }
-
-      // Check rate limit - max 5 reports per hour
-      const rateLimitCheck = await storage.checkRateLimit(
-        `report_${userId}`, 
-        'report', 
-        5, 
-        60
-      );
-      
-      if (!rateLimitCheck.allowed) {
-        return res.status(429).json({ 
-          message: "Rate limit exceeded. Please wait before submitting more reports.",
-          remainingTime: rateLimitCheck.remainingTime
-        });
-      }
-
-      const report = await storage.reportUser(validatedData);
-      await storage.recordRateLimitAttempt(`report_${userId}`, 'report');
-      
-      res.json({ report, message: "Report submitted successfully" });
-    } catch (error: any) {
-      console.error("Error reporting user:", error);
-      if (error.name === 'ZodError') {
-        return res.status(400).json({ message: "Invalid report data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to submit report" });
-    }
-  });
-
   // ========== UNIVERSAL AI API ENDPOINTS ==========
 
   const FAQS = [
@@ -3071,165 +2153,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Private administrator AI routes are registered in adminDashboard.ts.
   // The accepted first release is read-only and exposes no knowledge-write endpoint.
 
-  // Coog Paws Chat Route - Serve Socket.IO real-time chat interface
-  const coogPawsHandler = (req: any, res: any) => {
-    res.send(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>🐾 Coog Paws Chat - CoogsNation</title>
-          <meta name="viewport" content="width=device-width, initial-scale=1">
-          <style>
-            body { 
-              font-family: 'Arial', sans-serif; 
-              background: linear-gradient(135deg, #c8102e, #d62d20); 
-              color: white; 
-              margin: 0; 
-              padding: 20px; 
-              min-height: 100vh;
-            }
-            .container { 
-              max-width: 800px; 
-              margin: 0 auto; 
-              background: rgba(255,255,255,0.1); 
-              border-radius: 15px; 
-              padding: 20px;
-              backdrop-filter: blur(10px);
-            }
-            h1 { 
-              text-align: center; 
-              margin-bottom: 30px; 
-              font-size: 2.5em;
-              text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-            }
-            #messages { 
-              border: 2px solid rgba(255,255,255,0.3); 
-              height: 400px; 
-              overflow-y: auto; 
-              padding: 15px; 
-              margin-bottom: 15px;
-              background: rgba(255,255,255,0.1);
-              border-radius: 10px;
-              font-size: 16px;
-            }
-            .input-container {
-              display: flex;
-              gap: 10px;
-              align-items: center;
-            }
-            #msg { 
-              flex: 1;
-              padding: 12px 15px; 
-              border: none;
-              border-radius: 25px;
-              font-size: 16px;
-              outline: none;
-            }
-            button { 
-              padding: 12px 20px; 
-              background: white; 
-              color: #c8102e; 
-              border: none; 
-              border-radius: 25px; 
-              cursor: pointer;
-              font-weight: bold;
-              font-size: 16px;
-            }
-            button:hover { 
-              background: #f0f0f0; 
-            }
-            .message {
-              margin: 8px 0;
-              padding: 8px 12px;
-              background: rgba(255,255,255,0.2);
-              border-radius: 15px;
-              word-wrap: break-word;
-            }
-            .back-link {
-              display: inline-block;
-              margin-bottom: 20px;
-              color: white;
-              text-decoration: none;
-              padding: 8px 16px;
-              background: rgba(255,255,255,0.2);
-              border-radius: 20px;
-              transition: all 0.3s ease;
-            }
-            .back-link:hover {
-              background: rgba(255,255,255,0.3);
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <a href="/" class="back-link">← Back to CoogsNation</a>
-            <h1>🐾 Coog Paws Chat</h1>
-            <p style="text-align: center; margin-bottom: 30px; font-size: 18px;">Real-time chat for meaningful connections in the Cougar community</p>
-            
-            <div id="messages"></div>
-            <div class="input-container">
-              <input 
-                id="msg" 
-                placeholder="Type your message here..." 
-                autocomplete="off"
-                maxlength="500"
-              />
-              <button onclick="send()">Send 🐾</button>
-            </div>
-          </div>
-
-          <script src="/socket.io/socket.io.js"></script>
-          <script>
-            const socket = io();
-            const messages = document.getElementById("messages");
-            const input = document.getElementById("msg");
-
-            // Handle incoming chat messages
-            socket.on("chat", data => {
-              const messageDiv = document.createElement("div");
-              messageDiv.className = "message";
-              messageDiv.textContent = data.message || data;
-              messages.appendChild(messageDiv);
-              messages.scrollTop = messages.scrollHeight;
-            });
-
-            // Send message function
-            function send() {
-              const message = input.value.trim();
-              if (!message) return;
-              
-              socket.emit("chat", { message: message });
-              input.value = "";
-            }
-
-            // Send message on Enter key
-            input.addEventListener("keypress", function(e) {
-              if (e.key === "Enter") {
-                send();
-              }
-            });
-
-            // Focus on input when page loads
-            window.addEventListener("load", () => {
-              input.focus();
-            });
-
-            // Connection status
-            socket.on("connect", () => {
-              console.log("Connected to Coog Paws Chat");
-            });
-
-            socket.on("disconnect", () => {
-              console.log("Disconnected from Coog Paws Chat");
-            });
-          </script>
-        </body>
-      </html>
-    `);
-  };
-
-  // Only /coogpaws route available
-  app.get("/coogpaws", coogPawsHandler);
+  /* The legacy standalone Coog Paws chat page is gone. It served its own HTML
+   * document with its own inline Socket.IO client against the root namespace —
+   * a second, parallel chat implementation alongside the immersive lounge.
+   * Old bookmarks are redirected to the lounge rather than 404'd. */
+  app.get("/coogpaws", (_req, res) => res.redirect(301, "/coogpaws-chat"));
 
   const httpServer = createServer(app);
   
@@ -3252,13 +2180,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   io.engine.use(sessionMiddleware as any);
 
+  /**
+   * Socket authentication — the SAME security HTTP requests get.
+   *
+   * This previously checked only that a session user id existed and that the
+   * row was still in the database. It did not check `accountStatus` and did
+   * not check `sessionVersion`, so a suspended account or a session revoked by
+   * a password change kept working over Socket.IO after it had stopped working
+   * over HTTP. That gap is closed here by calling the same authoritative
+   * evaluator the HTTP middleware uses — `evaluateSessionState()` in
+   * server/auth.ts — rather than restating its rules and letting the two
+   * definitions drift.
+   *
+   * This is an intentional tightening. Sessions that are suspended, disabled,
+   * deleted or version-revoked will now be refused a socket.
+   *
+   * The client-facing error is deliberately generic: the member learns their
+   * session was not accepted, not which account condition caused it.
+   */
   const requireSocketUser = async (socket: any, next: (error?: Error) => void) => {
     try {
       const sessionUser = socket.request.session?.passport?.user;
       const userId = sessionUser?.id;
       if (!userId) return next(new Error("Unauthorized"));
+
       const dbUser = await storage.getUser(userId);
       if (!dbUser) return next(new Error("Unauthorized"));
+
+      const rejection = evaluateSessionState(
+        dbUser,
+        socket.request.session?.sessionVersion,
+      );
+      if (rejection) {
+        console.warn("Socket session rejected:", rejection);
+        return next(new Error("Unauthorized"));
+      }
+
       socket.data.userId = dbUser.id;
       socket.data.user = dbUser;
       return next();
@@ -3268,66 +2225,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   };
 
-  const requireUHSocketUser = async (socket: any, next: (error?: Error) => void) => {
-    await requireSocketUser(socket, (error?: Error) => {
-      if (error) return next(error);
-      const dbUser = socket.data.user;
-      const email = String(dbUser?.email || "").toLowerCase();
-      const uhDomains = ["@uh.edu", "@cougarnet.uh.edu", "@central.uh.edu", "@uhcl.edu", "@uhd.edu", "@uhv.edu"];
-      if (!uhDomains.some((domain) => email.endsWith(domain))) {
-        return next(new Error("UH community verification required"));
-      }
-      if (!dbUser.firstName || !dbUser.lastName) {
-        return next(new Error("Complete profile required"));
-      }
-      return next();
-    });
-  };
-
-  io.of("/").use(requireUHSocketUser);
-
-  // Per-user Socket.IO rate limiter for member chat messages.
-  const chatSocketWindows = new Map<string, { startedAt: number; count: number }>();
-  const assertChatSocketRate = (userId: string) => {
-    const now = Date.now();
-    const current = chatSocketWindows.get(userId);
-    if (!current || now - current.startedAt >= 60_000) {
-      chatSocketWindows.set(userId, { startedAt: now, count: 1 });
-      return;
-    }
-    if (current.count >= 30) throw new Error("Chat message rate limit reached");
-    current.count += 1;
-  };
-  const memberChatMessageSchema = z.object({
-    message: z.string().trim().min(1).max(2000),
-  }).strict();
-
-  // Handle authenticated UH-community Socket.IO connections.
-  io.on("connection", (socket) => {
-    console.log("User connected to Coog Paws Chat:", socket.id);
-    socket.broadcast.emit("chat", { message: "Someone joined the Coog Paws chat." });
-
-    socket.on("chat", (data) => {
-      try {
-        const validated = memberChatMessageSchema.parse(
-          typeof data === "string" ? { message: data } : data,
-        );
-        assertChatSocketRate(socket.data.userId);
-        io.emit("chat", {
-          message: validated.message,
-          userId: socket.data.userId,
-          sentAt: new Date().toISOString(),
-        });
-      } catch (error) {
-        socket.emit("chat-error", {
-          message: error instanceof Error ? error.message : "Invalid chat message",
-        });
-      }
-    });
-
-    socket.on("disconnect", () => {
-      socket.broadcast.emit("chat", { message: "Someone left the Coog Paws chat." });
-    });
+  io.of("/").use((_socket, next) => {
+    next(new Error("Namespace disabled"));
   });
 
   // Provider-neutral AI streaming namespace.

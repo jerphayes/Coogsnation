@@ -1,125 +1,76 @@
+import { useState } from "react";
+import { Link } from "wouter";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useQuery } from "@tanstack/react-query";
 import type { EventResponse } from "@shared/api-types";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function Events() {
   const { isAuthenticated } = useAuth();
-  
-  const { data: events, isLoading } = useQuery<EventResponse[]>({
+  const [selectedEvent, setSelectedEvent] = useState<EventResponse | null>(null);
+
+  const { data: events = [], isLoading } = useQuery<EventResponse[]>({
     queryKey: ["/api/events"],
   });
 
-  const getCategoryColor = (category: string) => {
+  const getCategoryColor = (category: string | null) => {
     switch (category?.toLowerCase()) {
-      case 'football': return 'bg-uh-red text-white';
-      case 'basketball': return 'bg-orange-500 text-white';
-      case 'baseball': return 'bg-green-500 text-white';
-      case 'alumni': return 'bg-purple-500 text-white';
-      case 'campus': return 'bg-blue-500 text-white';
-      default: return 'bg-gray-500 text-white';
-    }
-  };
-
-  const getCategoryIcon = (category: string) => {
-    switch (category?.toLowerCase()) {
-      case 'football': return 'fas fa-football-ball';
-      case 'basketball': return 'fas fa-basketball-ball';
-      case 'baseball': return 'fas fa-baseball-ball';
-      case 'alumni': return 'fas fa-graduation-cap';
-      case 'campus': return 'fas fa-university';
-      default: return 'fas fa-calendar';
+      case "football": return "bg-uh-red text-white";
+      case "basketball": return "bg-orange-500 text-white";
+      case "baseball": return "bg-green-500 text-white";
+      case "alumni": return "bg-purple-500 text-white";
+      case "campus": return "bg-blue-500 text-white";
+      default: return "bg-gray-500 text-white";
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-8">
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
-            <h1 className="text-3xl font-bold text-uh-black mb-2">Upcoming Events</h1>
-            <p className="text-gray-600">Stay connected with University of Houston events and activities</p>
+            <h1 className="text-3xl font-bold text-uh-black">Upcoming Events</h1>
+            <p className="mt-2 text-gray-600">Community events and activities shared with CoogsNation members.</p>
           </div>
           {isAuthenticated && (
-            <Button className="bg-uh-red hover:bg-red-700 text-white">
-              <i className="fas fa-plus mr-2"></i>
-              Create Event
-            </Button>
+            <Link href="/event-management?create=1">
+              <Button className="bg-uh-red text-white hover:bg-red-700">Create Event</Button>
+            </Link>
           )}
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Card key={i} className="animate-pulse p-6">
-                <div className="space-y-3">
-                  <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                  <div className="h-6 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                  <div className="h-4 bg-gray-200 rounded w-full"></div>
-                </div>
-              </Card>
-            ))}
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3, 4, 5, 6].map((item) => <Card key={item} className="h-64 animate-pulse bg-gray-100" />)}
           </div>
-        ) : events && events.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {events.map((event: any) => (
-              <Card key={event.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+        ) : events.length > 0 ? (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {events.map((event) => (
+              <Card key={event.id} className="overflow-hidden transition hover:shadow-lg">
                 <div className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <Badge className={getCategoryColor(event.category)}>
-                      <i className={`${getCategoryIcon(event.category)} mr-1`}></i>
-                      {event.category?.toUpperCase() || 'EVENT'}
-                    </Badge>
+                  <div className="mb-4 flex items-start justify-between gap-4">
+                    <Badge className={getCategoryColor(event.category)}>{event.category?.toUpperCase() || "EVENT"}</Badge>
                     <div className="text-right">
                       <div className="text-lg font-bold text-uh-red">
-                        {new Date(event.eventDate).toLocaleDateString('en-US', { 
-                          month: 'short', 
-                          day: 'numeric' 
-                        })}
+                        {new Date(event.eventDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                       </div>
                       <div className="text-sm text-gray-600">
-                        {new Date(event.eventDate).toLocaleTimeString('en-US', { 
-                          hour: 'numeric', 
-                          minute: '2-digit' 
-                        })}
+                        {new Date(event.eventDate).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
                       </div>
                     </div>
                   </div>
-                  
-                  <h3 className="font-bold text-lg text-uh-black mb-2 line-clamp-2">
-                    {event.title}
-                  </h3>
-                  
-                  {event.location && (
-                    <div className="flex items-center text-gray-600 mb-3">
-                      <i className="fas fa-map-marker-alt mr-2 text-uh-red"></i>
-                      <span className="text-sm">{event.location}</span>
-                    </div>
-                  )}
-                  
-                  {event.description && (
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-3">
-                      {event.description}
-                    </p>
-                  )}
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs text-gray-500">
-                      <i className="fas fa-clock mr-1"></i>
-                      {new Date(event.eventDate) > new Date() ? 'Upcoming' : 'Past Event'}
-                    </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      className="border-uh-red text-uh-red hover:bg-uh-red hover:text-white"
-                    >
+                  <h2 className="line-clamp-2 text-lg font-bold text-uh-black">{event.title}</h2>
+                  {event.location && <p className="mt-3 text-sm text-gray-600">📍 {event.location}</p>}
+                  {event.description && <p className="mt-3 line-clamp-3 text-sm text-gray-600">{event.description}</p>}
+                  <div className="mt-5 flex items-center justify-between">
+                    <span className="text-xs text-gray-500">{new Date(event.eventDate) > new Date() ? "Upcoming" : "Past event"}</span>
+                    <Button variant="outline" size="sm" className="border-uh-red text-uh-red" onClick={() => setSelectedEvent(event)}>
                       Learn More
                     </Button>
                   </div>
@@ -128,59 +79,56 @@ export default function Events() {
             ))}
           </div>
         ) : (
-          <Card className="p-12">
-            <div className="text-center text-gray-500">
-              <i className="fas fa-calendar text-6xl mb-6"></i>
-              <h3 className="text-xl font-semibold mb-2">No Upcoming Events</h3>
-              <p>Check back soon for the latest University of Houston events and activities!</p>
-              {isAuthenticated && (
-                <Button className="bg-uh-red hover:bg-red-700 text-white mt-4">
-                  <i className="fas fa-plus mr-2"></i>
-                  Create the First Event
-                </Button>
-              )}
-            </div>
+          <Card className="p-12 text-center">
+            <h2 className="text-xl font-semibold">No Upcoming Events</h2>
+            <p className="mt-2 text-gray-600">Check back soon for new community activities.</p>
+            {isAuthenticated && (
+              <Link href="/event-management?create=1">
+                <Button className="mt-5 bg-uh-red text-white hover:bg-red-700">Create the First Event</Button>
+              </Link>
+            )}
           </Card>
         )}
 
-        {/* Event Categories */}
-        <div className="mt-16">
-          <h2 className="text-2xl font-bold text-uh-black mb-6">Event Categories</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <section className="mt-14">
+          <h2 className="mb-6 text-2xl font-bold text-uh-black">Event Resources</h2>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
             {[
-              { name: 'Football', icon: 'fas fa-football-ball', color: 'bg-uh-red', link: 'https://uhcougars.com/sports/football/schedule' },
-              { name: 'Basketball', icon: 'fas fa-basketball-ball', color: 'bg-orange-500', link: 'https://uhcougars.com/sports/mens-basketball/schedule' },
-              { name: 'Baseball', icon: 'fas fa-baseball-ball', color: 'bg-green-500', link: 'https://uhcougars.com/sports/baseball/schedule' },
-              { name: 'Alumni', icon: 'fas fa-graduation-cap', color: 'bg-purple-500', link: 'https://www.linkedin.com/school/university-of-houston/' },
-              { name: 'About UH', icon: 'fas fa-history', color: 'bg-blue-500', link: 'https://en.wikipedia.org/wiki/University_of_Houston' },
-              { name: 'City of Houston', icon: 'fas fa-city', color: 'bg-teal-500', link: 'https://www.houstontx.gov/' },
-              { name: 'Other', icon: 'fas fa-calendar', color: 'bg-gray-500' },
-            ].map((category) => (
-              category.link ? (
-                <a key={category.name} href={category.link} target="_blank" rel="noopener noreferrer">
-                  <Card className="p-4 cursor-pointer hover:shadow-lg transition-shadow">
-                    <div className="text-center">
-                      <div className={`w-12 h-12 ${category.color} rounded-full flex items-center justify-center mx-auto mb-3`}>
-                        <i className={`${category.icon} text-white`}></i>
-                      </div>
-                      <h4 className="font-semibold text-uh-black">{category.name}</h4>
-                    </div>
-                  </Card>
-                </a>
-              ) : (
-                <Card key={category.name} className="p-4 cursor-pointer hover:shadow-lg transition-shadow">
-                  <div className="text-center">
-                    <div className={`w-12 h-12 ${category.color} rounded-full flex items-center justify-center mx-auto mb-3`}>
-                      <i className={`${category.icon} text-white`}></i>
-                    </div>
-                    <h4 className="font-semibold text-uh-black">{category.name}</h4>
-                  </div>
+              { name: "Football", icon: "🏈", link: "https://uhcougars.com/sports/football/schedule" },
+              { name: "Basketball", icon: "🏀", link: "https://uhcougars.com/sports/mens-basketball/schedule" },
+              { name: "Baseball", icon: "⚾", link: "https://uhcougars.com/sports/baseball/schedule" },
+              { name: "Alumni", icon: "🎓", link: "https://www.linkedin.com/school/university-of-houston/" },
+              { name: "About UH", icon: "🏫", link: "https://www.uh.edu/" },
+            ].map((resource) => (
+              <a key={resource.name} href={resource.link} target="_blank" rel="noopener noreferrer">
+                <Card className="h-full p-4 text-center transition hover:shadow-lg">
+                  <div className="text-3xl" aria-hidden="true">{resource.icon}</div>
+                  <h3 className="mt-2 font-semibold text-uh-black">{resource.name}</h3>
                 </Card>
-              )
+              </a>
             ))}
+            <Link href="/event-management" className="block">
+              <Card className="h-full p-4 text-center transition hover:shadow-lg">
+                <div className="text-3xl" aria-hidden="true">📆</div>
+                <h3 className="mt-2 font-semibold text-uh-black">Manage Events</h3>
+              </Card>
+            </Link>
           </div>
-        </div>
-      </div>
+        </section>
+      </main>
+
+      <Dialog open={Boolean(selectedEvent)} onOpenChange={(open) => !open && setSelectedEvent(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{selectedEvent?.title}</DialogTitle></DialogHeader>
+          {selectedEvent && (
+            <div className="space-y-3 text-sm text-gray-700">
+              <p><strong>Date:</strong> {new Date(selectedEvent.eventDate).toLocaleString()}</p>
+              {selectedEvent.location && <p><strong>Location:</strong> {selectedEvent.location}</p>}
+              {selectedEvent.description && <p className="whitespace-pre-wrap">{selectedEvent.description}</p>}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Footer />
     </div>

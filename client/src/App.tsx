@@ -1,4 +1,4 @@
-import { Switch, Route, useLocation } from "wouter";
+import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -8,7 +8,6 @@ import { ChatWidget } from "@/components/ChatWidget";
 import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/LandingSimple";
-import Home from "@/pages/Home";
 import Forums from "@/pages/Forums";
 import News from "@/pages/News";
 import Store from "@/pages/Store";
@@ -18,6 +17,9 @@ import WearYourPride from "@/pages/WearYourPride";
 import EverydayAlumni from "@/pages/EverydayAlumni";
 import KeepsakesGifts from "@/pages/KeepsakesGifts";
 import LimitedEditions from "@/pages/LimitedEditions";
+import LegacyJewelry from "@/pages/LegacyJewelry";
+import CoogsNationOriginals from "@/pages/CoogsNationOriginals";
+import StoreConcierge from "@/pages/StoreConcierge";
 import Events from "@/pages/Events";
 import ForumCategory from "@/pages/ForumCategory";
 import ForumTopic from "@/pages/ForumTopic";
@@ -37,6 +39,7 @@ import CoogpawsChat from "@/pages/CoogpawsChat";
 import Login from "@/pages/Login";
 import LoginEmail from "@/pages/LoginEmail";
 import MemberDashboard from "@/pages/MemberDashboard";
+import ResetPassword from "@/pages/ResetPassword";
 import { lazy, Suspense } from "react";
 
 /* The immersive venue is code-split: Three.js and the Virtual Venue Engine
@@ -58,6 +61,9 @@ function Router() {
       <Route path="/store/everyday-alumni" component={EverydayAlumni} />
       <Route path="/store/keepsakes-gifts" component={KeepsakesGifts} />
       <Route path="/store/limited-editions" component={LimitedEditions} />
+      <Route path="/store/legacy-jewelry" component={LegacyJewelry} />
+      <Route path="/store/coogsnation-originals" component={CoogsNationOriginals} />
+      <Route path="/store/concierge" component={StoreConcierge} />
       <Route path="/cart" component={Cart} />
       <Route path="/profile" component={Profile} />
       <Route path="/events" component={Events} />
@@ -75,6 +81,7 @@ function Router() {
       <Route path="/complete-profile" component={ProfileCompletion} />
       <Route path="/login" component={Login} />
       <Route path="/login/email" component={LoginEmail} />
+      <Route path="/reset-password" component={ResetPassword} />
       <Route path="/login/other" component={Login} />
       <Route path="/signup" component={ProfileCompletion} />
       <Route path="/join" component={ProfileCompletion} />
@@ -95,16 +102,15 @@ function Router() {
         )}
       </Route>
       <Route path="/coogpaws-chat" component={CoogpawsChat} />
-      <Route path="/forums/categories/:categoryId" component={ForumCategory} />
       <Route path="/forums/topics/:topicId" component={ForumTopic} />
+      <Route path="/forums/categories/:categoryId" component={ForumCategory} />
+      <Route path="/forums/:categorySlug" component={ForumCategory} />
       <Route component={NotFound} />
     </Switch>
   );
 }
 
 function App() {
-  const [location] = useLocation();
-  const isLandingPage = location === '/';
   const { isOpen, pendingUrl, handleContinue, handleClose } = useExternalLinkDisclaimer();
 
   return (
@@ -115,13 +121,6 @@ function App() {
             <Toaster />
             <Router />
           </div>
-          {isLandingPage && (
-            <footer className="w-full text-center mt-8">
-              <p className="text-black text-xs max-w-4xl mx-auto leading-relaxed">
-                This site is not endorsed, affiliated or connected with the University of Houston, it is a Fan Site dedicated to the Students, Alumni, Faculty and Fans of the "University of Houston" all images, logos, art are creations of and by Coogsnation.com, they are Trademarked and the sole possession of Coogsnation.com and cannot be used without the expressed consent of Coogsnation.com.
-              </p>
-            </footer>
-          )}
         </div>
         <ExternalLinkDisclaimer
           isOpen={isOpen}
