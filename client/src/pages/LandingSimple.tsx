@@ -963,6 +963,58 @@ export default function Landing() {
           transform: translateY(0);
         }
 
+        .cn-community-slogan {
+          margin: 0;
+          color: #c8102e !important;
+          font-size: 18px !important;
+          font-weight: 800;
+          letter-spacing: .01em;
+        }
+
+        .cn-site-footer {
+          width: 100%;
+          padding: 34px 24px 38px;
+          background: #111827;
+          border-top: 4px solid #c8102e;
+          color: #ffffff;
+          text-align: center;
+        }
+
+        .cn-site-footer-inner {
+          max-width: 1000px;
+          margin: 0 auto;
+        }
+
+        .cn-site-footer-brand {
+          margin: 0;
+          color: #ffffff;
+          font-family: Georgia, "Times New Roman", serif;
+          font-size: 23px;
+          font-weight: 700;
+          letter-spacing: .03em;
+        }
+
+        .cn-site-footer-independent {
+          margin: 8px 0 0;
+          color: #f3f4f6;
+          font-family: Georgia, "Times New Roman", serif;
+          font-size: 16px;
+          font-style: italic;
+        }
+
+        .cn-site-footer-owner {
+          margin: 9px 0 0;
+          color: #ffffff;
+          font-size: 15px;
+          font-weight: 800;
+        }
+
+        .cn-site-footer-copyright {
+          margin: 9px 0 0;
+          color: #cbd5e1;
+          font-size: 13px;
+        }
+
         @media (max-width: 900px) {
           .cn-nav {
             gap: 14px;
@@ -1148,11 +1200,11 @@ export default function Landing() {
                   devGuestRemaining <= 0
                 }
                 onClick={startDevGuest}
-                title="Development testing only"
+                title="Enter CoogsNation as Guest"
               >
                 {devGuestStarting
-                  ? "Starting Guest Test…"
-                  : "Guest Full Access"}
+                  ? "Opening Guest…"
+                  : "Guest"}
               </button>
             )}
 
@@ -1247,9 +1299,8 @@ export default function Landing() {
         <div className="cn-feature-heading">
           <h2>CoogsNation Community</h2>
 
-          <p>
-            Connect, share, and grow with fellow fans
-            of the Houston Cougars.
+          <p className="cn-community-slogan">
+            Together, We Show What It Means To Be A Fan At The Next Level.
           </p>
         </div>
 
@@ -1285,6 +1336,26 @@ export default function Landing() {
           />
         </div>
       </section>
+
+      <footer className="cn-site-footer">
+        <div className="cn-site-footer-inner">
+          <p className="cn-site-footer-brand">
+            CoogsNation.com
+          </p>
+
+          <p className="cn-site-footer-independent">
+            An independent University of Houston fan community
+          </p>
+
+          <p className="cn-site-footer-owner">
+            Owned and operated by Next Generation Fandom LLC
+          </p>
+
+          <p className="cn-site-footer-copyright">
+            © 2026 Next Generation Fandom LLC. All rights reserved.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }
