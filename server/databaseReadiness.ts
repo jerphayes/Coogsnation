@@ -63,7 +63,7 @@ export async function assertDatabaseReady(): Promise<void> {
 
     if (missing.length > 0) {
       throw new Error(
-        `Missing ${missing.join(", ")}. Run npm run db:bootstrap for a new database, then npm run db:migrate:dev.`,
+        `Missing ${missing.join(", ")}. For a brand-new empty development database only, run npm run db:bootstrap, then npm run db:migrate:dev. For any existing database, restore a backup or run the numbered migrations; do not use schema push.`,
       );
     }
   } catch (error) {

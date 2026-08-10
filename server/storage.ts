@@ -3,6 +3,7 @@ import {
   forumCategories,
   forumTopics,
   forumPosts,
+  forumPostReports,
   newsArticles,
   newsComments,
   events,
@@ -15,12 +16,6 @@ import {
   hallOfFame,
   eventRsvps,
   rateLimits,
-  coogpawsProfiles,
-  coogpawsSwipes,
-  coogpawsMatches,
-  coogpawsMessages,
-  coogpawsBlocks,
-  coogpawsReports,
   userIdentities,
   type User,
   type UserIdentity,
@@ -32,6 +27,8 @@ import {
   type InsertForumTopic,
   type ForumPost,
   type InsertForumPost,
+  type ForumPostReport,
+  type InsertForumPostReport,
   type NewsArticle,
   type InsertNewsArticle,
   type NewsComment,
@@ -54,19 +51,6 @@ import {
   type InsertHallOfFame,
   type EventRsvp,
   type InsertEventRsvp,
-  type CoogpawsProfile,
-  type CoogpawsBrowseProfile,
-  type InsertCoogpawsProfile,
-  type CoogpawsSwipe,
-  type InsertCoogpawsSwipe,
-  type CoogpawsMatch,
-  type InsertCoogpawsMatch,
-  type CoogpawsMessage,
-  type InsertCoogpawsMessage,
-  type CoogpawsBlock,
-  type InsertCoogpawsBlock,
-  type CoogpawsReport,
-  type InsertCoogpawsReport,
   type UserStatistics,
   type AchievementLevel,
   getAchievementLevel,
@@ -76,7 +60,7 @@ import {
   type InsertVenueSeatClaim,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql, and, like, isNull, isNotNull, gte, lte } from "drizzle-orm";
+import { eq, ne, desc, sql, and, like, isNull, isNotNull, gte, lte } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -101,14 +85,18 @@ export interface IStorage {
   
   // Forum operations
   getForumCategories(): Promise<ForumCategory[]>;
+  getForumCategory(id: number): Promise<ForumCategory | undefined>;
+  getForumCategoryBySlug(slug: string): Promise<ForumCategory | undefined>;
   createForumCategory(category: InsertForumCategory): Promise<ForumCategory>;
   getForumTopicsByCategory(categoryId: number, limit?: number): Promise<ForumTopic[]>;
+  getRecentForumTopics(limit?: number): Promise<ForumTopic[]>;
   getForumTopic(id: number): Promise<ForumTopic | undefined>;
   createForumTopic(topic: InsertForumTopic): Promise<ForumTopic>;
   updateForumTopic(id: number, topic: Partial<InsertForumTopic>): Promise<ForumTopic>;
   getForumPostsByTopic(topicId: number): Promise<ForumPost[]>;
   getForumPost(id: number): Promise<ForumPost | undefined>;
   createForumPost(post: InsertForumPost): Promise<ForumPost>;
+  createForumPostReport(report: InsertForumPostReport): Promise<ForumPostReport>;
   updateForumPost(id: number, post: Partial<InsertForumPost>): Promise<ForumPost>;
   deleteForumTopic(topicId: number): Promise<void>;
   deleteForumPost(postId: number): Promise<void>;
@@ -258,39 +246,6 @@ export interface IStorage {
   clearRateLimit(key: string, type: string): Promise<void>;
   cleanupExpiredRateLimits(): Promise<void>;
 
-  // Coogpaws Dating App operations
-  // Profile operations
-  getCoogpawsProfile(userId: string): Promise<CoogpawsProfile | undefined>;
-  createCoogpawsProfile(profile: InsertCoogpawsProfile): Promise<CoogpawsProfile>;
-  updateCoogpawsProfile(userId: string, profile: Partial<InsertCoogpawsProfile>): Promise<CoogpawsProfile>;
-  deleteCoogpawsProfile(userId: string): Promise<void>;
-  getActiveCoogpawsProfiles(excludeUserId: string, limit?: number): Promise<CoogpawsBrowseProfile[]>;
-  
-  // Swipe operations
-  recordSwipe(swipe: InsertCoogpawsSwipe): Promise<CoogpawsSwipe>;
-  hasUserSwiped(swiperId: string, swipedUserId: string): Promise<boolean>;
-  getUserSwipes(userId: string): Promise<CoogpawsSwipe[]>;
-  
-  // Match operations
-  createMatch(user1Id: string, user2Id: string): Promise<CoogpawsMatch>;
-  getUserMatches(userId: string): Promise<CoogpawsMatch[]>;
-  getMatch(matchId: number): Promise<CoogpawsMatch | undefined>;
-  deleteMatch(matchId: number): Promise<void>;
-  
-  // Message operations
-  sendMessage(message: InsertCoogpawsMessage): Promise<CoogpawsMessage>;
-  getMatchMessages(matchId: number): Promise<CoogpawsMessage[]>;
-  markMessagesAsRead(matchId: number, userId: string): Promise<void>;
-  getUnreadMessageCount(userId: string): Promise<number>;
-  
-  // Safety & moderation operations
-  blockUser(block: InsertCoogpawsBlock): Promise<CoogpawsBlock>;
-  unblockUser(blockerId: string, blockedUserId: string): Promise<void>;
-  isUserBlocked(blockerId: string, blockedUserId: string): Promise<boolean>;
-  getUserBlocks(userId: string): Promise<CoogpawsBlock[]>;
-  reportUser(report: InsertCoogpawsReport): Promise<CoogpawsReport>;
-  getUserReports(userId: string): Promise<CoogpawsReport[]>;
-  getReportsByStatus(status: string): Promise<CoogpawsReport[]>;
   // Virtual Venue Engine — persistent seat ownership.
   // The engine holds runtime seat state; these are the only persistence
   // operations it can reach, and it reaches them through an adapter.
@@ -537,6 +492,22 @@ export class DatabaseStorage implements IStorage {
       .where(eq(forumCategories.isActive, true))
       .orderBy(forumCategories.sortOrder, forumCategories.name);
   }
+
+  async getForumCategory(id: number): Promise<ForumCategory | undefined> {
+    const [category] = await db
+      .select()
+      .from(forumCategories)
+      .where(and(eq(forumCategories.id, id), eq(forumCategories.isActive, true)));
+    return category;
+  }
+
+  async getForumCategoryBySlug(slug: string): Promise<ForumCategory | undefined> {
+    const [category] = await db
+      .select()
+      .from(forumCategories)
+      .where(and(eq(forumCategories.slug, slug), eq(forumCategories.isActive, true)));
+    return category;
+  }
   
   async createForumCategory(category: InsertForumCategory): Promise<ForumCategory> {
     const [newCategory] = await db
@@ -553,6 +524,17 @@ export class DatabaseStorage implements IStorage {
       .where(eq(forumTopics.categoryId, categoryId))
       .orderBy(desc(forumTopics.isPinned), desc(forumTopics.lastReplyAt))
       .limit(limit);
+  }
+
+  async getRecentForumTopics(limit = 10): Promise<ForumTopic[]> {
+    const rows = await db
+      .select({ topic: forumTopics })
+      .from(forumTopics)
+      .innerJoin(forumCategories, eq(forumTopics.categoryId, forumCategories.id))
+      .where(and(eq(forumCategories.isActive, true), ne(forumCategories.slug, "coogpaws")))
+      .orderBy(desc(sql`coalesce(${forumTopics.lastReplyAt}, ${forumTopics.createdAt})`))
+      .limit(limit);
+    return rows.map((row) => row.topic);
   }
   
   async getForumTopic(id: number): Promise<ForumTopic | undefined> {
@@ -616,6 +598,14 @@ export class DatabaseStorage implements IStorage {
       .where(eq(forumTopics.id, post.topicId));
     
     return newPost;
+  }
+
+  async createForumPostReport(report: InsertForumPostReport): Promise<ForumPostReport> {
+    const [createdReport] = await db
+      .insert(forumPostReports)
+      .values(report)
+      .returning();
+    return createdReport;
   }
   
   async updateForumPost(id: number, post: Partial<InsertForumPost>): Promise<ForumPost> {
@@ -1900,312 +1890,6 @@ export class DatabaseStorage implements IStorage {
       .where(lte(rateLimits.windowStart, cutoff));
   }
 
-  // Heartbeats Dating App methods implementation
-
-  // Profile operations
-  async getCoogpawsProfile(userId: string): Promise<CoogpawsProfile | undefined> {
-    const [profile] = await db
-      .select()
-      .from(coogpawsProfiles)
-      .where(eq(coogpawsProfiles.userId, userId));
-    return profile;
-  }
-
-  async createCoogpawsProfile(profile: InsertCoogpawsProfile): Promise<CoogpawsProfile> {
-    const [newProfile] = await db
-      .insert(coogpawsProfiles)
-      .values(profile)
-      .returning();
-    return newProfile;
-  }
-
-  async updateCoogpawsProfile(userId: string, profile: Partial<InsertCoogpawsProfile>): Promise<CoogpawsProfile> {
-    const [updatedProfile] = await db
-      .update(coogpawsProfiles)
-      .set({ ...profile, updatedAt: new Date() })
-      .where(eq(coogpawsProfiles.userId, userId))
-      .returning();
-    return updatedProfile;
-  }
-
-  async deleteCoogpawsProfile(userId: string): Promise<void> {
-    await db
-      .delete(coogpawsProfiles)
-      .where(eq(coogpawsProfiles.userId, userId));
-  }
-
-  async getActiveCoogpawsProfiles(excludeUserId: string, limit = 20): Promise<CoogpawsBrowseProfile[]> {
-    // Subquery for already swiped users
-    const swipedSubquery = db
-      .select({ swipedUserId: coogpawsSwipes.swipedUserId })
-      .from(coogpawsSwipes)
-      .where(eq(coogpawsSwipes.swiperId, excludeUserId));
-
-    // Subquery for blocked users (both directions)
-    const blockedByMeSubquery = db
-      .select({ blockedUserId: coogpawsBlocks.blockedUserId })
-      .from(coogpawsBlocks)
-      .where(eq(coogpawsBlocks.blockerId, excludeUserId));
-
-    const blockingMeSubquery = db
-      .select({ blockerId: coogpawsBlocks.blockerId })
-      .from(coogpawsBlocks)
-      .where(eq(coogpawsBlocks.blockedUserId, excludeUserId));
-
-    const profiles = await db
-      .select({
-        profile: coogpawsProfiles,
-        ownerFirstName: users.firstName,
-        ownerLastName: users.lastName,
-        ownerProfileImageUrl: users.profileImageUrl,
-        ownerMajorOrDepartment: users.majorOrDepartment,
-        ownerGraduationYear: users.graduationYear,
-      })
-      .from(coogpawsProfiles)
-      .innerJoin(users, eq(coogpawsProfiles.userId, users.id))
-      .where(
-        and(
-          eq(coogpawsProfiles.isActive, true),
-          sql`${coogpawsProfiles.userId} != ${excludeUserId}`,
-          sql`${coogpawsProfiles.userId} NOT IN (${swipedSubquery})`,
-          sql`${coogpawsProfiles.userId} NOT IN (${blockedByMeSubquery})`,
-          sql`${coogpawsProfiles.userId} NOT IN (${blockingMeSubquery})`
-        )
-      )
-      .limit(limit);
-    
-    return profiles.map((row) => ({
-      ...row.profile,
-      ownerFirstName: row.ownerFirstName,
-      ownerLastName: row.ownerLastName,
-      ownerProfileImageUrl: row.ownerProfileImageUrl,
-      ownerMajorOrDepartment: row.ownerMajorOrDepartment,
-      ownerGraduationYear: row.ownerGraduationYear,
-    }));
-  }
-
-  // Swipe operations
-  async recordSwipe(swipe: InsertCoogpawsSwipe): Promise<CoogpawsSwipe> {
-    const [newSwipe] = await db
-      .insert(coogpawsSwipes)
-      .values(swipe)
-      .returning();
-
-    // Check if this creates a match (mutual like)
-    if (swipe.isLike) {
-      const [mutualSwipe] = await db
-        .select()
-        .from(coogpawsSwipes)
-        .where(
-          and(
-            eq(coogpawsSwipes.swiperId, swipe.swipedUserId),
-            eq(coogpawsSwipes.swipedUserId, swipe.swiperId),
-            eq(coogpawsSwipes.isLike, true)
-          )
-        );
-
-      if (mutualSwipe) {
-        // Create a match
-        await this.createMatch(swipe.swiperId, swipe.swipedUserId);
-      }
-    }
-
-    return newSwipe;
-  }
-
-  async hasUserSwiped(swiperId: string, swipedUserId: string): Promise<boolean> {
-    const [swipe] = await db
-      .select()
-      .from(coogpawsSwipes)
-      .where(
-        and(
-          eq(coogpawsSwipes.swiperId, swiperId),
-          eq(coogpawsSwipes.swipedUserId, swipedUserId)
-        )
-      );
-    return !!swipe;
-  }
-
-  async getUserSwipes(userId: string): Promise<CoogpawsSwipe[]> {
-    return await db
-      .select()
-      .from(coogpawsSwipes)
-      .where(eq(coogpawsSwipes.swiperId, userId))
-      .orderBy(desc(coogpawsSwipes.createdAt));
-  }
-
-  // Match operations
-  async createMatch(user1Id: string, user2Id: string): Promise<CoogpawsMatch> {
-    // Ensure consistent ordering for uniqueness
-    const [smallerId, largerId] = [user1Id, user2Id].sort();
-    
-    const [match] = await db
-      .insert(coogpawsMatches)
-      .values({
-        user1Id: smallerId,
-        user2Id: largerId,
-      })
-      .onConflictDoNothing()
-      .returning();
-    
-    return match;
-  }
-
-  async getUserMatches(userId: string): Promise<CoogpawsMatch[]> {
-    return await db
-      .select()
-      .from(coogpawsMatches)
-      .where(
-        and(
-          sql`(${coogpawsMatches.user1Id} = ${userId} OR ${coogpawsMatches.user2Id} = ${userId})`,
-          eq(coogpawsMatches.isActive, true)
-        )
-      )
-      .orderBy(desc(coogpawsMatches.createdAt));
-  }
-
-  async getMatch(matchId: number): Promise<CoogpawsMatch | undefined> {
-    const [match] = await db
-      .select()
-      .from(coogpawsMatches)
-      .where(eq(coogpawsMatches.id, matchId));
-    return match;
-  }
-
-  async deleteMatch(matchId: number): Promise<void> {
-    await db
-      .update(coogpawsMatches)
-      .set({ isActive: false })
-      .where(eq(coogpawsMatches.id, matchId));
-  }
-
-  // Message operations
-  async sendMessage(message: InsertCoogpawsMessage): Promise<CoogpawsMessage> {
-    const [newMessage] = await db
-      .insert(coogpawsMessages)
-      .values(message)
-      .returning();
-    return newMessage;
-  }
-
-  async getMatchMessages(matchId: number): Promise<CoogpawsMessage[]> {
-    return await db
-      .select()
-      .from(coogpawsMessages)
-      .where(eq(coogpawsMessages.matchId, matchId))
-      .orderBy(coogpawsMessages.createdAt);
-  }
-
-  async markMessagesAsRead(matchId: number, userId: string): Promise<void> {
-    await db
-      .update(coogpawsMessages)
-      .set({ isRead: true })
-      .where(
-        and(
-          eq(coogpawsMessages.matchId, matchId),
-          sql`${coogpawsMessages.senderId} != ${userId}`
-        )
-      );
-  }
-
-  async getUnreadMessageCount(userId: string): Promise<number> {
-    // Get all matches for the user
-    const userMatches = await this.getUserMatches(userId);
-    const matchIds = userMatches.map(match => match.id);
-
-    if (matchIds.length === 0) {
-      return 0;
-    }
-
-    const [result] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(coogpawsMessages)
-      .where(
-        and(
-          sql`${coogpawsMessages.matchId} IN (${sql.join(matchIds, sql`, `)})`,
-          sql`${coogpawsMessages.senderId} != ${userId}`,
-          eq(coogpawsMessages.isRead, false)
-        )
-      );
-
-    return result?.count || 0;
-  }
-
-  // Safety & moderation operations
-  async blockUser(block: InsertCoogpawsBlock): Promise<CoogpawsBlock> {
-    const [newBlock] = await db
-      .insert(coogpawsBlocks)
-      .values(block)
-      .onConflictDoNothing()
-      .returning();
-
-    // Deactivate any existing matches between these users
-    await db
-      .update(coogpawsMatches)
-      .set({ isActive: false })
-      .where(
-        sql`(${coogpawsMatches.user1Id} = ${block.blockerId} AND ${coogpawsMatches.user2Id} = ${block.blockedUserId}) OR 
-            (${coogpawsMatches.user1Id} = ${block.blockedUserId} AND ${coogpawsMatches.user2Id} = ${block.blockerId})`
-      );
-
-    return newBlock;
-  }
-
-  async unblockUser(blockerId: string, blockedUserId: string): Promise<void> {
-    await db
-      .delete(coogpawsBlocks)
-      .where(
-        and(
-          eq(coogpawsBlocks.blockerId, blockerId),
-          eq(coogpawsBlocks.blockedUserId, blockedUserId)
-        )
-      );
-  }
-
-  async isUserBlocked(blockerId: string, blockedUserId: string): Promise<boolean> {
-    const [block] = await db
-      .select()
-      .from(coogpawsBlocks)
-      .where(
-        and(
-          eq(coogpawsBlocks.blockerId, blockerId),
-          eq(coogpawsBlocks.blockedUserId, blockedUserId)
-        )
-      );
-    return !!block;
-  }
-
-  async getUserBlocks(userId: string): Promise<CoogpawsBlock[]> {
-    return await db
-      .select()
-      .from(coogpawsBlocks)
-      .where(eq(coogpawsBlocks.blockerId, userId))
-      .orderBy(desc(coogpawsBlocks.createdAt));
-  }
-
-  async reportUser(report: InsertCoogpawsReport): Promise<CoogpawsReport> {
-    const [newReport] = await db
-      .insert(coogpawsReports)
-      .values(report)
-      .returning();
-    return newReport;
-  }
-
-  async getUserReports(userId: string): Promise<CoogpawsReport[]> {
-    return await db
-      .select()
-      .from(coogpawsReports)
-      .where(eq(coogpawsReports.reportedUserId, userId))
-      .orderBy(desc(coogpawsReports.createdAt));
-  }
-
-  async getReportsByStatus(status: string): Promise<CoogpawsReport[]> {
-    return await db
-      .select()
-      .from(coogpawsReports)
-      .where(eq(coogpawsReports.status, status))
-      .orderBy(desc(coogpawsReports.createdAt));
-  }
   /* ══════════════════════════════════════════════════════════════════════
    * Virtual Venue Engine — persistent seat ownership
    * ════════════════════════════════════════════════════════════════════ */
@@ -2230,22 +1914,38 @@ export class DatabaseStorage implements IStorage {
   }
 
   /**
-   * Claim a seat. A user holds at most one seat per venue, so an existing
-   * claim is released first — moving seats is the common case, and forcing the
-   * client to send two requests would open a window where the user holds none.
+   * Claim a seat, atomically and without ever leaving the member seatless.
    *
-   * Returns null when the seat is already held by someone else. The unique
-   * index is the real guard: two simultaneous claims cannot both succeed, and
-   * the loser gets null rather than an exception.
+   * ORDER MATTERS, AND THE PREVIOUS ORDER WAS WRONG
+   * -----------------------------------------------
+   * This used to DELETE the member's existing claim and then INSERT the new
+   * one with `onConflictDoNothing`. When the target seat was already held the
+   * insert returned nothing and this method returned null — but the delete had
+   * already run inside the same transaction and was committed with it. A
+   * member who tried to move to an occupied seat lost the seat they were in
+   * and gained nothing.
+   *
+   * So the operation is inverted: INSERT FIRST, and release the old seat only
+   * once the new one is genuinely held. If the target is occupied the insert
+   * does nothing, the method returns null, and the member's original claim is
+   * still there — untouched, because nothing deleted it.
+   *
+   * Two database constraints make this safe under concurrency:
+   *
+   *   (venue_id, seat_persistent_id)  one owner per seat
+   *   (venue_id, user_id)             one seat per owner   ← migration 0006
+   *
+   * The second is why the insert is attempted as an UPDATE-on-conflict for the
+   * user key: a member who already holds a seat in this venue would otherwise
+   * violate it. Moving is therefore a single statement that either relocates
+   * the member or does nothing at all.
+   *
+   * @returns the claim now held by this user, or null if the seat was taken.
    */
   async claimVenueSeat(claim: InsertVenueSeatClaim): Promise<VenueSeatClaimRecord | null> {
     return await db.transaction(async (tx) => {
-      await tx
-        .delete(venueSeatClaims)
-        .where(
-          and(eq(venueSeatClaims.venueId, claim.venueId), eq(venueSeatClaims.userId, claim.userId)),
-        );
-
+      /* Attempt the seat. If ANOTHER user holds it, the seat-unique index
+       * rejects and we do nothing — the caller's existing claim survives. */
       const [inserted] = await tx
         .insert(venueSeatClaims)
         .values(claim)
@@ -2254,7 +1954,40 @@ export class DatabaseStorage implements IStorage {
         })
         .returning();
 
-      return inserted ?? null;
+      if (inserted) {
+        /* Won the seat. Now release anything else this member held here. The
+         * delete is scoped to the user and excludes the row just created, so
+         * it can only ever remove a stale seat, never the new one. */
+        await tx
+          .delete(venueSeatClaims)
+          .where(
+            and(
+              eq(venueSeatClaims.venueId, claim.venueId),
+              eq(venueSeatClaims.userId, claim.userId),
+              ne(venueSeatClaims.id, inserted.id),
+            ),
+          );
+        return inserted;
+      }
+
+      /* The insert did nothing. Two possibilities, and they are not the same:
+       *   - this member ALREADY holds this exact seat  → success, idempotent
+       *   - somebody else holds it                     → refusal
+       */
+      const [existing] = await tx
+        .select()
+        .from(venueSeatClaims)
+        .where(
+          and(
+            eq(venueSeatClaims.venueId, claim.venueId),
+            eq(venueSeatClaims.seatPersistentId, claim.seatPersistentId),
+          ),
+        )
+        .limit(1);
+
+      if (existing && existing.userId === claim.userId) return existing;
+
+      return null;
     });
   }
 

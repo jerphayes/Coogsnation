@@ -1,423 +1,434 @@
-import { useState, useEffect } from "react";
+/**
+ * CoogpawsChat — the Coog Paws Lounge
+ * ---------------------------------------------------------------------------
+ * The Coog Paws page is now an immersive room: the Virtual Venue Engine
+ * renders the lounge, and chat, presence and connection state are laid over
+ * it. It is the first lounge and the template for the rest.
+ *
+ * WHAT THIS PAGE IS AND IS NOT
+ * ----------------------------
+ * It is NOT a Three.js page. There is no renderer, no scene, no geometry and
+ * no `three` import anywhere in this file — a second parallel 3D system was
+ * explicitly rejected. The lounge is a VENUE (`venue-engine/venues/
+ * CoogPawsLounge.js`) loaded through the same registry, session factory and
+ * teardown path as the stadium venues. Everything here is composition:
+ *
+ *   the room      → `LOUNGE_ROOMS.coogpaws` in shared/lounge.ts
+ *   the rendering → `createVenueSession({ venueId: room.venueId })`
+ *   the chat      → `useLoungeRoom(room.id)`
+ *   the controls  → `session.venueOptions()` / `setVenueOption()` (ADR-020)
+ *
+ * Nothing above names Coog Paws except the room id, which is why the Football
+ * Lounge is a registry entry rather than a copy of this file.
+ *
+ * LAZY LOADING is preserved from `Venue.tsx` and matters more here, not less:
+ * the engine and Three.js are ~700 KB and must stay out of the initial bundle
+ * on a mobile-first site.
+ *
+ * DEGRADATION. If the engine cannot boot — no WebGL, a lost context, a driver
+ * failure — the room does not fail. The 3D drops away and the chat continues
+ * on its own, because a member on a device that cannot render a lounge should
+ * still be able to talk to the people in it.
+ */
+
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { io, Socket } from "socket.io-client";
+import { useLoungeRoom } from "@/hooks/useLoungeRoom";
+import { LoungeChatOverlay } from "@/components/lounge/LoungeChatOverlay";
+import { VENUE_API, type VenueUserContext } from "@shared/venue";
+import { getLoungeRoom } from "@shared/lounge";
+import type { VenueOption, VenueSession } from "@/venue-engine";
 
-interface ChatMessage {
-  message: string;
-  timestamp?: Date;
-}
+const CoogpawsAiPanel = lazy(() => import("@/components/lounge/CoogpawsAiPanel"));
 
-interface AIMessage {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  timestamp: Date;
-  isStreaming?: boolean;
+/** The room this page presents. The only Coog Paws-specific value in the file. */
+const ROOM_ID = "coogpaws";
+
+/** Chairs in the lounge. Matches the venue's measured seat manifest. */
+const SEAT_COUNT = 8;
+
+/** Cheap capability probe. Cheaper than booting 700 KB to find out. */
+function webglAvailable(): boolean {
+  try {
+    const canvas = document.createElement("canvas");
+    return !!(
+      window.WebGLRenderingContext &&
+      (canvas.getContext("webgl2") || canvas.getContext("webgl"))
+    );
+  } catch {
+    return false;
+  }
 }
 
 export default function CoogpawsChat() {
-  const { user, isAuthenticated } = useAuth();
-  const { toast } = useToast();
-  
-  // Regular chat state
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [inputValue, setInputValue] = useState("");
-  const [socket, setSocket] = useState<Socket | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
-  
-  // AI chat state
-  const [aiMessages, setAiMessages] = useState<AIMessage[]>([]);
-  const [aiInputValue, setAiInputValue] = useState("");
-  const [aiSocket, setAiSocket] = useState<Socket | null>(null);
-  const [isAiConnected, setIsAiConnected] = useState(false);
-  const [isAiEnabled, setIsAiEnabled] = useState(false);
-  const [activeTab, setActiveTab] = useState("chat");
+  const [, navigate] = useLocation();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const room = getLoungeRoom(ROOM_ID);
 
-  // Fetch feature flags to check if AI is enabled
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const sessionRef = useRef<VenueSession | null>(null);
+  /** Guards against React 18 StrictMode double-invoking the boot effect. */
+  const bootingRef = useRef(false);
+
+  const [progress, setProgress] = useState({ fraction: 0, message: "Preparing the lounge" });
+  const [ready, setReady] = useState(false);
+  const [venueError, setVenueError] = useState<string | null>(null);
+  const [options, setOptions] = useState<VenueOption[]>([]);
+  const [seatIndex, setSeatIndex] = useState<number | null>(null);
+  const [showAi, setShowAi] = useState(false);
+  const [seatNotice, setSeatNotice] = useState<string | null>(null);
+  const [seatBusy, setSeatBusy] = useState(false);
+  const [render3d] = useState(() => (typeof window === "undefined" ? false : webglAvailable()));
+
+  /* Chat runs independently of the renderer, and starts as soon as the member
+   * is authenticated. A failed venue must never take the room down with it. */
+  const lounge = useLoungeRoom(ROOM_ID, { enabled: isAuthenticated });
+
+  const { data: contextData, isLoading: contextLoading } = useQuery<{ context: VenueUserContext }>({
+    queryKey: [VENUE_API.context],
+    enabled: isAuthenticated && render3d,
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  /* ── boot the venue ─────────────────────────────────────────────── */
+
   useEffect(() => {
-    const fetchFeatureFlags = async () => {
+    if (!render3d || !room) return;
+    if (!isAuthenticated || !contextData?.context || !containerRef.current) return;
+    if (bootingRef.current) return;
+    bootingRef.current = true;
+
+    let cancelled = false;
+    const container = containerRef.current;
+
+    (async () => {
       try {
-        const response = await fetch('/api/feature-flags');
-        const data = await response.json();
-        
-        if (data.success && data.flags) {
-          setIsAiEnabled(data.flags.aiEnabled);
-        }
-      } catch (error) {
-        console.error("Error fetching feature flags:", error);
-        setIsAiEnabled(false);
-      }
-    };
+        const { createVenueSession } = await import("@/venue-engine/session");
+        if (cancelled) return;
 
-    fetchFeatureFlags();
-  }, []);
-
-  // Connect to your existing Socket.io servers
-  useEffect(() => {
-    // Regular chat socket connection (existing functionality)
-    const newSocket = io();
-
-    newSocket.on("connect", () => {
-      console.log("Connected to Coog Paws Chat");
-      setIsConnected(true);
-    });
-
-    newSocket.on("disconnect", () => {
-      console.log("Disconnected from Coog Paws Chat");
-      setIsConnected(false);
-    });
-
-    // Listen for chat messages (using the same event name as your server)
-    newSocket.on("chat", (data: ChatMessage) => {
-      setMessages((prev) => [...prev, { ...data, timestamp: new Date() }]);
-    });
-
-    setSocket(newSocket);
-
-    // AI chat socket connection (only if AI is enabled)
-    let aiSocketConnection: any = null;
-    if (isAiEnabled) {
-      aiSocketConnection = io('/ai');
-      
-      aiSocketConnection.on("connect", () => {
-        console.log("Connected to AI Chat");
-        setIsAiConnected(true);
-      });
-
-      aiSocketConnection.on("disconnect", () => {
-        console.log("Disconnected from AI Chat");
-        setIsAiConnected(false);
-      });
-
-      // Handle AI streaming chunks
-      aiSocketConnection.on("ai-chunk", (data: any) => {
-        const { id, chunk, fullResponse, isComplete, memoryUsed } = data;
-        
-        setAiMessages((prev) => {
-          const existing = prev.find(msg => msg.id === id.toString());
-          if (existing) {
-            // Update existing message with new content
-            return prev.map(msg => 
-              msg.id === id.toString() 
-                ? { ...msg, content: fullResponse, isStreaming: !isComplete }
-                : msg
-            );
-          } else {
-            // Create new AI message
-            return [...prev, {
-              id: id.toString(),
-              role: "assistant" as const,
-              content: fullResponse,
-              timestamp: new Date(),
-              isStreaming: !isComplete
-            }];
-          }
+        const session = await createVenueSession({
+          container,
+          venueId: room.venueId,
+          user: contextData.context,
+          onProgress: (fraction, message) => {
+            if (!cancelled) setProgress({ fraction, message });
+          },
         });
-      });
 
-      setAiSocket(aiSocketConnection);
-    }
+        if (cancelled) {
+          await session.dispose();
+          return;
+        }
+
+        sessionRef.current = session;
+        setOptions(session.venueOptions());
+        setReady(true);
+      } catch (caught) {
+        if (cancelled) return;
+        console.error("[coogpaws] lounge boot failed:", caught);
+        setVenueError(
+          caught instanceof Error ? caught.message : "The lounge could not be rendered.",
+        );
+      }
+    })();
 
     return () => {
-      newSocket.close();
-      if (aiSocketConnection) {
-        aiSocketConnection.close();
-      }
+      cancelled = true;
+      bootingRef.current = false;
+      const session = sessionRef.current;
+      sessionRef.current = null;
+      setReady(false);
+      setSeatIndex(null);
+      if (session) void session.dispose();
     };
-  }, [isAiEnabled]);
+  }, [isAuthenticated, contextData, room, render3d]);
 
-  // Regular chat send function (existing)
-  const sendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!isAuthenticated) {
-      toast({
-        title: "Sign in required",
-        description: "Please sign in to send messages in the chat.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (!socket || !inputValue.trim()) return;
-
-    // Send message using the same event name as your server expects
-    socket.emit("chat", { message: inputValue.trim() });
-    setInputValue("");
-  };
-
-  // AI chat send function (new)
-  const sendAIMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!isAuthenticated) {
-      toast({
-        title: "Sign in required",
-        description: "Please sign in to chat with the AI assistant.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (!aiSocket || !aiInputValue.trim()) return;
-
-    const userMessage: AIMessage = {
-      id: `user_${Date.now()}`,
-      role: "user",
-      content: aiInputValue.trim(),
-      timestamp: new Date()
+  /* Stop rendering while the tab is hidden. Battery matters on mobile, and the
+   * chat socket stays open regardless — presence should not flap on tab-out. */
+  useEffect(() => {
+    const onVisibility = () => {
+      const session = sessionRef.current;
+      if (!session) return;
+      if (document.hidden) session.pause();
+      else session.resume();
     };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, []);
 
-    setAiMessages(prev => [...prev, userMessage]);
+  /* ── venue controls ─────────────────────────────────────────────── */
 
-    // Send message to AI socket
-    aiSocket.emit("ai-message", {
-      message: aiInputValue.trim(),
-      conversationId: `conv_${Date.now()}`,
-      userId: (user as any)?.id || 'anonymous'
-    });
+  const setOption = useCallback((key: string, value: string | boolean) => {
+    const session = sessionRef.current;
+    if (!session) return;
+    if (session.setVenueOption(key, value)) setOptions(session.venueOptions());
+  }, []);
 
-    setAiInputValue("");
-  };
+  /**
+   * Take the next AVAILABLE chair.
+   *
+   * The server owns seat ownership, so this asks and reports the answer. It
+   * does not assume seat 0 is free, and it does not stop at the first refusal
+   * — an occupied chair means try the next one, which is what a person walking
+   * into a lounge would do. A network failure is different and stops the walk
+   * immediately, because retrying seven more times against a dead server just
+   * produces seven more failures.
+   */
+  const takeSeat = useCallback(async () => {
+    const session = sessionRef.current;
+    if (!session) return;
 
-  // AI feedback function
-  const sendAIFeedback = async (messageId: string, feedback: "1" | "-1") => {
+    setSeatNotice(null);
+    setSeatBusy(true);
     try {
-      const response = await fetch(`/api/ai/feedback`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: parseInt(messageId), feedback })
-      });
-      
-      if (response.ok) {
-        toast({
-          title: "Feedback sent!",
-          description: "Thank you for helping CoogAI learn."
-        });
+      const start = seatIndex === null ? 0 : seatIndex + 1;
+      for (let step = 0; step < SEAT_COUNT; step++) {
+        const candidate = (start + step) % SEAT_COUNT;
+        if (candidate === seatIndex) continue;      // already sitting there
+
+        const result = await session.claimSeat(candidate);
+        if (result.ok) {
+          setSeatIndex(result.seatIndex);
+          return;
+        }
+        if (result.reason === "occupied") continue; // try the next chair
+        setSeatNotice(result.message);              // network / auth — stop
+        return;
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to send feedback",
-        variant: "destructive"
-      });
+      setSeatNotice("Every chair is taken right now.");
+    } finally {
+      setSeatBusy(false);
     }
-  };
+  }, [seatIndex]);
 
-  const canInteract = isAuthenticated;
+  const standUp = useCallback(async () => {
+    const session = sessionRef.current;
+    if (!session) return;
+    setSeatNotice(null);
+    await session.releaseSeat();
+    setSeatIndex(null);
+    session.setCameraView("lounge-home");
+  }, []);
 
+  /* ── gates ──────────────────────────────────────────────────────── */
+
+  if (!room) {
+    return <PageMessage title="Lounge unavailable" detail="This room is not configured." />;
+  }
+
+  if (authLoading) {
+    return <PageMessage title="Loading" detail="Checking your session…" />;
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <PageMessage
+        title="Sign in to enter the lounge"
+        detail="Coog Paws is open to CoogsNation members."
+        action={{ label: "Sign in", onClick: () => navigate("/login") }}
+      />
+    );
+  }
+
+  const projection = options.find((option) => option.key === "projection");
+  const houseLights = options.find((option) => option.key === "houseLights");
+
+  return (
+    <div className="min-h-screen bg-black">
+      <Header />
+
+      <div className="relative h-[calc(100vh-4rem)] w-full overflow-hidden bg-black">
+        {render3d && <div ref={containerRef} className="absolute inset-0" />}
+
+        <nav className="absolute left-2 top-2 z-30 flex gap-2" aria-label="Lounge navigation">
+          <button
+            type="button"
+            onClick={() => navigate("/forums")}
+            className="rounded border border-white/25 bg-black/75 px-3 py-2 text-xs font-semibold text-white backdrop-blur-md hover:bg-white hover:text-black"
+            data-testid="button-standard-board"
+          >
+            Standard Board
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/community")}
+            className="rounded border border-white/25 bg-black/75 px-3 py-2 text-xs font-semibold text-white backdrop-blur-md hover:bg-white hover:text-black"
+            data-testid="button-exit-lounge"
+          >
+            Exit Lounge
+          </button>
+        </nav>
+
+        {/* Boot progress. Chat is already usable underneath. */}
+        {render3d && !ready && !venueError && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/85 text-white">
+            <div className="text-xs uppercase tracking-[0.2em] text-white/70">
+              {contextLoading ? "Checking access" : progress.message}
+            </div>
+            <div className="h-1 w-56 overflow-hidden rounded bg-white/15">
+              <div
+                className="h-full bg-amber-300/80 transition-[width] duration-200"
+                style={{ width: `${Math.round(progress.fraction * 100)}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Degraded mode: no WebGL, or the engine failed. Chat continues. */}
+        {(!render3d || venueError) && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-b from-[#1c1230] to-black p-6 text-center text-white">
+            <h1 className="text-2xl font-semibold">Coog Paws Lounge</h1>
+            <p className="max-w-md text-sm text-white/70">
+              {venueError
+                ? "The 3D lounge could not be rendered on this device, so it has been turned off. Chat is still live."
+                : "This device does not support 3D graphics, so the lounge is showing in chat-only mode."}
+            </p>
+          </div>
+        )}
+
+        {/* ── venue controls ─────────────────────────────────────── */}
+        {ready && (
+          <div className="pointer-events-none absolute inset-x-0 top-2 z-10 flex flex-col items-center gap-2 px-2 sm:top-4">
+            {projection?.kind === "enum" && (
+              <div
+                className="pointer-events-auto flex gap-1 rounded border border-amber-300/25 bg-black/65 p-1 backdrop-blur-md"
+                role="group"
+                aria-label="Projection"
+              >
+                {projection.values?.map((choice) => (
+                  <button
+                    key={choice.value}
+                    type="button"
+                    onClick={() => setOption("projection", choice.value)}
+                    aria-pressed={projection.value === choice.value}
+                    className={
+                      "rounded px-3 py-1.5 text-[11px] uppercase tracking-[0.14em] transition " +
+                      (projection.value === choice.value
+                        ? "bg-amber-300 text-black"
+                        : "text-white/70 hover:bg-white/10 hover:text-white")
+                    }
+                  >
+                    {choice.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="pointer-events-auto flex gap-1 rounded border border-amber-300/25 bg-black/65 p-1 backdrop-blur-md">
+              {houseLights && (
+                <button
+                  type="button"
+                  onClick={() => setOption("houseLights", !(houseLights.value === true))}
+                  aria-pressed={houseLights.value === true}
+                  className={
+                    "rounded px-3 py-1.5 text-[11px] uppercase tracking-[0.14em] transition " +
+                    (houseLights.value === true
+                      ? "bg-amber-300 text-black"
+                      : "text-white/70 hover:bg-white/10 hover:text-white")
+                  }
+                >
+                  House lights
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={takeSeat}
+                disabled={seatBusy}
+                className="rounded px-3 py-1.5 text-[11px] uppercase tracking-[0.14em] text-white/70 transition hover:bg-white/10 hover:text-white disabled:opacity-40"
+              >
+                {seatBusy ? "Seating…" : seatIndex === null ? "Take a seat" : `Seat ${seatIndex + 1} · move`}
+              </button>
+              {seatIndex !== null && (
+                <button
+                  type="button"
+                  onClick={standUp}
+                  className="rounded px-3 py-1.5 text-[11px] uppercase tracking-[0.14em] text-white/70 transition hover:bg-white/10 hover:text-white"
+                >
+                  Stand
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowAi((v) => !v)}
+                aria-pressed={showAi}
+                className="rounded px-3 py-1.5 text-[11px] uppercase tracking-[0.14em] text-white/70 transition hover:bg-white/10 hover:text-white"
+              >
+                Assistant
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Assistant available even in degraded mode. */}
+        {!ready && render3d ? null : (
+          <div className="pointer-events-none absolute left-2 top-14 z-10">
+            {!ready && (
+              <button
+                type="button"
+                onClick={() => setShowAi((v) => !v)}
+                className="pointer-events-auto rounded border border-white/20 bg-black/65 px-3 py-1.5 text-[11px] uppercase tracking-[0.14em] text-white/70 hover:text-white"
+              >
+                Assistant
+              </button>
+            )}
+          </div>
+        )}
+
+        {seatNotice && (
+          <div className="pointer-events-none absolute inset-x-0 top-28 z-20 flex justify-center px-4">
+            <p
+              role="status"
+              className="rounded border border-amber-300/40 bg-black/80 px-3 py-2 text-xs text-amber-100 backdrop-blur-md"
+            >
+              {seatNotice}
+            </p>
+          </div>
+        )}
+
+        {showAi && (
+          <Suspense fallback={null}>
+            <CoogpawsAiPanel onClose={() => setShowAi(false)} />
+          </Suspense>
+        )}
+
+        <LoungeChatOverlay
+          roomLabel={room.label}
+          state={lounge.state}
+          problem={lounge.problem}
+          inRoom={lounge.inRoom}
+          occupants={lounge.occupants}
+          messages={lounge.messages}
+          canSend={lounge.canSend}
+          onSend={lounge.sendMessage}
+          onRetry={lounge.reconnect}
+        />
+      </div>
+    </div>
+  );
+}
+
+function PageMessage(props: {
+  title: string;
+  detail: string;
+  action?: { label: string; onClick: () => void };
+}) {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-uh-black mb-2">🐾 Coog Paws Chat</h1>
-          <p className="text-gray-600">Real-time chat and AI assistance for the University of Houston community</p>
-        </div>
-        
-        {/* Guest Notice */}
-        {!canInteract && (
-          <Card className="mb-6 bg-yellow-50 border-yellow-200">
-            <CardContent className="py-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-yellow-900">👤 Browsing as Guest</p>
-                  <p className="text-xs text-yellow-800 mt-1">Sign in to participate in conversations and chat with AI</p>
-                </div>
-                <div className="flex gap-2">
-                  <Button asChild size="sm" className="bg-yellow-600 hover:bg-yellow-700 text-white">
-                    <a href="/join">Sign Up</a>
-                  </Button>
-                  <Button asChild size="sm" variant="outline">
-                    <a href="/login">Login</a>
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      <div className="flex h-[calc(100vh-4rem)] flex-col items-center justify-center gap-4 p-6 text-center">
+        <div className="text-lg font-semibold">{props.title}</div>
+        <p className="max-w-md text-sm text-muted-foreground">{props.detail}</p>
+        {props.action && (
+          <Button type="button" variant="outline" onClick={props.action.onClick}>
+            {props.action.label}
+          </Button>
         )}
-
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="chat" data-testid="tab-group-chat">
-              💬 Group Chat
-              <div className="ml-2">
-                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-              </div>
-            </TabsTrigger>
-            <TabsTrigger value="ai" data-testid="tab-ai-chat">
-              🤖 AI Assistant
-              <div className="ml-2">
-                <div className={`w-2 h-2 rounded-full ${isAiConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-              </div>
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Group Chat Tab */}
-          <TabsContent value="chat" className="mt-6">
-            <Card className="h-96 flex flex-col">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center justify-between">
-                  Group Chat Messages
-                  <span className="text-sm text-gray-600">
-                    {isConnected ? 'Connected' : 'Connecting...'}
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              
-              <CardContent className="flex-1 flex flex-col">
-                <div className="flex-1 overflow-y-auto bg-uh-red rounded p-4 mb-4 space-y-2">
-                  {messages.length === 0 ? (
-                    <div className="text-center text-white py-8">
-                      <p>Welcome to Coog Paws Group Chat! 🐾</p>
-                      <p className="text-sm">Start a conversation with other Cougar fans...</p>
-                    </div>
-                  ) : (
-                    messages.map((msg, index) => (
-                      <div key={index} className="bg-white p-3 rounded-lg shadow-sm">
-                        <p className="text-gray-800">{msg.message}</p>
-                        {msg.timestamp && (
-                          <p className="text-xs text-gray-500 mt-1">
-                            {msg.timestamp.toLocaleTimeString()}
-                          </p>
-                        )}
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                <form onSubmit={sendMessage} className="flex gap-2">
-                  <Input
-                    type="text"
-                    placeholder="Type a message..."
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    className="flex-1"
-                    disabled={!isConnected}
-                    data-testid="chat-input"
-                  />
-                  <Button
-                    type="submit"
-                    disabled={!isConnected || !inputValue.trim()}
-                    className="bg-uh-red hover:bg-red-700"
-                    data-testid="send-button"
-                  >
-                    Send
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* AI Chat Tab */}
-          <TabsContent value="ai" className="mt-6">
-            <Card className="h-96 flex flex-col">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center justify-between">
-                  🤖 CoogAI Assistant
-                  <span className="text-sm text-gray-600">
-                    {isAiConnected ? 'Connected' : 'Connecting...'}
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              
-              <CardContent className="flex-1 flex flex-col">
-                <div className="flex-1 overflow-y-auto bg-blue-50 rounded p-4 mb-4 space-y-2">
-                  {aiMessages.length === 0 ? (
-                    <div className="text-center text-gray-600 py-8">
-                      <p>🤖 Hello! I'm CoogAI, your CoogsNation assistant</p>
-                      <p className="text-sm">Ask me anything or get help with questions!</p>
-                      {!isAiEnabled && (
-                        <p className="text-sm text-orange-600 mt-2">⚠️ AI features are currently disabled</p>
-                      )}
-                    </div>
-                  ) : (
-                    aiMessages.map((msg, index) => (
-                      <div 
-                        key={index} 
-                        className={`p-3 rounded-lg shadow-sm ${
-                          msg.role === "user" 
-                            ? "bg-uh-red text-white ml-8" 
-                            : "bg-white text-gray-800 mr-8"
-                        }`}
-                      >
-                        <p className="whitespace-pre-wrap">{msg.content}</p>
-                        <div className="flex items-center justify-between mt-2">
-                          <p className={`text-xs ${msg.role === "user" ? "text-gray-200" : "text-gray-500"}`}>
-                            {msg.timestamp.toLocaleTimeString()}
-                            {msg.isStreaming && " (typing...)"}
-                          </p>
-                          {msg.role === "assistant" && !msg.isStreaming && (
-                            <div className="flex gap-1">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => sendAIFeedback(msg.id, "1")}
-                                className="text-xs px-2 py-1 h-6"
-                                data-testid={`thumbs-up-${msg.id}`}
-                              >
-                                👍
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => sendAIFeedback(msg.id, "-1")}
-                                className="text-xs px-2 py-1 h-6"
-                                data-testid={`thumbs-down-${msg.id}`}
-                              >
-                                👎
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                <form onSubmit={sendAIMessage} className="flex gap-2">
-                  <Input
-                    type="text"
-                    placeholder="Ask CoogAI anything..."
-                    value={aiInputValue}
-                    onChange={(e) => setAiInputValue(e.target.value)}
-                    className="flex-1"
-                    disabled={!isAiConnected || !isAiEnabled}
-                    data-testid="ai-chat-input"
-                  />
-                  <Button
-                    type="submit"
-                    disabled={!isAiConnected || !aiInputValue.trim() || !isAiEnabled}
-                    className="bg-blue-600 hover:bg-blue-700"
-                    data-testid="ai-send-button"
-                  >
-                    Ask AI
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-
-        <div className="mt-6 text-center text-sm text-gray-600">
-          <p>💬 Chat responsibly and follow University of Houston community guidelines</p>
-          <p className="text-xs mt-1">
-            AI responses are generated automatically and may not always be accurate. Please verify important information.
-          </p>
-        </div>
       </div>
-
-      <Footer />
     </div>
   );
 }

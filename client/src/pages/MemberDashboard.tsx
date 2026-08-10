@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { Link } from "wouter";
 
 export default function MemberDashboard() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -67,64 +68,71 @@ export default function MemberDashboard() {
         <div className="p-4 border rounded-lg shadow hover:shadow-md">
           <h3 className="text-xl font-semibold">Unread Messages</h3>
           <p className="text-4xl text-red-600 mt-2">0</p>
-          <button
-            className="mt-3 bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+          <Link
+            href="/messages"
+            className="mt-3 inline-block bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
             data-testid="button-view-messages"
           >
             View Messages
-          </button>
+          </Link>
         </div>
 
         <div className="p-4 border rounded-lg shadow hover:shadow-md">
           <h3 className="text-xl font-semibold">Upcoming Events</h3>
           <p className="text-4xl text-green-600 mt-2">0</p>
-          <button
-            className="mt-3 bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
+          <Link
+            href="/event-management"
+            className="mt-3 inline-block bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
             data-testid="button-manage-events"
           >
             Manage Events
-          </button>
+          </Link>
         </div>
 
         <div className="p-4 border rounded-lg shadow hover:shadow-md">
           <h3 className="text-xl font-semibold">Community Members</h3>
           <p className="text-4xl text-purple-600 mt-2">2</p>
-          <button
-            className="mt-3 bg-purple-500 text-white px-3 py-1 rounded hover:bg-purple-600"
+          <Link
+            href="/forums"
+            className="mt-3 inline-block bg-purple-500 text-white px-3 py-1 rounded hover:bg-purple-600"
             data-testid="button-join-discussion"
           >
             Join Discussion
-          </button>
+          </Link>
         </div>
       </div>
 
       <div className="mt-12 border-t pt-6 text-center">
         <h3 className="text-lg font-semibold text-gray-700 mb-3">Quick Actions</h3>
         <div className="flex flex-wrap justify-center gap-3">
-          <button
-            className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+          <Link
+            href="/forums"
+            className="inline-block bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
             data-testid="button-join-forum"
           >
             Join Forum Discussion
-          </button>
-          <button
-            className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600"
+          </Link>
+          <Link
+            href="/event-management?create=1"
+            className="inline-block bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600"
             data-testid="button-create-event"
           >
             Create Event
-          </button>
-          <button
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          </Link>
+          <Link
+            href="/store"
+            className="inline-block bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
             data-testid="button-shop-merchandise"
           >
             Shop Merchandise
-          </button>
-          <button
-            className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800"
+          </Link>
+          <Link
+            href="/messages"
+            className="inline-block bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800"
             data-testid="button-send-message"
           >
             Send Message
-          </button>
+          </Link>
           <a
             href="/complete-profile"
             className="bg-purple-600 px-4 py-2 rounded hover:bg-purple-700 inline-block"

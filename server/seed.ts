@@ -2,7 +2,6 @@ import { db } from "./db";
 import { 
   forumCategories, 
   hallOfFame, 
-  products,
   newsArticles,
   events
 } from "@shared/schema";
@@ -51,14 +50,6 @@ async function seedDatabase() {
       icon: "fas fa-coffee",
       color: "#6B7280",
       sortOrder: 5
-    },
-    {
-      name: "Coogpaws",
-      description: "Dating, relationships, and meeting fellow Coogs",
-      slug: "coogpaws",
-      icon: "fas fa-heart",
-      color: "#EC4899",
-      sortOrder: 6
     },
     {
       name: "UH Hall of Fame",
@@ -223,38 +214,7 @@ async function seedDatabase() {
     await db.insert(hallOfFame).values(entry).onConflictDoNothing();
   }
 
-  // Seed some sample products
-  const sampleProducts = [
-    {
-      name: "CoogsNation Baseball Cap",
-      description: "Official Houston Cougars baseball cap with embroidered logo",
-      price: "29.99",
-      category: "apparel",
-      stockQuantity: 50,
-      imageUrl: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=400&h=400&fit=crop"
-    },
-    {
-      name: "UH Hoodie - Red",
-      description: "Comfortable Houston Cougars hoodie in signature red",
-      price: "49.99", 
-      category: "apparel",
-      stockQuantity: 30,
-      imageUrl: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=400&h=400&fit=crop"
-    },
-    {
-      name: "Cougar Pride T-Shirt",
-      description: "Classic Houston Cougars t-shirt for every fan",
-      price: "19.99",
-      category: "apparel", 
-      stockQuantity: 75,
-      imageUrl: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=400&h=400&fit=crop"
-    }
-  ];
-
-  console.log("🛍️ Seeding products...");
-  for (const product of sampleProducts) {
-    await db.insert(products).values(product).onConflictDoNothing();
-  }
+  // Commerce products are supplied by approved Shopify and affiliate catalogs.
 
   console.log("✅ Database seeding completed!");
 }

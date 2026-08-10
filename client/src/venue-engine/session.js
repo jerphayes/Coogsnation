@@ -158,6 +158,8 @@ export async function createVenueSession(options) {
       }
       return seats.findAvailable();
     },
+    /* Venue-declared. A lounge starts with zero simulated occupants. */
+    simulation: venue.simulation,
   });
   const net = engine.register('net', new NetworkManager({ bus, transport }));
 
@@ -225,8 +227,14 @@ export async function createVenueSession(options) {
 
   /* Persistence flows through the twin, so any claimable object persists by
    * the same path. The adapter reaches the CoogsNation API, never the DB. */
+  /* Set while `claimSeat()` is driving a claim it has ALREADY persisted, so
+   * the watcher below does not POST the same claim a second time. Any other
+   * path into the twin (a plugin, a future tool) still persists normally. */
+  let suppressClaimPersist = false;
+
   registry.watch(({ object, event, payload }) => {
     if (event === 'claimed') {
+      if (suppressClaimPersist) return;
       persistenceService.saveSeatClaim(venue.id, {
         pid: object.persistentId,
         index: object.index ?? null,
@@ -301,6 +309,22 @@ export async function createVenueSession(options) {
     if (import.meta.env?.DEV) globalThis.venue = session;
   };
 
+  /**
+   * The seat the local user holds, tracked by the session.
+   *
+   * It CANNOT be derived from `seats.avatarId`. That is an Int32Array — a
+   * numeric id per seat, sized for a 58,000-seat bowl — while CoogsNation user
+   * ids are strings. `seats.avatarId[i] === user.userId` compares a number to
+   * a string and is therefore false for every seat, always. The previous
+   * `releaseSeat()` was built on exactly that comparison, which means it never
+   * released anything: it looped the whole manifest, matched nothing, and
+   * returned silently.
+   *
+   * So local ownership is held here, updated only when the SERVER has
+   * confirmed a claim, and cleared on release.
+   */
+  let localSeatIndex = null;
+
   const publicSession = {
     venueId: venue.id,
     stats,
@@ -309,19 +333,129 @@ export async function createVenueSession(options) {
     setCameraView(name) { return camera.setView(name); },
     cameraViews() { return camera.views(); },
 
+    /* Presentation options — see VenueDefinition.options() (ADR-020). The
+     * session forwards and reports; it does not interpret. Errors from a venue
+     * are contained here so a bad option can never take down the frame loop. */
+    venueOptions() {
+      try { return venue.options() || []; }
+      catch (error) { log.warn('venue.options() threw', { message: error.message }); return []; }
+    },
+
+    setVenueOption(key, value) {
+      try { return venue.setOption(key, value) === true; }
+      catch (error) {
+        log.warn('venue.setOption() threw', { key, message: error.message });
+        return false;
+      }
+    },
+
+    /**
+     * Move the local user to a seat. THE SERVER DECIDES.
+     *
+     * Order is the whole correctness argument here. The previous version
+     * claimed the seat locally, returned true, and let persistence catch up
+     * asynchronously — so a member whose claim was rejected with a 409 still
+     * saw themselves sitting there, and two members could each believe they
+     * held the same chair while the database had recorded only one of them.
+     *
+     * Now: persist first, and touch local state and the camera only once the
+     * server has confirmed ownership. A refusal changes nothing at all.
+     *
+     * The three outcomes are reported separately — an occupied seat and an
+     * unreachable server call for different words in the interface, and
+     * collapsing them into a boolean is what made the old failure invisible.
+     *
+     * @returns {Promise<{ok:true, seatIndex:number}|{ok:false, reason:'occupied'|'unauthorized'|'failed'|'unknown-seat', message:string}>}
+     */
     async claimSeat(seatIndex) {
       const collection = registry._collections.get('seat');
       const handle = collection?.resolveByIndex(seatIndex);
-      if (!handle) return false;
-      const claimed = handle.claim(user.userId, { username: user.displayName });
-      collection.recycle(handle);
-      return claimed;
+      if (!handle) {
+        return { ok: false, reason: 'unknown-seat', message: 'That seat does not exist.' };
+      }
+
+      const described = collection.describe(seatIndex);
+      const previousIndex = localSeatIndex;
+
+      /* Ask the server FIRST. Nothing local has changed yet, so a refusal
+       * leaves the member exactly where they were. */
+      const result = await persistenceService.saveSeatClaim(venue.id, {
+        pid: described.persistentId,
+        index: seatIndex,
+        section: described.metadata?.section,
+        row: described.metadata?.row,
+        seatNumber: described.metadata?.number,
+        userId: user.userId,
+        displayName: user.displayName,
+      });
+
+      if (!result.ok) {
+        collection.recycle(handle);
+        return result;
+      }
+
+      /* Confirmed. Release the old seat only now — the member has never been
+       * seatless at any point in this sequence. */
+      if (previousIndex !== null && previousIndex !== seatIndex) {
+        seats.release(previousIndex);
+      }
+
+      suppressClaimPersist = true;
+      let claimed = false;
+      try {
+        claimed = handle.claim(user.userId, { username: user.displayName });
+      } finally {
+        suppressClaimPersist = false;
+        collection.recycle(handle);
+      }
+
+      if (!claimed) {
+        /* The server granted it but the local twin refused — the two are out
+         * of step. Report rather than pretend. */
+        return { ok: false, reason: 'failed', message: 'The seat could not be occupied.' };
+      }
+
+      localSeatIndex = seatIndex;
+
+      /* The public contract says claiming a seat MOVES the local user to it.
+       * Until now nothing flew the camera, so the contract was aspirational.
+       * Camera flight happens only after a confirmed claim, never on failure. */
+      try { camera.gotoSeat(seatIndex); } catch { /* venue may declare no seat view */ }
+
+      return { ok: true, seatIndex };
     },
 
+    /**
+     * Release the seat the local user holds and return to the venue's default
+     * view. Also sweeps any seat still recorded against a NUMERIC id matching
+     * this session, which is how the legacy code path could strand a seat.
+     */
     async releaseSeat() {
-      for (let i = 0; i < seats.count; i++) {
-        if (seats.avatarId[i] === user.userId) { seats.release(i); return; }
+      let released = false;
+
+      if (localSeatIndex !== null) {
+        seats.release(localSeatIndex);
+        persistenceService.clearSeatClaim(
+          venue.id,
+          registry._collections.get('seat')?.describe(localSeatIndex)?.persistentId,
+        );
+        localSeatIndex = null;
+        released = true;
       }
+
+      /* Defensive sweep for duplicates. Only matches when the id is numeric,
+       * which is the only case the seat array can represent at all. */
+      const numericId = Number(user.userId);
+      if (Number.isInteger(numericId)) {
+        for (let i = 0; i < seats.count; i++) {
+          if (seats.avatarId[i] === numericId) { seats.release(i); released = true; }
+        }
+      }
+
+      if (released) {
+        try { camera.setView('lounge-home'); } catch { /* venue may not declare it */ }
+      }
+      return released;
     },
 
     occupancy() { return registry.summary('seat', 'occupancy') || {}; },

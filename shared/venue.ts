@@ -99,7 +99,7 @@ export function hasVenuePermission(
  * VENUES
  * ═══════════════════════════════════════════════════════════════════════ */
 
-export const VENUE_IDS = ["football", "basketball", "baseball", "concert"] as const;
+export const VENUE_IDS = ["football", "basketball", "baseball", "concert", "coogpaws"] as const;
 export type VenueId = (typeof VENUE_IDS)[number];
 
 export const venueIdSchema = z.enum(VENUE_IDS);

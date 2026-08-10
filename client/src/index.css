@@ -173,3 +173,24 @@ a:hover, .link:hover {
   text-shadow: 1px 1px 3px rgba(0,0,0,0.6);
   font-weight: 600;
 }
+
+
+/* COOGSNATION GLOBAL SCROLL BASELINE */
+/* Normal pages use normal document scrolling. */
+html {
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+body {
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+#root {
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+}
