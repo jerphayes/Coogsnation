@@ -204,6 +204,165 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Auth middleware
   const sessionMiddleware = await setupAuth(app);
+
+  /*
+   * DEVELOPMENT-ONLY UNLIMITED MEMBER TEST ACCESS.
+   *
+   * Anonymous visitors can exercise all normal MEMBER
+   * functionality during the build/debug cycle.
+   *
+   * Production: disabled.
+   * Administrator/owner authority: never granted.
+   */
+  app.get(
+    "/api/auth/dev-guest/status",
+    (_req, res) => {
+      const enabled =
+        process.env.NODE_ENV !== "production" &&
+        process.env.DEV_GUEST_FULL_ACCESS === "true";
+
+      return res.json({
+        enabled,
+        unlimited: enabled,
+      });
+    },
+  );
+
+  app.post(
+    "/api/auth/dev-guest",
+    async (req: any, res) => {
+      const enabled =
+        process.env.NODE_ENV !== "production" &&
+        process.env.DEV_GUEST_FULL_ACCESS === "true";
+
+      if (!enabled) {
+        return res.status(404).json({
+          message: "Guest Full Access is unavailable.",
+        });
+      }
+
+      try {
+        const email =
+          "guest-test-pass@coogsnation.local";
+
+        let guest =
+          await storage.getUserByEmail(email);
+
+        if (!guest) {
+          guest =
+            await storage.createLocalUser({
+              email,
+
+              firstName: "Guest",
+              lastName: "Tester",
+
+              nickname: "Guest Test Pass",
+              handle: "GuestTestPass",
+
+              role: "member",
+              accountStatus: "active",
+
+              sessionVersion: 0,
+
+              isProfileComplete: true,
+              profileCompletedAt: new Date(),
+
+              emailVerifiedAt: new Date(),
+
+              hasConsentedToDataUse: true,
+              hasConsentedToMarketing: false,
+
+              country: "USA",
+            } as any);
+        }
+
+        /*
+         * Never let this testing identity become admin.
+         */
+        if (guest.role === "admin") {
+          return res.status(403).json({
+            message:
+              "Guest testing identity cannot have administrator privileges.",
+          });
+        }
+
+        /*
+         * Make sure an old guest record is usable.
+         */
+        if (guest.accountStatus !== "active") {
+          guest =
+            await storage.updateUserProfile(
+              guest.id,
+              {
+                accountStatus: "active",
+                role: "member",
+                emailVerifiedAt:
+                  guest.emailVerifiedAt || new Date(),
+              } as any,
+            );
+        }
+
+        await new Promise<void>(
+          (resolve, reject) => {
+            req.session.regenerate(
+              (error: any) =>
+                error ? reject(error) : resolve(),
+            );
+          },
+        );
+
+        await new Promise<void>(
+          (resolve, reject) => {
+            req.logIn(
+              {
+                id: guest.id,
+                provider: "local",
+              },
+              (error: any) =>
+                error ? reject(error) : resolve(),
+            );
+          },
+        );
+
+        /*
+         * Required by CoogsNation's session-revocation
+         * protection.
+         */
+        (req.session as any).sessionVersion =
+          guest.sessionVersion ?? 0;
+
+        await new Promise<void>(
+          (resolve, reject) => {
+            req.session.save(
+              (error: any) =>
+                error ? reject(error) : resolve(),
+            );
+          },
+        );
+
+        return res.json({
+          ok: true,
+          unlimited: true,
+          userId: guest.id,
+          role: "member",
+          redirect: "/dashboard",
+        });
+
+      } catch (error) {
+        console.error(
+          "[DEV GUEST] Guest authentication failed:",
+          error,
+        );
+
+        return res.status(500).json({
+          message:
+            "Unable to establish Guest Full Access.",
+        });
+      }
+    },
+  );
+
+
   const aiService = getAIService();
 
   const loginLimiter = rateLimit({
