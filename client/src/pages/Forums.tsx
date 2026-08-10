@@ -34,6 +34,122 @@ const sportsSlugs = new Set([
 ]);
 
 
+type CommunityGroupDefinition = {
+  title: string;
+  description: string;
+  headerClasses: string;
+  uhAlternating?: boolean;
+  alternateStart?: "red" | "white";
+  items: {
+    slug: string;
+    label: string;
+  }[];
+};
+
+type CommunityGroup = CommunityGroupDefinition & {
+  categories: {
+    category: ForumCategory;
+    label: string;
+  }[];
+};
+
+const communityGroupDefinitions: CommunityGroupDefinition[] = [
+  {
+    title: "Coogs Life",
+    description:
+      "Campus life, alumni, careers, academics, business, technology, and everyday Cougar conversation",
+    headerClasses: "bg-red-700 text-white",
+    uhAlternating: true,
+    alternateStart: "red",
+    items: [
+      {
+        slug: "cougar-corner",
+        label: "Cougar Corner",
+      },
+      {
+        slug: "student-life",
+        label: "Student Life",
+      },
+      {
+        slug: "academic-discussion",
+        label: "Academic Discussion",
+      },
+      {
+        slug: "alumni-network",
+        label: "Alumni Network",
+      },
+      {
+        slug: "uh-hall-of-fame",
+        label: "UH Hall of Fame",
+      },
+      {
+        slug: "professional-networking",
+        label: "Professional Networking",
+      },
+      {
+        slug: "business",
+        label: "Business & Entrepreneurship",
+      },
+      {
+        slug: "technology",
+        label: "Technology & AI",
+      },
+    ],
+  },
+
+  {
+    title: "Houston Events & Happenings",
+    description:
+      "Houston culture, entertainment, food, festivals, and things to do",
+    headerClasses: "bg-[#6FA8DC] text-white",
+    items: [
+      {
+        slug: "entertainment",
+        label: "Entertainment",
+      },
+      {
+        slug: "food-dining",
+        label: "Food & Dining",
+      },
+    ],
+  },
+
+  {
+    title: "Coogs Marketplace",
+    description:
+      "Buy, sell, trade, housing, property, and local opportunities",
+    headerClasses: "bg-green-700 text-white",
+    items: [
+      {
+        slug: "classifieds",
+        label: "Buy, Sell & Trade",
+      },
+      {
+        slug: "real-estate",
+        label: "Real Estate & Housing",
+      },
+    ],
+  },
+
+  {
+    title: "Current Events",
+    description:
+      "National and local open discussion",
+    headerClasses: "bg-amber-900 text-white",
+    items: [
+      {
+        slug: "politics",
+        label: "National & Local Current Events",
+      },
+      {
+        slug: "coogs-lounge",
+        label: "Open Discussion",
+      },
+    ],
+  },
+]
+
+
 function categoryIcon(category: ForumCategory): string {
   const icons: Record<string, string> = {
     football: "🏈",
@@ -103,6 +219,48 @@ export default function Forums() {
     );
 
 
+  const communityGroups = useMemo<CommunityGroup[]>(() => {
+    const categoriesBySlug =
+      new Map(
+        communityCategories.map(
+          (category) => [
+            category.slug,
+            category,
+          ]
+        )
+      );
+
+    return communityGroupDefinitions
+      .map((group) => ({
+        ...group,
+        categories: group.items
+          .map((item) => {
+            const category =
+              categoriesBySlug.get(item.slug);
+
+            return category
+              ? {
+                  category,
+                  label: item.label,
+                }
+              : null;
+          })
+          .filter(
+            (
+              item
+            ): item is {
+              category: ForumCategory;
+              label: string;
+            } => item !== null
+          ),
+      }))
+      .filter(
+        (group) =>
+          group.categories.length > 0
+      );
+  }, [communityCategories]);
+
+
 
   const activeBoardCount = useMemo(() => {
     const displayedSportsCount =
@@ -114,7 +272,7 @@ export default function Forums() {
       ).length;
 
     const displayedCommunityCount =
-      communityCategories.length;
+      communityGroups.length;
 
     const waterCoolerCount =
       waterCoolerCategory ? 1 : 0;
@@ -129,7 +287,7 @@ export default function Forums() {
     );
   }, [
     sportsCategories,
-    communityCategories,
+    communityGroups,
     waterCoolerCategory,
   ]);
 
@@ -210,8 +368,8 @@ export default function Forums() {
             </TabsContent>
 
             <TabsContent value="community" className="mt-6">
-              <CategoryGrid
-                categories={communityCategories}
+              <CommunityGroupGrid
+                groups={communityGroups}
               />
             </TabsContent>
 
@@ -363,6 +521,107 @@ export default function Forums() {
     </div>
   );
 }
+
+
+function CommunityGroupGrid({
+  groups,
+}: {
+  groups: CommunityGroup[];
+}) {
+  if (groups.length === 0) {
+    return (
+      <Card>
+        <CardContent className="p-10 text-center text-gray-600">
+          No matching community categories.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="grid items-stretch gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {groups.map((group) => (
+        <details
+          key={group.title}
+          className="group h-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:shadow-lg"
+        >
+          <summary
+            className={`flex min-h-28 cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 [&::-webkit-details-marker]:hidden ${group.headerClasses}`}
+          >
+            <div>
+              <h2 className="text-lg font-bold">
+                {group.title}
+              </h2>
+
+              <p className="mt-1 text-xs leading-5 opacity-90">
+                {group.description}
+              </p>
+            </div>
+
+            <span
+              aria-hidden="true"
+              className="shrink-0 text-xl transition-transform duration-200 group-open:rotate-180"
+            >
+              ▼
+            </span>
+          </summary>
+
+          <div className="border-t border-gray-200">
+            {group.categories.map(
+              (
+                {
+                  category,
+                  label,
+                },
+                index
+              ) => {
+                let rowClasses =
+                  "bg-white text-gray-800 hover:bg-gray-50";
+
+                if (group.uhAlternating) {
+                  const startRed =
+                    group.alternateStart !==
+                    "white";
+
+                  const useRed =
+                    startRed
+                      ? index % 2 === 0
+                      : index % 2 !== 0;
+
+                  rowClasses = useRed
+                    ? "bg-red-700 text-white hover:bg-red-800"
+                    : "bg-white text-red-700 hover:bg-red-50";
+                }
+
+                return (
+                  <Link
+                    key={category.id}
+                    href={forumCategoryPath(
+                      category.slug
+                    )}
+                    className={`flex items-center justify-between gap-4 border-b border-gray-200 px-5 py-4 font-semibold last:border-b-0 ${rowClasses}`}
+                  >
+                    <span>
+                      {label}
+                    </span>
+
+                    <span
+                      aria-hidden="true"
+                      className="text-sm"
+                    >
+                      →
+                    </span>
+                  </Link>
+                );
+              }
+            )}
+          </div>
+        </details>
+      ))}
+    </div>
+  );
+}
+
 
 function categoryHeaderClasses(
   category: ForumCategory,
