@@ -102,6 +102,37 @@ export default function Forums() {
         category.slug !== "water-cooler"
     );
 
+
+
+  const activeBoardCount = useMemo(() => {
+    const displayedSportsCount =
+      sportsCategories.filter(
+        (category) =>
+          !womensSportsDetailSlugs.has(
+            category.slug
+          )
+      ).length;
+
+    const displayedCommunityCount =
+      communityCategories.length;
+
+    const waterCoolerCount =
+      waterCoolerCategory ? 1 : 0;
+
+    const coogPawsCount = 1;
+
+    return (
+      displayedSportsCount +
+      displayedCommunityCount +
+      waterCoolerCount +
+      coogPawsCount
+    );
+  }, [
+    sportsCategories,
+    communityCategories,
+    waterCoolerCategory,
+  ]);
+
   const categoryById = useMemo(
     () => new Map(visibleCategories.map((category) => [category.id, category])),
     [visibleCategories],
@@ -130,7 +161,7 @@ export default function Forums() {
         <section className="mb-10 grid gap-4 md:grid-cols-3">
           <Card>
             <CardContent className="p-5 text-center">
-              <div className="text-3xl font-bold text-uh-red">{visibleCategories.length}</div>
+              <div className="text-3xl font-bold text-uh-red">{activeBoardCount}</div>
               <div className="text-sm text-gray-600">Active boards</div>
             </CardContent>
           </Card>
@@ -334,9 +365,30 @@ export default function Forums() {
 }
 
 function categoryHeaderClasses(
-  color?: string | null,
+  category: ForumCategory,
 ): string {
-  switch ((color || "").toLowerCase()) {
+  const slug =
+    String(category.slug || "").toLowerCase();
+
+  // Football
+  if (slug === "football") {
+    return "bg-red-700 text-white";
+  }
+
+  // Men's Basketball
+  if (slug === "basketball") {
+    return "bg-white text-red-700 border-b-2 border-red-600";
+  }
+
+  // Consolidated women's athletics
+  if (slug === "womens-sports") {
+    return "bg-pink-300 text-red-800";
+  }
+
+  // Original category color scheme
+  switch (
+    String(category.color || "").toLowerCase()
+  ) {
     case "red":
       return "bg-red-700 text-white";
 
@@ -381,48 +433,115 @@ function categoryHeaderClasses(
   }
 }
 
-function CategoryGrid({ categories }: { categories: ForumCategory[] }) {
-  if (categories.length === 0) {
-    return <Card><CardContent className="p-10 text-center text-gray-600">No matching forum categories.</CardContent></Card>;
+const womensSportsDetailSlugs =
+  new Set([
+    "womens-basketball",
+    "womens-golf",
+    "womens-soccer",
+    "softball",
+    "womens-tennis",
+    "womens-track-field",
+    "womens-swimming-diving",
+  ]);
+
+function CategoryGrid({
+  categories,
+}: {
+  categories: ForumCategory[];
+}) {
+  /*
+   * Individual women's sport boards remain in the
+   * underlying system but are represented here by
+   * one Women Sports umbrella card.
+   */
+  const displayCategories =
+    categories.filter(
+      (category) =>
+        !womensSportsDetailSlugs.has(
+          category.slug
+        )
+    );
+
+  if (displayCategories.length === 0) {
+    return (
+      <Card>
+        <CardContent className="p-10 text-center text-gray-600">
+          No matching forum categories.
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
     <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-      {categories.map((category) => (
-        <Link
-          key={category.id}
-          href={forumCategoryPath(category.slug)}
-          className="block h-full"
-        >
-          <Card className="h-full overflow-hidden border border-gray-200 transition hover:-translate-y-0.5 hover:shadow-lg">
+      {displayCategories.map((category) => {
+        const isWomenSports =
+          category.slug === "womens-sports";
 
-            <div
-              className={`flex min-h-16 items-center gap-3 px-5 py-4 ${categoryHeaderClasses(
-                category.color,
-              )}`}
-            >
-              <span
-                className="text-2xl"
-                aria-hidden="true"
+        const isIntramural =
+          category.slug === "other-sports-men";
+
+        const displayName =
+          isWomenSports
+            ? "Women Sports"
+            : isIntramural
+              ? "Intramural Sports"
+              : category.name;
+
+        return (
+          <Link
+            key={category.id}
+            href={forumCategoryPath(
+              category.slug
+            )}
+            className="block h-full"
+          >
+            <Card className="h-full overflow-hidden border border-gray-200 transition hover:-translate-y-0.5 hover:shadow-lg">
+
+              <div
+                className={`flex min-h-16 items-center gap-3 px-5 py-4 ${categoryHeaderClasses(
+                  category
+                )}`}
               >
-                {categoryIcon(category)}
-              </span>
+                <span
+                  className="text-2xl"
+                  aria-hidden="true"
+                >
+                  {categoryIcon(category)}
+                </span>
 
-              <h2 className="text-lg font-bold">
-                {category.name}
-              </h2>
-            </div>
+                <h2 className="text-lg font-bold">
+                  {displayName}
+                </h2>
+              </div>
 
-            <CardContent className="bg-white p-5">
-              <p className="text-sm leading-6 text-gray-700">
-                {category.description ||
-                  "Community discussion board"}
-              </p>
-            </CardContent>
+              <CardContent className="bg-white p-5">
 
-          </Card>
-        </Link>
-      ))}
+                {isIntramural ? (
+                  <p className="leading-6 text-gray-700">
+
+                    <span className="text-sm font-medium">
+                      Activities
+                    </span>
+
+                    <span className="ml-1 text-xs">
+                      / announcements on and off campus
+                    </span>
+
+                  </p>
+                ) : (
+                  <p className="text-sm leading-6 text-gray-700">
+                    {category.description ||
+                      "Community discussion board"}
+                  </p>
+                )}
+
+              </CardContent>
+
+            </Card>
+          </Link>
+        );
+      })}
     </div>
   );
 }
