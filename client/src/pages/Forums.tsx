@@ -17,9 +17,12 @@ const sportsSlugs = new Set([
   "football",
   "basketball",
   "baseball",
+  "recruiting",
+  "game-day-central",
   "golf",
   "track-field",
   "other-sports",
+  "other-sports-men",
   "womens-sports",
   "womens-basketball",
   "womens-golf",
@@ -30,7 +33,6 @@ const sportsSlugs = new Set([
   "womens-swimming-diving",
 ]);
 
-const communitySlugs = new Set(["recruiting", "water-cooler", "hall-of-fame", "campus-events"]);
 
 function categoryIcon(category: ForumCategory): string {
   const icons: Record<string, string> = {
@@ -75,8 +77,30 @@ export default function Forums() {
     );
   }, [searchQuery, visibleCategories]);
 
-  const sportsCategories = filteredCategories.filter((category) => sportsSlugs.has(category.slug));
-  const communityCategories = filteredCategories.filter((category) => communitySlugs.has(category.slug));
+  const sportsCategories =
+    filteredCategories.filter(
+      (category) =>
+        sportsSlugs.has(category.slug)
+    );
+
+  /*
+   * EVERYTHING that is not sports belongs in Community,
+   * except Water Cooler Talk which has its own third section.
+   */
+  const waterCoolerCategory =
+    filteredCategories.find(
+      (category) =>
+        category.slug === "water-cooler-talk" ||
+        category.slug === "water-cooler"
+    );
+
+  const communityCategories =
+    filteredCategories.filter(
+      (category) =>
+        !sportsSlugs.has(category.slug) &&
+        category.slug !== "water-cooler-talk" &&
+        category.slug !== "water-cooler"
+    );
 
   const categoryById = useMemo(
     () => new Map(visibleCategories.map((category) => [category.id, category])),
@@ -133,20 +157,116 @@ export default function Forums() {
         ) : categoriesLoading ? (
           <CategorySkeleton />
         ) : (
-          <Tabs defaultValue="all" className="mb-10">
+          <Tabs defaultValue="sports" className="mb-10">
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="all">All Boards</TabsTrigger>
-              <TabsTrigger value="sports">Sports</TabsTrigger>
-              <TabsTrigger value="community">Community</TabsTrigger>
+              <TabsTrigger value="sports">
+                Sports
+              </TabsTrigger>
+
+              <TabsTrigger value="community">
+                Community
+              </TabsTrigger>
+
+              <TabsTrigger value="conversation">
+                Coog Paws & Water Cooler
+              </TabsTrigger>
             </TabsList>
-            <TabsContent value="all" className="mt-6">
-              <CategoryGrid categories={filteredCategories} />
-            </TabsContent>
+
             <TabsContent value="sports" className="mt-6">
-              <CategoryGrid categories={sportsCategories} />
+              <CategoryGrid
+                categories={sportsCategories}
+              />
             </TabsContent>
+
             <TabsContent value="community" className="mt-6">
-              <CategoryGrid categories={communityCategories} />
+              <CategoryGrid
+                categories={communityCategories}
+              />
+            </TabsContent>
+
+            <TabsContent
+              value="conversation"
+              className="mt-6"
+            >
+              <div className="grid gap-5 md:grid-cols-2">
+
+                <Link
+                  href="/coogpaws-chat"
+                  className="block h-full"
+                >
+                  <Card className="h-full overflow-hidden border border-gray-200 transition hover:-translate-y-0.5 hover:shadow-lg">
+
+                    <div className="flex min-h-16 items-center gap-3 bg-red-700 px-5 py-4 text-white">
+                      <span
+                        className="text-2xl"
+                        aria-hidden="true"
+                      >
+                        🐾
+                      </span>
+
+                      <h2 className="text-lg font-bold">
+                        Coog Paws
+                      </h2>
+                    </div>
+
+                    <CardContent className="bg-white p-5">
+                      <p className="text-sm leading-6 text-gray-700">
+                        Live CoogsNation community chat and lounge conversation.
+                      </p>
+                    </CardContent>
+
+                  </Card>
+                </Link>
+
+                {waterCoolerCategory ? (
+                  <Link
+                    href={forumCategoryPath(
+                      waterCoolerCategory.slug
+                    )}
+                    className="block h-full"
+                  >
+                    <Card className="h-full overflow-hidden border border-gray-200 transition hover:-translate-y-0.5 hover:shadow-lg">
+
+                      <div className="flex min-h-16 items-center gap-3 bg-sky-500 px-5 py-4 text-white">
+                        <span
+                          className="text-2xl"
+                          aria-hidden="true"
+                        >
+                          ☕
+                        </span>
+
+                        <h2 className="text-lg font-bold">
+                          Water Cooler Talk
+                        </h2>
+                      </div>
+
+                      <CardContent className="bg-white p-5">
+                        <p className="text-sm leading-6 text-gray-700">
+                          General discussion, off-topic conversation, and community talk.
+                        </p>
+                      </CardContent>
+
+                    </Card>
+                  </Link>
+                ) : (
+                  <Card className="h-full">
+                    <CardContent className="p-6">
+                      <div className="mb-3 text-3xl">
+                        ☕
+                      </div>
+
+                      <h2 className="text-lg font-bold text-uh-black">
+                        Water Cooler Talk
+                      </h2>
+
+                      <p className="mt-2 text-sm text-gray-600">
+                        Water Cooler Talk is temporarily unavailable.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+
+              </div>
             </TabsContent>
           </Tabs>
         )}
@@ -213,6 +333,54 @@ export default function Forums() {
   );
 }
 
+function categoryHeaderClasses(
+  color?: string | null,
+): string {
+  switch ((color || "").toLowerCase()) {
+    case "red":
+      return "bg-red-700 text-white";
+
+    case "blue":
+      return "bg-blue-700 text-white";
+
+    case "green":
+      return "bg-green-700 text-white";
+
+    case "orange":
+      return "bg-orange-600 text-white";
+
+    case "purple":
+      return "bg-purple-700 text-white";
+
+    case "gray":
+      return "bg-slate-700 text-white";
+
+    case "gold":
+      return "bg-amber-500 text-black";
+
+    case "cyan":
+      return "bg-cyan-700 text-white";
+
+    case "amber":
+      return "bg-amber-600 text-white";
+
+    case "lime":
+      return "bg-lime-700 text-white";
+
+    case "violet":
+      return "bg-violet-700 text-white";
+
+    case "teal":
+      return "bg-teal-700 text-white";
+
+    case "indigo":
+      return "bg-indigo-700 text-white";
+
+    default:
+      return "bg-red-700 text-white";
+  }
+}
+
 function CategoryGrid({ categories }: { categories: ForumCategory[] }) {
   if (categories.length === 0) {
     return <Card><CardContent className="p-10 text-center text-gray-600">No matching forum categories.</CardContent></Card>;
@@ -221,13 +389,37 @@ function CategoryGrid({ categories }: { categories: ForumCategory[] }) {
   return (
     <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
       {categories.map((category) => (
-        <Link key={category.id} href={forumCategoryPath(category.slug)} className="block h-full">
-          <Card className="h-full transition hover:-translate-y-0.5 hover:shadow-lg">
-            <CardContent className="p-6">
-              <div className="mb-3 text-3xl" aria-hidden="true">{categoryIcon(category)}</div>
-              <h2 className="text-lg font-bold text-uh-black">{category.name}</h2>
-              <p className="mt-2 text-sm text-gray-600">{category.description || "Community discussion board"}</p>
+        <Link
+          key={category.id}
+          href={forumCategoryPath(category.slug)}
+          className="block h-full"
+        >
+          <Card className="h-full overflow-hidden border border-gray-200 transition hover:-translate-y-0.5 hover:shadow-lg">
+
+            <div
+              className={`flex min-h-16 items-center gap-3 px-5 py-4 ${categoryHeaderClasses(
+                category.color,
+              )}`}
+            >
+              <span
+                className="text-2xl"
+                aria-hidden="true"
+              >
+                {categoryIcon(category)}
+              </span>
+
+              <h2 className="text-lg font-bold">
+                {category.name}
+              </h2>
+            </div>
+
+            <CardContent className="bg-white p-5">
+              <p className="text-sm leading-6 text-gray-700">
+                {category.description ||
+                  "Community discussion board"}
+              </p>
             </CardContent>
+
           </Card>
         </Link>
       ))}

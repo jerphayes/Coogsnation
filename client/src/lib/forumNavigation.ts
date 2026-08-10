@@ -26,7 +26,11 @@ export const LEGACY_COOGPAWS_FORUM_SLUG = "coogpaws";
  * navigation. The immersive lounge remains available at /coogpaws-chat.
  */
 export function isVisibleForumCategory(category: ForumCategory): boolean {
-  return category.isActive !== false && category.slug !== LEGACY_COOGPAWS_FORUM_SLUG;
+  return (
+    category.isActive !== false &&
+    category.slug !== LEGACY_COOGPAWS_FORUM_SLUG &&
+    category.slug !== "premium-lounge"
+  );
 }
 
 export function resolveForumCategory(
