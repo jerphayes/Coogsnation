@@ -57,7 +57,7 @@ function metadataPathFor(absolutePath: string): string {
 export class FileStorageService {
   async uploadAvatarDirect(userId: string, fileBuffer: Buffer, mimeType: string): Promise<string> {
     const safeUserId = userId.replace(/[^a-zA-Z0-9_-]/g, "_");
-    const relativePath = `avatars/${safeUserId}/${Date.now()}-${randomUUID()}.jpg`;
+    const relativePath = `avatars/${safeUserId}/${Date.now()}-${randomUUID()}.webp`;
     const absolutePath = absolutePathFor(relativePath);
     const metadata: StoredFileMetadata = {
       contentType: mimeType,

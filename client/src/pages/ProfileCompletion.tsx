@@ -23,17 +23,6 @@ import type { z } from 'zod';
 type ProfileCompletionData = z.infer<typeof userProfileCompletionSchema>;
 type LocalRegistrationData = z.infer<typeof localAccountRegistrationSchema>;
 
-const MEMBER_CATEGORIES = [
-  { value: 'Student', label: 'Student', description: 'Currently enrolled student' },
-  { value: 'Ex-Student', label: 'Ex-Student', description: 'Former University of Houston student' },
-  { value: 'Graduate', label: 'Graduate', description: 'Graduate of University of Houston' },
-  { value: 'Post Graduate', label: 'Post Graduate', description: 'Post graduate degree holder' },
-  { value: 'Faculty', label: 'Faculty Member', description: 'University of Houston faculty' },
-  { value: 'Staff', label: 'Staff Member', description: 'University of Houston staff' },
-  { value: 'Coog Crazy Fan', label: 'Coog Crazy Fan', description: 'Enthusiastic Houston Cougars supporter' },
-  { value: 'Friend', label: 'Friend', description: 'Friend of the University of Houston community' },
-];
-
 const US_STATES = [
   'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
   'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
@@ -99,10 +88,10 @@ export default function ProfileCompletion() {
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
+    if (file.size > 10 * 1024 * 1024) {
       toast({
         title: "Image Too Large",
-        description: "Avatar files must be 2 MB or smaller.",
+        description: "Avatar files must be 10 MB or smaller. CoogsNation will optimize the image automatically.",
         variant: "destructive",
       });
       return;
@@ -181,7 +170,7 @@ export default function ProfileCompletion() {
         website: '',
       },
       addressLine1: '',
-      country: '',
+      country: 'USA',
       optInOffers: false,
     },
   });
@@ -222,7 +211,7 @@ export default function ProfileCompletion() {
           website: '',
         },
         addressLine1: user.addressLine1 || '',
-        country: user.country || '',
+        country: user.country || 'USA',
         optInOffers: user.optInOffers || false,
       });
       
@@ -307,59 +296,49 @@ export default function ProfileCompletion() {
     },
   });
 
-  // Local registration mutation (for password-based accounts)
+  // Local registration mutation.
+  // Membership remains pending until email confirmation.
   const localRegistrationMutation = useMutation({
     mutationFn: async (data: LocalRegistrationData) => {
-      // Include reCAPTCHA token in the payload
       const payload = {
         ...data,
         "g-recaptcha-response": recaptchaToken
       };
-      await apiRequest('POST', '/api/auth/register-local', payload);
 
-      // Sign the new member in so an optional avatar selected during signup can
-      // be sent through the authenticated, security-hardened upload endpoint.
-      let signedIn = false;
-      try {
-        await apiRequest('POST', '/api/auth/login-local', {
-          handle: data.email,
-          password: data.password,
-        });
-        signedIn = true;
-      } catch (error) {
-        console.error('Account created, but automatic sign-in failed:', error);
-      }
+      const response = await apiRequest(
+        'POST',
+        '/api/auth/register-local',
+        payload
+      );
 
-      let avatarUploadFailed = false;
-      if (pendingAvatarFile && signedIn) {
-        try {
-          await uploadAvatarFile(pendingAvatarFile);
-        } catch (error) {
-          avatarUploadFailed = true;
-          console.error('Post-registration avatar upload failed:', error);
-        }
-      }
+      const result =
+        await response.json().catch(() => ({}));
 
-      return { avatarUploadFailed, signedIn };
+      return {
+        email: data.email,
+        verificationRequired:
+          result?.verificationRequired === true,
+      };
     },
-    onSuccess: ({ avatarUploadFailed, signedIn }) => {
-      if (signedIn) {
-        queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-      }
+
+    onSuccess: ({ email }) => {
       toast({
-        title: 'Account Created Successfully!',
-        description: !signedIn
-          ? 'Your account was created. Please log in to continue and add your avatar.'
-          : avatarUploadFailed
-            ? 'Your account was created and you are signed in. You can retry the avatar upload from your profile.'
-            : 'Your CoogsNation account has been created and you are signed in.',
+        title: 'Check Your Email',
+        description:
+          'Your membership is pending. Click the confirmation link within 24 hours to activate CoogsNation membership.',
       });
-      setLocation(signedIn ? '/dashboard' : '/login');
+
+      setLocation(
+        `/verify-email-pending?email=${encodeURIComponent(email)}`
+      );
     },
+
     onError: (error: any) => {
       toast({
         title: 'Registration Failed',
-        description: error.message || 'Failed to create account. Please try again.',
+        description:
+          error.message ||
+          'Failed to create account. Please try again.',
         variant: 'destructive',
       });
     },
@@ -487,7 +466,7 @@ export default function ProfileCompletion() {
                   </h4>
                   <div className="space-y-3">
                     <p className="text-sm text-gray-600 dark:text-gray-300">
-                      Choose a JPG, PNG, or WebP image up to 2 MB. It is validated, stripped of metadata, resized, and safely converted by the server.
+                      Choose a JPG, PNG, or WebP image up to 10 MB. CoogsNation automatically corrects orientation, crops it square, resizes it, removes metadata, and optimizes it.
                     </p>
                     <Input
                       type="file"
@@ -755,179 +734,27 @@ export default function ProfileCompletion() {
               </CardContent>
             </Card>
 
-            {/* Address Information */}
+            {/* Required Contact Address */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MapPin className="w-5 h-5" />
-                  Address Information (Optional)
+                  Contact Address
                 </CardTitle>
               </CardHeader>
+
               <CardContent className="space-y-4">
                 <FormField
                   control={form.control}
                   name="address"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Street Address</FormLabel>
+                      <FormLabel>Street Address *</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="123 Main St" data-testid="input-address" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="city"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>City</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="Houston" data-testid="input-city" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="state"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>State</FormLabel>
-                        <Select
-                          onValueChange={(value) => field.onChange(value === 'not-specified' ? undefined : value)}
-                          value={field.value || 'not-specified'}
-                        >
-                          <FormControl>
-                            <SelectTrigger data-testid="select-state">
-                              <SelectValue placeholder="Select state" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="not-specified">Prefer not to say</SelectItem>
-                            {US_STATES.map(state => (
-                              <SelectItem key={state} value={state}>{state}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="zipCode"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>ZIP Code</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="77204" data-testid="input-zipcode" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                {/* Enhanced address fields */}
-                <div className="border-t pt-4 mt-4">
-                  <h4 className="font-medium mb-3 text-gray-900 dark:text-gray-100">Additional Address Details (Optional)</h4>
-                  
-                  <div className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="addressLine1"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Address Line 1</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="Street address, P.O. box, etc." data-testid="input-address-line1" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="country"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Country</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="USA" data-testid="input-country" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Member Category */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5" />
-                  Member Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="memberCategory"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Member Category (Optional)</FormLabel>
-                      <Select
-                        onValueChange={(value) => field.onChange(value === 'not-specified' ? undefined : value)}
-                        value={field.value || 'not-specified'}
-                      >
-                        <FormControl>
-                          <SelectTrigger data-testid="select-member-category">
-                            <SelectValue placeholder="Select your category" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="not-specified">Prefer not to say</SelectItem>
-                          {MEMBER_CATEGORIES.map(category => (
-                            <SelectItem key={category.value} value={category.value}>
-                              <div>
-                                <div className="font-medium">{category.label}</div>
-                                <div className="text-sm text-gray-600">{category.description}</div>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="graduationYear"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Graduation Year (If Applicable)</FormLabel>
-                      <FormControl>
-                        <Input 
+                        <Input
                           {...field}
-                          type="number"
-                          min="1950"
-                          max={new Date().getFullYear() + 10}
-                          placeholder="2024"
-                          data-testid="input-graduation-year"
-                          onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                          placeholder="123 Main St"
+                          data-testid="input-address"
                         />
                       </FormControl>
                       <FormMessage />
@@ -935,56 +762,95 @@ export default function ProfileCompletion() {
                   )}
                 />
 
-                {/* Enhanced membership fields */}
-                <div className="border-t pt-4 mt-4">
-                  <h4 className="font-medium mb-3 text-gray-900 dark:text-gray-100">Additional Membership Details</h4>
-                  
-                  <div className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="affiliation"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Current Affiliation (Optional)</FormLabel>
-                          <Select
-                            onValueChange={(value) => field.onChange(value === 'not-specified' ? undefined : value)}
-                            value={field.value || 'not-specified'}
-                          >
-                            <FormControl>
-                              <SelectTrigger data-testid="select-affiliation">
-                                <SelectValue placeholder="Select your affiliation" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="not-specified">Prefer not to say</SelectItem>
-                              <SelectItem value="Current Student">Current Student</SelectItem>
-                              <SelectItem value="Ex-Student">Ex-Student</SelectItem>
-                              <SelectItem value="Graduate">Graduate</SelectItem>
-                              <SelectItem value="Faculty">Faculty</SelectItem>
-                              <SelectItem value="Staff">Staff</SelectItem>
-                              <SelectItem value="Coog Crazy Fan">Coog Crazy Fan</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="city"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>City *</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder="Houston"
+                            data-testid="input-city"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                    <FormField
-                      control={form.control}
-                      name="majorOrDepartment"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Major or Department</FormLabel>
+                  <FormField
+                    control={form.control}
+                    name="state"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>State *</FormLabel>
+
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value || undefined}
+                        >
                           <FormControl>
-                            <Input {...field} placeholder="Computer Science, Engineering, Business, etc." data-testid="input-major-department" />
+                            <SelectTrigger data-testid="select-state">
+                              <SelectValue placeholder="Select state" />
+                            </SelectTrigger>
                           </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+
+                          <SelectContent>
+                            {US_STATES.map((state) => (
+                              <SelectItem
+                                key={state}
+                                value={state}
+                              >
+                                {state}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="zipCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>ZIP Code *</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder="77204"
+                            data-testid="input-zipcode"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
+
+                <FormField
+                  control={form.control}
+                  name="country"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Country *</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="USA"
+                          data-testid="input-country"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </CardContent>
             </Card>
 
@@ -1002,7 +868,7 @@ export default function ProfileCompletion() {
                   name="aboutMe"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>About Me</FormLabel>
+                      <FormLabel>About Me (Optional)</FormLabel>
                       <FormControl>
                         <textarea
                           {...field}
@@ -1021,7 +887,7 @@ export default function ProfileCompletion() {
                   name="interests"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Interests</FormLabel>
+                      <FormLabel>Interests (Optional)</FormLabel>
                       <FormControl>
                         <Input {...field} placeholder="Sports, Music, Technology, Gaming, Reading, etc." data-testid="input-interests" />
                       </FormControl>
