@@ -14,9 +14,8 @@ export const FORUM_NAVIGATION = {
   basketball: { label: "Basketball", slug: "basketball" },
   baseball: { label: "Baseball", slug: "baseball" },
   recruiting: { label: "Recruiting", slug: "recruiting" },
-  waterCooler: { label: "Water Cooler Talk", slug: "water-cooler" },
-  hallOfFame: { label: "UH Hall of Fame", slug: "hall-of-fame" },
-  campusEvents: { label: "Campus Events", slug: "campus-events" },
+  waterCooler: { label: "Water Cooler Talk", slug: "water-cooler-talk" },
+  hallOfFame: { label: "UH Hall of Fame", slug: "uh-hall-of-fame" },
 } as const;
 
 export const LEGACY_COOGPAWS_FORUM_SLUG = "coogpaws";

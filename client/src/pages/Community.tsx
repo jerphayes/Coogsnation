@@ -113,7 +113,7 @@ export default function Community() {
               <i className="fas fa-calendar-alt text-4xl text-uh-red mb-4"></i>
               <h3 className="text-xl font-bold mb-4">Campus Events</h3>
               <p className="text-gray-600 mb-6">Stay updated on campus events, meetups, and social gatherings</p>
-              <Link href={forumCategoryPath(FORUM_NAVIGATION.campusEvents.slug)}>
+              <Link href="/events">
                 <Button variant="outline" className="border-uh-red text-uh-red hover:bg-uh-red hover:text-white">
                   View Events
                 </Button>

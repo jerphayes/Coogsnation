@@ -158,9 +158,8 @@ function categoryIcon(category: ForumCategory): string {
     golf: "⛳",
     "track-field": "🏃",
     recruiting: "📣",
-    "water-cooler": "☕",
-    "hall-of-fame": "🏆",
-    "campus-events": "📅",
+    "water-cooler-talk": "☕",
+    "uh-hall-of-fame": "🏆",
     "womens-sports": "🏅",
   };
   return icons[category.slug] || "💬";
@@ -589,8 +588,8 @@ function CommunityGroupGrid({
                       : index % 2 !== 0;
 
                   rowClasses = useRed
-                    ? "bg-red-700 text-white hover:bg-red-800"
-                    : "bg-white text-red-700 hover:bg-red-50";
+                    ? "bg-red-700 !text-white hover:bg-red-800"
+                    : "bg-white !text-red-700 hover:bg-red-50";
                 }
 
                 return (
