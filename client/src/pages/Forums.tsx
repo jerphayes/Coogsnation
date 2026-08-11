@@ -19,6 +19,7 @@ const sportsSlugs = new Set([
   "baseball",
   "recruiting",
   "game-day-central",
+  "tailgate-roundup",
   "golf",
   "track-field",
   "other-sports",
@@ -158,6 +159,7 @@ function categoryIcon(category: ForumCategory): string {
     golf: "⛳",
     "track-field": "🏃",
     recruiting: "📣",
+    "tailgate-roundup": "🍔",
     "water-cooler-talk": "☕",
     "uh-hall-of-fame": "🏆",
     "womens-sports": "🏅",
@@ -278,8 +280,13 @@ export default function Forums() {
 
     const coogPawsCount = 1;
 
+    // Ticket Purchase is a Sports utility card rather
+    // than a discussion-board database category.
+    const ticketPurchaseCount = 1;
+
     return (
       displayedSportsCount +
+      ticketPurchaseCount +
       displayedCommunityCount +
       waterCoolerCount +
       coogPawsCount
@@ -800,9 +807,84 @@ function CategoryGrid({
           </Link>
         );
       })}
+
+      <TicketPurchaseCard />
     </div>
   );
 }
+
+
+function TicketPurchaseCard() {
+  return (
+    <details className="group h-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
+
+      <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 bg-green-700 px-5 py-4 text-white [&::-webkit-details-marker]:hidden">
+
+        <div className="flex items-center gap-3">
+          <span
+            className="text-2xl"
+            aria-hidden="true"
+          >
+            🎟️
+          </span>
+
+          <h2 className="text-lg font-bold">
+            Ticket Purchase
+          </h2>
+        </div>
+
+        <span
+          aria-hidden="true"
+          className="text-lg transition-transform duration-200 group-open:rotate-180"
+        >
+          ▼
+        </span>
+
+      </summary>
+
+      <div className="border-t border-gray-200">
+
+        <div className="flex items-center justify-between border-b border-gray-200 bg-white px-5 py-4">
+          <div>
+            <div className="font-bold text-gray-900">
+              Ticketmaster
+            </div>
+
+            <div className="mt-1 text-xs text-gray-500">
+              Ticket marketplace
+            </div>
+          </div>
+
+          <span className="text-lg text-green-700">
+            🎫
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between bg-gray-50 px-5 py-4">
+          <div>
+            <div className="font-bold text-gray-900">
+              StubHub
+            </div>
+
+            <div className="mt-1 text-xs text-gray-500">
+              Ticket marketplace
+            </div>
+          </div>
+
+          <span className="text-lg text-green-700">
+            🎫
+          </span>
+        </div>
+
+        <div className="bg-white px-5 py-3 text-xs leading-5 text-gray-500">
+          Tracked affiliate purchase links will connect here.
+        </div>
+
+      </div>
+    </details>
+  );
+}
+
 
 function CategorySkeleton() {
   return (
