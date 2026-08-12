@@ -14,13 +14,47 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertCoogpawsProfileSchema } from "@shared/schema";
-import type { CoogpawsProfileResponse, CoogpawsBrowseProfile } from "@shared/api-types";
 import { formatDistance } from "date-fns";
 import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
 
-const profileSchema = insertCoogpawsProfileSchema.omit({ userId: true });
+// Coogpaws database tables intentionally remain outside shared/schema.ts.
+// Keep the client form/API contract local so Drizzle will not try to manage
+// or drop the existing coogpaws_* production tables.
+const profileSchema = z.object({
+  bio: z.string(),
+  age: z.number().int().min(18).max(99),
+  lookingFor: z.string().min(1),
+  interests: z.string(),
+  photos: z.array(z.string()),
+  isActive: z.boolean(),
+  locationPreference: z.string().min(1),
+  ageRangeMin: z.number().int().min(18).max(99),
+  ageRangeMax: z.number().int().min(18).max(99),
+});
+
+interface CoogpawsProfileResponse {
+  id?: string | number;
+  userId: string;
+  bio: string | null;
+  age: number | null;
+  lookingFor: string | null;
+  interests: string | null;
+  photos: string[] | null;
+  isActive: boolean | null;
+  locationPreference: string | null;
+  ageRangeMin: number | null;
+  ageRangeMax: number | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+interface CoogpawsBrowseProfile extends CoogpawsProfileResponse {
+  ownerFirstName?: string | null;
+  ownerLastName?: string | null;
+  ownerMajorOrDepartment?: string | null;
+  ownerGraduationYear?: number | null;
+}
 
 // UH email domain verification function
 function isUHEmail(email: string | null | undefined): boolean {

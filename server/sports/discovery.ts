@@ -135,22 +135,103 @@ export function discoverGamesFromPublicPage(html: string, division: Division, fa
   return [...found.values()];
 }
 
-function scoreboardUrl(date: Date, division: Division): string {
-  const yyyy = date.getUTCFullYear();
-  const mm = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const dd = String(date.getUTCDate()).padStart(2, "0");
-  const level = division === "fcs" ? "fcs" : "fbs";
-  return `https://www.ncaa.com/scoreboard/football/${level}/${yyyy}/${mm}/${dd}/all-conf`;
+
+const DAY_MS = 86_400_000;
+const NCAA_SLATE_CACHE_MS = 2 * 60_000;
+
+const ncaaSlateCache = new Map<
+  string,
+  { expiresAt: number; games: DiscoveredGame[] }
+>();
+
+function ncaaSeasonYear(date: Date): number {
+  return date.getUTCMonth() <= 1
+    ? date.getUTCFullYear() - 1
+    : date.getUTCFullYear();
 }
 
-export async function discoverNcaaDaySlate(date: Date, division: Division, fetchImpl: typeof fetch = fetch): Promise<DiscoveredGame[]> {
-  const url = scoreboardUrl(date, division);
+export function ncaaWeekCode(date: Date): string {
+  const season = ncaaSeasonYear(date);
+
+  const septemberFirst = new Date(Date.UTC(season, 8, 1));
+  const daysToMonday = (8 - septemberFirst.getUTCDay()) % 7;
+  const laborDayMs = Date.UTC(season, 8, 1 + daysToMonday);
+  const week1ThursdayMs = laborDayMs - 4 * DAY_MS;
+
+  const targetMs = Date.UTC(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate(),
+  );
+
+  if (targetMs < week1ThursdayMs) return "P";
+
+  const week =
+    Math.floor((targetMs - week1ThursdayMs) / (7 * DAY_MS)) + 1;
+
+  return String(Math.max(1, week)).padStart(2, "0");
+}
+
+export function ncaaScoreboardUrl(
+  date: Date,
+  division: Division,
+): string {
+  const season = ncaaSeasonYear(date);
+  const week = ncaaWeekCode(date);
+  const level = division === "fcs" ? "fcs" : "fbs";
+
+  return `https://www.ncaa.com/scoreboard/football/${level}/${season}/${week}/all-conf`;
+}
+
+export async function discoverNcaaDaySlate(
+  date: Date,
+  division: Division,
+  fetchImpl: typeof fetch = fetch,
+): Promise<DiscoveredGame[]> {
+  const url = ncaaScoreboardUrl(date, division);
+
+  const cached = ncaaSlateCache.get(url);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.games;
+  }
+
   const response = await fetchImpl(url, {
-    headers: { "accept": "text/html,application/xhtml+xml", "user-agent": "NGF-SportsFacts/1.0 (+public factual schedule collector)" },
+    headers: {
+      accept: "text/html,application/xhtml+xml",
+      "accept-language": "en-US,en;q=0.9",
+      "user-agent":
+        "Mozilla/5.0 (compatible; NGF-SportsFacts/1.0; +https://coogsnation.com)",
+    },
     signal: AbortSignal.timeout(15_000),
   });
-  if (!response.ok) throw new Error(`NCAA ${division} schedule HTTP ${response.status}`);
-  return discoverGamesFromPublicPage(await response.text(), division, date.toISOString());
+
+  if (response.status === 404) {
+    const games: DiscoveredGame[] = [];
+    ncaaSlateCache.set(url, {
+      expiresAt: Date.now() + NCAA_SLATE_CACHE_MS,
+      games,
+    });
+    return games;
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      `NCAA ${division} scoreboard HTTP ${response.status} (${url})`,
+    );
+  }
+
+  const games = discoverGamesFromPublicPage(
+    await response.text(),
+    division,
+    date.toISOString(),
+  );
+
+  ncaaSlateCache.set(url, {
+    expiresAt: Date.now() + NCAA_SLATE_CACHE_MS,
+    games,
+  });
+
+  return games;
 }
 
 export function phaseForDiscovery(_game: DiscoveredGame): GamePhase { return "scheduled"; }

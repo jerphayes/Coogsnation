@@ -1,10 +1,39 @@
 import { storage } from "../../storage";
-import type { CommerceCapabilities, CommerceProduct, CommerceProvider } from "../types";
 
-export class LocalCatalogProvider implements CommerceProvider {
+/**
+ * Legacy/local database catalog adapter.
+ *
+ * This is intentionally standalone. The v3 storefront CommerceProvider
+ * contract only represents "shopify" and "affiliate". Treating this local
+ * database adapter as either provider would mislabel its source.
+ */
+export interface LocalCatalogCapabilities {
+  provider: "local";
+  configured: boolean;
+  productSearch: boolean;
+  productDetails: boolean;
+  cartRead: boolean;
+  cartMutation: boolean;
+  checkoutUrl: boolean;
+  note: string;
+}
+
+export interface LocalCatalogProduct {
+  id: string;
+  title: string;
+  description: string;
+  priceAmount: string;
+  currencyCode: string;
+  imageUrl?: string;
+  productUrl: string;
+  availableForSale: boolean;
+  provider: "local";
+}
+
+export class LocalCatalogProvider {
   readonly name = "local" as const;
 
-  capabilities(): CommerceCapabilities {
+  capabilities(): LocalCatalogCapabilities {
     return {
       provider: this.name,
       configured: true,
@@ -17,7 +46,7 @@ export class LocalCatalogProvider implements CommerceProvider {
     };
   }
 
-  async searchProducts(query: string, limit: number): Promise<CommerceProduct[]> {
+  async searchProducts(query: string, limit: number): Promise<LocalCatalogProduct[]> {
     const terms = query.toLowerCase().split(/\W+/).filter((term) => term.length > 2);
     const products = await storage.getProducts(100);
     const ranked = products.map((product) => {

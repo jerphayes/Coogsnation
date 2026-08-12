@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 const commands = [
   ["npm", ["exec", "tsx", "--", "tests/ngf-sports/core.test.ts"]],
   ["npm", ["exec", "tsx", "--", "tests/ngf-sports/parser.test.ts"]],
+  ["npm", ["exec", "tsx", "--", "tests/ngf-sports/ncaa-week.test.ts"]],
 ];
 for (const [cmd,args] of commands) {
   const result = spawnSync(cmd, args, { stdio:"inherit", shell: process.platform === "win32" });
