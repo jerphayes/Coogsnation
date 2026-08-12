@@ -23,7 +23,6 @@ import type {
   Notification,
   Order,
   ShoppingCart,
-  CoogpawsProfile,
 } from "./schema";
 
 // JSON serialization turns Date into string. JsonOf<T> applies that transform
@@ -62,15 +61,6 @@ export type CampusLocationResponse = JsonOf<CampusLocation>;
 export type EventWithLocation = JsonOf<Event> & {
   campusLocation?: JsonOf<CampusLocation>;
 };
-
-// --- CoogPaws ----------------------------------------------------------------
-
-// server: GET /api/coogpaws/profile   ->  storage.getCoogpawsProfile()  (may be undefined)
-export type CoogpawsProfileResponse = JsonOf<CoogpawsProfile>;
-
-// server: GET /api/coogpaws/profiles  ->  storage.getActiveCoogpawsProfiles()
-// Joined with safe owner display fields (see shared/schema CoogpawsBrowseProfile).
-export type { CoogpawsBrowseProfile } from "./schema";
 
 // --- Auth --------------------------------------------------------------------
 

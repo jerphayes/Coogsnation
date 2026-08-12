@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -24,6 +24,7 @@ import type { EventResponse } from "@shared/api-types";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+import { useLocation } from "wouter";
 
 const createEventSchema = insertEventSchema.extend({
   category: z.string().default("community"),
@@ -35,10 +36,19 @@ type CreateEventFormData = z.infer<typeof createEventSchema>;
 export default function EventManagement() {
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
+  const [location, navigate] = useLocation();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<"calendar" | "list">("list");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+
+  useEffect(() => {
+    const query = location.split("?")[1] || "";
+    if (new URLSearchParams(query).get("create") === "1") {
+      setIsCreateDialogOpen(true);
+      navigate("/event-management", { replace: true });
+    }
+  }, [location, navigate]);
 
   const { data: events = [], isLoading } = useQuery<EventResponse[]>({
     queryKey: ["/api/events"],

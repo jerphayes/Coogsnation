@@ -196,6 +196,21 @@ export const forumPosts = pgTable("forum_posts", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Member reports for standard-board posts. This is separate from the retired
+// profile-matching reporting system.
+export const forumPostReports = pgTable("forum_post_reports", {
+  id: serial("id").primaryKey(),
+  postId: integer("post_id").notNull().references(() => forumPosts.id),
+  reportedById: varchar("reported_by_id").notNull().references(() => users.id),
+  reason: varchar("reason", { length: 50 }).notNull(),
+  details: text("details"),
+  status: varchar("status", { length: 20 }).notNull().default("pending"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_forum_post_reports_post").on(table.postId),
+  index("idx_forum_post_reports_status").on(table.status),
+]);
+
 // News articles
 export const newsArticles = pgTable("news_articles", {
   id: serial("id").primaryKey(),
@@ -349,88 +364,12 @@ export const eventRsvps = pgTable("event_rsvps", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Coog Paws Community Connection Tables
-
-// Coog Paws user profiles for community connections
-export const coogpawsProfiles = pgTable("coogpaws_profiles", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id).unique(),
-  bio: text("bio").notNull(),
-  age: integer("age").notNull(),
-  lookingFor: varchar("looking_for", { length: 100 }).notNull(), // "friendship", "dating", "serious relationship", "networking"
-  interests: varchar("interests", { length: 500 }), // Comma-separated interests
-  photos: varchar("photos", { length: 1000 }).array().notNull().default(sql`'{}'::varchar[]`), // Array of photo URLs
-  isActive: boolean("is_active").default(true),
-  locationPreference: varchar("location_preference", { length: 50 }).default("on-campus"), // "on-campus", "nearby", "anywhere"
-  ageRangeMin: integer("age_range_min").default(18),
-  ageRangeMax: integer("age_range_max").default(99),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-// Track all swipes (likes and passes)
-export const coogpawsSwipes = pgTable("coogpaws_swipes", {
-  id: serial("id").primaryKey(),
-  swiperId: varchar("swiper_id").notNull().references(() => users.id),
-  swipedUserId: varchar("swiped_user_id").notNull().references(() => users.id),
-  isLike: boolean("is_like").notNull(), // true for like, false for pass
-  createdAt: timestamp("created_at").defaultNow(),
-}, (table) => [
-  unique("unique_swipe").on(table.swiperId, table.swipedUserId),
-]);
-
-// Store mutual matches
-export const coogpawsMatches = pgTable("coogpaws_matches", {
-  id: serial("id").primaryKey(),
-  user1Id: varchar("user1_id").notNull().references(() => users.id),
-  user2Id: varchar("user2_id").notNull().references(() => users.id),
-  isActive: boolean("is_active").default(true), // Can be deactivated if one user blocks/unmatches
-  createdAt: timestamp("created_at").defaultNow(),
-}, (table) => [
-  unique("unique_match").on(table.user1Id, table.user2Id),
-]);
-
-// Messages between matched users
-export const coogpawsMessages = pgTable("coogpaws_messages", {
-  id: serial("id").primaryKey(),
-  matchId: integer("match_id").notNull().references(() => coogpawsMatches.id),
-  senderId: varchar("sender_id").notNull().references(() => users.id),
-  content: text("content").notNull(),
-  isRead: boolean("is_read").default(false),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// User blocking system for safety
-export const coogpawsBlocks = pgTable("coogpaws_blocks", {
-  id: serial("id").primaryKey(),
-  blockerId: varchar("blocker_id").notNull().references(() => users.id),
-  blockedUserId: varchar("blocked_user_id").notNull().references(() => users.id),
-  reason: varchar("reason", { length: 100 }), // harassment, inappropriate, spam, fake, other
-  createdAt: timestamp("created_at").defaultNow(),
-}, (table) => [
-  unique("unique_block").on(table.blockerId, table.blockedUserId),
-]);
-
-// User reporting system for moderation
-export const coogpawsReports = pgTable("coogpaws_reports", {
-  id: serial("id").primaryKey(),
-  reporterId: varchar("reporter_id").notNull().references(() => users.id),
-  reportedUserId: varchar("reported_user_id").notNull().references(() => users.id),
-  type: varchar("type", { length: 50 }).notNull(), // profile, message, behavior
-  reason: varchar("reason", { length: 100 }).notNull(), // harassment, inappropriate_content, fake_profile, spam, other
-  description: text("description"), // Additional details from reporter
-  status: varchar("status", { length: 20 }).default("pending"), // pending, reviewed, resolved, dismissed
-  reviewedBy: varchar("reviewed_by").references(() => users.id), // Admin who reviewed
-  reviewedAt: timestamp("reviewed_at"),
-  reviewNotes: text("review_notes"), // Admin notes
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
 // Define relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   identities: many(userIdentities),
   forumTopics: many(forumTopics),
   forumPosts: many(forumPosts),
+  forumPostReports: many(forumPostReports),
   newsArticles: many(newsArticles),
   newsComments: many(newsComments),
   events: many(events),
@@ -438,10 +377,6 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   orders: many(orders),
   notifications: many(notifications),
   eventRsvps: many(eventRsvps),
-  coogpawsProfile: one(coogpawsProfiles),
-  swipesMade: many(coogpawsSwipes, { relationName: "swiper" }),
-  swipesReceived: many(coogpawsSwipes, { relationName: "swiped" }),
-  messagesSent: many(coogpawsMessages),
 }));
 
 export const userIdentitiesRelations = relations(userIdentities, ({ one }) => ({
@@ -467,13 +402,25 @@ export const forumTopicsRelations = relations(forumTopics, ({ one, many }) => ({
   posts: many(forumPosts),
 }));
 
-export const forumPostsRelations = relations(forumPosts, ({ one }) => ({
+export const forumPostsRelations = relations(forumPosts, ({ one, many }) => ({
   topic: one(forumTopics, {
     fields: [forumPosts.topicId],
     references: [forumTopics.id],
   }),
   author: one(users, {
     fields: [forumPosts.authorId],
+    references: [users.id],
+  }),
+  reports: many(forumPostReports),
+}));
+
+export const forumPostReportsRelations = relations(forumPostReports, ({ one }) => ({
+  post: one(forumPosts, {
+    fields: [forumPostReports.postId],
+    references: [forumPosts.id],
+  }),
+  reportedBy: one(users, {
+    fields: [forumPostReports.reportedById],
     references: [users.id],
   }),
 }));
@@ -553,52 +500,6 @@ export const eventRsvpsRelations = relations(eventRsvps, ({ one }) => ({
   }),
 }));
 
-// Coog Paws Relations
-export const coogpawsProfilesRelations = relations(coogpawsProfiles, ({ one }) => ({
-  user: one(users, {
-    fields: [coogpawsProfiles.userId],
-    references: [users.id],
-  }),
-}));
-
-export const coogpawsSwipesRelations = relations(coogpawsSwipes, ({ one }) => ({
-  swiper: one(users, {
-    fields: [coogpawsSwipes.swiperId],
-    references: [users.id],
-    relationName: "swiper",
-  }),
-  swipedUser: one(users, {
-    fields: [coogpawsSwipes.swipedUserId],
-    references: [users.id],
-    relationName: "swiped",
-  }),
-}));
-
-export const coogpawsMatchesRelations = relations(coogpawsMatches, ({ one, many }) => ({
-  user1: one(users, {
-    fields: [coogpawsMatches.user1Id],
-    references: [users.id],
-    relationName: "match_user1",
-  }),
-  user2: one(users, {
-    fields: [coogpawsMatches.user2Id],
-    references: [users.id],
-    relationName: "match_user2",
-  }),
-  messages: many(coogpawsMessages),
-}));
-
-export const coogpawsMessagesRelations = relations(coogpawsMessages, ({ one }) => ({
-  match: one(coogpawsMatches, {
-    fields: [coogpawsMessages.matchId],
-    references: [coogpawsMatches.id],
-  }),
-  sender: one(users, {
-    fields: [coogpawsMessages.senderId],
-    references: [users.id],
-  }),
-}));
-
 // Export types
 export type UpsertUser = typeof users.$inferInsert;
 /**
@@ -630,6 +531,10 @@ export const venueSeatClaims = pgTable(
   (table) => [
     // One claim per seat, enforced by the database rather than by the engine.
     unique("venue_seat_claims_seat_unique").on(table.venueId, table.seatPersistentId),
+    // One seat per member per venue — the other direction of the same
+    // invariant. Added in migration 0006; without it a member could hold
+    // several seats and a failed move could leave them holding none.
+    unique("venue_seat_claims_user_unique").on(table.venueId, table.userId),
     index("venue_seat_claims_venue_idx").on(table.venueId),
     index("venue_seat_claims_user_idx").on(table.userId),
   ],
@@ -815,6 +720,8 @@ export type ForumTopic = typeof forumTopics.$inferSelect;
 
 export type InsertForumPost = typeof forumPosts.$inferInsert;
 export type ForumPost = typeof forumPosts.$inferSelect;
+export type InsertForumPostReport = typeof forumPostReports.$inferInsert;
+export type ForumPostReport = typeof forumPostReports.$inferSelect;
 
 export type InsertNewsArticle = typeof newsArticles.$inferInsert;
 export type NewsArticle = typeof newsArticles.$inferSelect;
@@ -848,34 +755,6 @@ export type EventRsvp = typeof eventRsvps.$inferSelect;
 
 export type InsertCampusLocation = typeof campusLocations.$inferInsert;
 export type CampusLocation = typeof campusLocations.$inferSelect;
-
-// Coog Paws Community App Types
-export type InsertCoogpawsProfile = typeof coogpawsProfiles.$inferInsert;
-export type CoogpawsProfile = typeof coogpawsProfiles.$inferSelect;
-
-// Safe browse card type: profile + display-only owner fields (no secrets).
-export type CoogpawsBrowseProfile = CoogpawsProfile & {
-  ownerFirstName: string | null;
-  ownerLastName: string | null;
-  ownerProfileImageUrl: string | null;
-  ownerMajorOrDepartment: string | null;
-  ownerGraduationYear: number | null;
-};
-
-export type InsertCoogpawsSwipe = typeof coogpawsSwipes.$inferInsert;
-export type CoogpawsSwipe = typeof coogpawsSwipes.$inferSelect;
-
-export type InsertCoogpawsMatch = typeof coogpawsMatches.$inferInsert;
-export type CoogpawsMatch = typeof coogpawsMatches.$inferSelect;
-
-export type InsertCoogpawsMessage = typeof coogpawsMessages.$inferInsert;
-export type CoogpawsMessage = typeof coogpawsMessages.$inferSelect;
-
-// Coog Paws Block and Report types
-export type CoogpawsBlock = typeof coogpawsBlocks.$inferSelect;
-export type InsertCoogpawsBlock = typeof coogpawsBlocks.$inferInsert;
-export type CoogpawsReport = typeof coogpawsReports.$inferSelect;
-export type InsertCoogpawsReport = typeof coogpawsReports.$inferInsert;
 
 // Zod schemas for validation
 export const insertUserIdentitySchema = createInsertSchema(userIdentities).omit({
@@ -914,6 +793,13 @@ export const insertForumPostSchema = createInsertSchema(forumPosts).omit({
   createdAt: true,
   updatedAt: true,
   isDeleted: true,
+});
+
+export const insertForumPostReportSchema = createInsertSchema(forumPostReports).omit({
+  id: true,
+  reportedById: true,
+  status: true,
+  createdAt: true,
 });
 
 export const insertNewsArticleSchema = createInsertSchema(newsArticles).omit({
@@ -982,42 +868,6 @@ export const insertCampusLocationSchema = createInsertSchema(campusLocations).om
   updatedAt: true,
 });
 
-// Coog Paws Zod schemas for validation
-export const insertCoogpawsProfileSchema = createInsertSchema(coogpawsProfiles).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertCoogpawsSwipeSchema = createInsertSchema(coogpawsSwipes).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertCoogpawsMatchSchema = createInsertSchema(coogpawsMatches).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertCoogpawsMessageSchema = createInsertSchema(coogpawsMessages).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertCoogpawsBlockSchema = createInsertSchema(coogpawsBlocks).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertCoogpawsReportSchema = createInsertSchema(coogpawsReports).omit({
-  id: true,
-  createdAt: true,
-  status: true,
-  reviewedBy: true,
-  reviewedAt: true,
-  reviewNotes: true,
-});
-
 // Password validation requirements
 export const passwordRequirements = {
   minLength: 9,
@@ -1066,6 +916,24 @@ const optionalZipCodeSchema = z.preprocess(
   z.string().trim().min(5, "ZIP code must be at least 5 characters").max(10).optional(),
 );
 
+
+const requiredStateSchema = z.string()
+  .trim()
+  .min(1, "State is required")
+  .length(2, "State must be 2 characters")
+  .regex(/^[A-Z]{2}$/, "State must be in format like TX");
+
+const requiredZipCodeSchema = z.string()
+  .trim()
+  .min(1, "ZIP code is required")
+  .min(5, "ZIP code must be at least 5 characters")
+  .max(10, "ZIP code must be 10 characters or fewer");
+
+const requiredCountrySchema = z.string()
+  .trim()
+  .min(1, "Country is required")
+  .max(50, "Country must be less than 50 characters");
+
 const optionalGraduationYearSchema = z.preprocess((value) => {
   const normalized = emptyStringToUndefined(value);
   if (typeof normalized === "string") return Number(normalized);
@@ -1086,10 +954,16 @@ export const userProfileCompletionSchema = z.object({
   lastName: z.string().trim().min(1, "Last name is required"),
   nickname: z.string().optional(),
   email: z.string().trim().toLowerCase().email("Please enter a valid email address"),
-  address: z.string().optional(),
-  city: z.string().optional(),
-  state: optionalStateSchema,
-  zipCode: optionalZipCodeSchema,
+  address: z.string()
+    .trim()
+    .min(1, "Street address is required")
+    .max(255, "Street address is too long"),
+  city: z.string()
+    .trim()
+    .min(1, "City is required")
+    .max(100, "City is too long"),
+  state: requiredStateSchema,
+  zipCode: requiredZipCodeSchema,
   dateOfBirth: z.coerce.date(),
   graduationYear: optionalGraduationYearSchema,
   fanType: z.enum(["Student", "Ex-Student", "Graduate", "Post Graduate", "Faculty", "Staff", "Coog Crazy Fan", "Friend"]).optional(),
@@ -1121,7 +995,7 @@ export const userProfileCompletionSchema = z.object({
   }).optional(),
   addressLine1: z.string().max(100, "Address line 1 must be less than 100 characters").optional(),
 
-  country: z.string().max(50, "Country must be less than 50 characters").optional(),
+  country: requiredCountrySchema,
   optInOffers: z.boolean().optional(),
   
   // Optional password fields for local account creation
@@ -1216,10 +1090,16 @@ export const localAccountRegistrationSchema = z.object({
   password: passwordSchema,
   confirmPassword: z.string(),
   backupEmail: backupEmailSchema,
-  address: z.string().optional(),
-  city: z.string().optional(),
-  state: optionalStateSchema,
-  zipCode: optionalZipCodeSchema,
+  address: z.string()
+    .trim()
+    .min(1, "Street address is required")
+    .max(255, "Street address is too long"),
+  city: z.string()
+    .trim()
+    .min(1, "City is required")
+    .max(100, "City is too long"),
+  state: requiredStateSchema,
+  zipCode: requiredZipCodeSchema,
   dateOfBirth: z.coerce.date(),
   graduationYear: optionalGraduationYearSchema,
   fanType: z.enum(["Student", "Ex-Student", "Graduate", "Post Graduate", "Faculty", "Staff", "Coog Crazy Fan", "Friend"]).optional(),
@@ -1251,7 +1131,7 @@ export const localAccountRegistrationSchema = z.object({
   }).optional(),
   addressLine1: z.string().max(100, "Address line 1 must be less than 100 characters").optional(),
 
-  country: z.string().max(50, "Country must be less than 50 characters").optional(),
+  country: requiredCountrySchema,
   optInOffers: z.boolean().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords must match",
@@ -1609,3 +1489,45 @@ export type AIChatRequest = z.infer<typeof aiChatRequestSchema>;
 export type AIV3ChatRequest = z.infer<typeof aiV3ChatRequestSchema>;
 export type AIModerationRequest = z.infer<typeof aiModerationRequestSchema>;
 export type AIFeedback = z.infer<typeof aiFeedbackSchema>;
+
+// Provider-neutral commerce tracking. The legacy local product/cart/order tables
+// remain for data preservation, but the active storefront uses Shopify and
+// approved affiliate providers through server/commerce.
+export const commerceClickEvents = pgTable("commerce_click_events", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+  siteKey: varchar("site_key", { length: 80 }).notNull(),
+  schoolKey: varchar("school_key", { length: 80 }).notNull(),
+  provider: varchar("provider", { length: 40 }).notNull(),
+  productId: varchar("product_id", { length: 260 }).notNull(),
+  merchant: varchar("merchant", { length: 160 }).notNull(),
+  destinationHost: varchar("destination_host", { length: 255 }),
+  purchaseMode: varchar("purchase_mode", { length: 40 }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index("idx_commerce_clicks_site_created").on(table.siteKey, table.createdAt),
+  index("idx_commerce_clicks_product_created").on(table.productId, table.createdAt),
+]);
+
+export const commerceInquiries = pgTable("commerce_inquiries", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+  siteKey: varchar("site_key", { length: 80 }).notNull(),
+  schoolKey: varchar("school_key", { length: 80 }).notNull(),
+  productId: varchar("product_id", { length: 260 }),
+  merchant: varchar("merchant", { length: 160 }),
+  name: varchar("name", { length: 160 }).notNull(),
+  email: varchar("email", { length: 254 }).notNull(),
+  phone: varchar("phone", { length: 40 }),
+  budgetRange: varchar("budget_range", { length: 80 }),
+  message: text("message").notNull(),
+  status: varchar("status", { length: 30 }).notNull().default("new"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index("idx_commerce_inquiries_site_status").on(table.siteKey, table.status),
+  index("idx_commerce_inquiries_created").on(table.createdAt),
+]);
+
+export type CommerceClickEvent = typeof commerceClickEvents.$inferSelect;
+export type CommerceInquiry = typeof commerceInquiries.$inferSelect;

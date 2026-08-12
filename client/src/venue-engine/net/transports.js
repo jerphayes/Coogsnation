@@ -36,6 +36,22 @@ export class LocalMockTransport {
     this._nextId = 1;
     this._users = new Map();
     this._timers = [];
+
+    /* Simulated occupancy, overridable per venue.
+     *
+     * The mock transport used to read NETWORK.mock directly, so EVERY venue
+     * got 40 synthetic spectators. That is right for a stadium bowl and wrong
+     * for an eight-chair lounge, where the fake occupants outnumbered the
+     * seats five to one and misrepresented an empty room as a full one.
+     *
+     * A venue now declares what it wants. Zero is a legitimate value and
+     * disables seeding, joins and departures entirely. */
+    this._sim = {
+      initialUsers: NETWORK.mock.initialUsers,
+      joinsPerMinute: NETWORK.mock.joinsPerMinute,
+      leavesPerMinute: NETWORK.mock.leavesPerMinute,
+      ...(opts?.simulation || {}),
+    };
   }
 
   async connect() {
@@ -49,14 +65,18 @@ export class LocalMockTransport {
 
     // Seed the room.
     const seeded = [];
-    for (let i = 0; i < NETWORK.mock.initialUsers; i++) {
+    for (let i = 0; i < this._sim.initialUsers; i++) {
       const u = this._spawn();
       if (u) seeded.push(u);
     }
     this.onMessage('presence.full', { users: seeded });
 
-    const joinMs = 60000 / Math.max(1, NETWORK.mock.joinsPerMinute);
-    const leaveMs = 60000 / Math.max(1, NETWORK.mock.leavesPerMinute);
+    /* A venue that asks for no simulated traffic gets none — no timers are
+     * created at all, rather than timers that fire and do nothing. */
+    if (this._sim.joinsPerMinute <= 0 && this._sim.leavesPerMinute <= 0) return;
+
+    const joinMs = 60000 / Math.max(1, this._sim.joinsPerMinute);
+    const leaveMs = 60000 / Math.max(1, this._sim.leavesPerMinute);
     this._timers.push(setInterval(() => {
       const u = this._spawn();
       if (u) this.onMessage('presence.delta', { joined: [u], left: [] });
@@ -184,6 +204,12 @@ export class WebSocketTransport {
 }
 
 /** Factory driven by config. */
+/**
+ * @param {object} opts
+ * @param {object} [opts.simulation] per-venue mock occupancy overrides:
+ *        `{ initialUsers, joinsPerMinute, leavesPerMinute }`. Omitted keys
+ *        fall back to NETWORK.mock.
+ */
 export function createTransport(opts) {
   return NETWORK.transport === 'websocket'
     ? new WebSocketTransport(NETWORK.endpoint)

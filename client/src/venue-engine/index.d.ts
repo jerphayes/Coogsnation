@@ -91,6 +91,27 @@ export interface VenueSessionOptions {
   onProgress?: (fraction: number, message: string) => void;
 }
 
+/**
+ * A presentation control a venue offers the application (ADR-020).
+ * Presentation only — never an access decision, never persisted identity.
+ */
+export interface VenueOption {
+  key: string;
+  label: string;
+  kind: "enum" | "toggle";
+  values?: Array<{ value: string; label: string }>;
+  value: string | boolean;
+}
+
+/** Outcome of a seat claim. Never collapse these into a boolean. */
+export type VenueSeatClaimResult =
+  | { ok: true; seatIndex: number }
+  | {
+      ok: false;
+      reason: "occupied" | "unauthorized" | "failed" | "unknown-seat";
+      message: string;
+    };
+
 export interface VenueSessionStats {
   venueId: VenueId;
   label: string;
@@ -117,9 +138,24 @@ export interface VenueSession {
   /** Camera preset names this venue declares. */
   cameraViews(): string[];
 
+  /**
+   * Presentation options this venue declares — a projection selector, house
+   * lights. Empty for venues that declare none, which is most of them.
+   */
+  venueOptions(): VenueOption[];
+  /** Apply a presentation option. False if the venue does not recognise it. */
+  setVenueOption(key: string, value: string | boolean): boolean;
+
   /** Move the local user to a seat. Resolves false if unavailable. */
-  claimSeat(seatIndex: number): Promise<boolean>;
-  releaseSeat(): Promise<void>;
+  /**
+   * Move the local user to a seat. Server-authoritative: the claim is
+   * persisted BEFORE local state or the camera change, so a refusal leaves
+   * the member exactly where they were. On success the camera flies to the
+   * seat. The three failure reasons are distinct on purpose.
+   */
+  claimSeat(seatIndex: number): Promise<VenueSeatClaimResult>;
+  /** Release every seat the local user holds; returns true if any were held. */
+  releaseSeat(): Promise<boolean>;
 
   /** Read-only census, e.g. `{ empty, ai, user }`. */
   occupancy(): Record<string, number>;

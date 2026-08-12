@@ -128,6 +128,11 @@ updates = {
     "ADMIN_AI_MODEL": model,
     "ADMIN_AI_BASE_URL": "https://api.openai.com/v1",
     "ADMIN_AI_API_KEY": openai_key,
+
+    # Codespaces are our development/test environment.
+    # Allow Guest to exercise normal member features
+    # without ever receiving admin/owner authority.
+    "DEV_GUEST_FULL_ACCESS": "true",
 }
 
 output = []

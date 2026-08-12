@@ -72,11 +72,24 @@ export class CoogsPersistenceService extends PersistenceService {
     }
   }
 
-  /** @param {string} venueId @param {object} record */
+  /**
+   * Persist a seat claim and REPORT THE OUTCOME.
+   *
+   * This used to swallow every failure and return undefined, on the reasoning
+   * that a venue should degrade rather than crash. That is right for a network
+   * blip and wrong for a 409: a rejected claim means somebody else owns the
+   * seat, and silently keeping the local claim told two members they were
+   * sitting in the same chair. Seat ownership is server-authoritative, so the
+   * caller has to be able to tell these three cases apart.
+   *
+   * @returns {Promise<{ok:true, claim:object}|{ok:false, reason:'occupied'|'unauthorized'|'failed', message:string}>}
+   */
   async saveSeatClaim(venueId, record) {
-    if (!record?.pid) return;          // nothing identifiable to persist
+    if (!record?.pid) {
+      return { ok: false, reason: 'failed', message: 'seat has no persistent id' };
+    }
     try {
-      await this._request(VENUE_API.claim, {
+      const data = await this._request(VENUE_API.claim, {
         method: 'POST',
         body: JSON.stringify({
           venueId: venueId || this.venueId,
@@ -87,11 +100,21 @@ export class CoogsPersistenceService extends PersistenceService {
           seatNumber: Number(record.seatNumber ?? 1),
         }),
       });
+      return { ok: true, claim: data?.claim ?? null };
     } catch (error) {
-      // Degrade, do not crash. The seat remains claimed in the live venue.
+      /* 409 is not a malfunction — it is the answer. Distinguish it from a
+       * genuine failure so the interface can say "that chair is taken"
+       * rather than "something went wrong". */
+      if (error.status === 409) {
+        return { ok: false, reason: 'occupied', message: 'That seat is already taken.' };
+      }
+      if (error.status === 401 || error.status === 403) {
+        return { ok: false, reason: 'unauthorized', message: 'You are not able to claim a seat here.' };
+      }
       this.onError('venue:error', {
         scope: 'persistence.claim', message: error.message, fatal: false,
       });
+      return { ok: false, reason: 'failed', message: 'Could not reach the server. Your seat was not changed.' };
     }
   }
 

@@ -1,678 +1,897 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PopperDropdown } from "@/components/ui/PopperDropdown";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "wouter";
 import { formatDistance } from "date-fns";
+import type { ForumCategory, ForumTopic } from "@shared/schema";
+import { forumCategoryPath, isVisibleForumCategory } from "@/lib/forumNavigation";
 
-type CategoryType = {
-  id: number;
-  name: string;
-  description: string | null;
-  slug: string;
-  icon: string | null;
-  color: string | null;
-  sortOrder: number | null;
-  isActive: boolean | null;
-  createdAt: Date | null;
+const sportsSlugs = new Set([
+  "football",
+  "basketball",
+  "baseball",
+  "recruiting",
+  "game-day-central",
+  "tailgate-roundup",
+  "golf",
+  "track-field",
+  "other-sports",
+  "other-sports-men",
+  "womens-sports",
+  "womens-basketball",
+  "womens-golf",
+  "womens-soccer",
+  "softball",
+  "womens-tennis",
+  "womens-track-field",
+  "womens-swimming-diving",
+]);
+
+
+type CommunityGroupDefinition = {
+  title: string;
+  description: string;
+  headerClasses: string;
+  uhAlternating?: boolean;
+  alternateStart?: "red" | "white";
+  items: {
+    slug: string;
+    label: string;
+  }[];
 };
 
-export default function Forums() {
-  const { user, isAuthenticated } = useAuth();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [coogsLoungeOpen, setCoogsLoungeOpen] = useState(false);
-  const [otherSportsMenOpen, setOtherSportsMenOpen] = useState(false);
-  const [womensSportsOpen, setWomensSportsOpen] = useState(false);
+type CommunityGroup = CommunityGroupDefinition & {
+  categories: {
+    category: ForumCategory;
+    label: string;
+  }[];
+};
 
-  const { data: forumCategories, isLoading: categoriesLoading, error: categoriesError } = useQuery({
-    queryKey: ["/api/forums/categories"],
+const communityGroupDefinitions: CommunityGroupDefinition[] = [
+  {
+    title: "Coogs Life",
+    description:
+      "Campus life, alumni, careers, academics, business, technology, and everyday Cougar conversation",
+    headerClasses: "bg-red-700 text-white",
+    uhAlternating: true,
+    alternateStart: "red",
+    items: [
+      {
+        slug: "cougar-corner",
+        label: "Cougar Corner",
+      },
+      {
+        slug: "student-life",
+        label: "Student Life",
+      },
+      {
+        slug: "academic-discussion",
+        label: "Academic Discussion",
+      },
+      {
+        slug: "alumni-network",
+        label: "Alumni Network",
+      },
+      {
+        slug: "uh-hall-of-fame",
+        label: "UH Hall of Fame",
+      },
+      {
+        slug: "professional-networking",
+        label: "Professional Networking",
+      },
+      {
+        slug: "business",
+        label: "Business & Entrepreneurship",
+      },
+      {
+        slug: "technology",
+        label: "Technology & AI",
+      },
+    ],
+  },
+
+  {
+    title: "Houston Events & Happenings",
+    description:
+      "Houston culture, entertainment, food, festivals, and things to do",
+    headerClasses: "bg-[#6FA8DC] text-white",
+    items: [
+      {
+        slug: "entertainment",
+        label: "Entertainment",
+      },
+      {
+        slug: "food-dining",
+        label: "Food & Dining",
+      },
+    ],
+  },
+
+  {
+    title: "Coogs Marketplace",
+    description:
+      "Buy, sell, trade, housing, property, and local opportunities",
+    headerClasses: "bg-green-700 text-white",
+    items: [
+      {
+        slug: "classifieds",
+        label: "Buy, Sell & Trade",
+      },
+      {
+        slug: "real-estate",
+        label: "Real Estate & Housing",
+      },
+    ],
+  },
+
+  {
+    title: "Current Events",
+    description:
+      "National and local open discussion",
+    headerClasses: "bg-amber-900 text-white",
+    items: [
+      {
+        slug: "politics",
+        label: "National & Local Current Events",
+      },
+      {
+        slug: "coogs-lounge",
+        label: "Open Discussion",
+      },
+    ],
+  },
+]
+
+
+function categoryIcon(category: ForumCategory): string {
+  const icons: Record<string, string> = {
+    football: "🏈",
+    basketball: "🏀",
+    baseball: "⚾",
+    golf: "⛳",
+    "track-field": "🏃",
+    recruiting: "📣",
+    "tailgate-roundup": "🍔",
+    "water-cooler-talk": "☕",
+    "uh-hall-of-fame": "🏆",
+    "womens-sports": "🏅",
+  };
+  return icons[category.slug] || "💬";
+}
+
+export default function Forums() {
+  const { isAuthenticated } = useAuth();
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const {
+    data: categories = [],
+    isLoading: categoriesLoading,
+    error: categoriesError,
+  } = useQuery<ForumCategory[]>({ queryKey: ["/api/forums/categories"] });
+
+  const { data: recentTopics = [], isLoading: recentLoading } = useQuery<ForumTopic[]>({
+    queryKey: ["/api/forums/recent?limit=6"],
   });
 
-  const getCategoryIcon = (name: string) => {
-    const iconMap: { [key: string]: string } = {
-      'Football': 'football-ball',
-      'Basketball': 'basketball-ball',
-      'Baseball': 'baseball-ball',
-      'Track & Field': 'running',
-      'Golf': 'golf-ball',
-      'Women\'s Basketball': 'basketball-ball',
-      'Women\'s Golf': 'golf-ball',
-      'Women\'s Soccer': 'futbol',
-      'Softball': 'baseball-ball',
-      'Women\'s Tennis': 'table-tennis',
-      'Women\'s Track & Field': 'running',
-      'Women\'s Swimming & Diving': 'swimmer',
-      'Water Cooler Talk': 'coffee',
-      'Coogs Lounge': 'users',
-      'Current Events': 'newspaper',
-      'Science': 'flask',
-      'Education': 'graduation-cap',
-      'Event Announcements': 'bullhorn',
-      'UH Hall of Fame': 'trophy',
-      'Academic Discussion': 'graduation-cap',
-      'Student Life': 'university',
-    };
-    return iconMap[name] || 'comments';
-  };
-
-  const getCategoryColor = (name: string) => {
-    const colorMap: { [key: string]: string } = {
-      'Football': 'bg-green-500',
-      'Basketball': 'bg-orange-500',
-      'Baseball': 'bg-blue-500',
-      'Track & Field': 'bg-purple-500',
-      'Golf': 'bg-green-600',
-      'Women\'s Basketball': 'bg-orange-600',
-      'Women\'s Golf': 'bg-emerald-500',
-      'Women\'s Soccer': 'bg-cyan-500',
-      'Softball': 'bg-amber-500',
-      'Women\'s Tennis': 'bg-lime-500',
-      'Women\'s Track & Field': 'bg-violet-500',
-      'Women\'s Swimming & Diving': 'bg-teal-600',
-      'Water Cooler Talk': 'bg-blue-600',
-      'Coogs Lounge': 'bg-purple-500',
-      'Current Events': 'bg-blue-500',
-      'Science': 'bg-green-500',
-      'Education': 'bg-indigo-500',
-      'Event Announcements': 'bg-orange-500',
-      'UH Hall of Fame': 'bg-yellow-600',
-      'Academic Discussion': 'bg-indigo-500',
-      'Student Life': 'bg-teal-500',
-    };
-    return colorMap[name] || 'bg-uh-red';
-  };
-
-  const getCategoryDescription = (name: string) => {
-    const descriptions: { [key: string]: string } = {
-      'Football': 'Discuss Houston Cougar football, games, players, recruiting, and strategy',
-      'Basketball': 'Basketball discussions including game analysis, player stats, and team news',
-      'Baseball': 'Houston Cougar baseball talk, game reviews, and season discussions',
-      'Track & Field': 'Track and field events, athlete achievements, and meet results',
-      'Golf': 'Golf team discussions, tournament results, and course talk',
-      'Women\'s Basketball': 'Houston Cougar Women\'s Basketball team discussions and game analysis',
-      'Women\'s Golf': 'Women\'s Golf team discussions, tournament results, and achievements',
-      'Women\'s Soccer': 'Houston Cougar Women\'s Soccer team news, matches, and player highlights',
-      'Softball': 'Houston Cougar Softball team discussions, games, and season coverage',
-      'Women\'s Tennis': 'Women\'s Tennis team matches, tournaments, and player achievements',
-      'Women\'s Track & Field': 'Women\'s Track & Field events, records, and athlete spotlights',
-      'Women\'s Swimming & Diving': 'Swimming & Diving team meets, records, and competitions',
-      'Water Cooler Talk': 'General discussions, off-topic conversations, and community chat',
-      'Coogs Lounge': 'Community discussions, current events, science, education, and announcements',
-      'Current Events': 'Discuss current events, news, and trending topics',
-      'Science': 'Science discussions, research, and STEM topics',
-      'Education': 'Educational resources, learning discussions, and academic topics',
-      'Event Announcements': 'Community event announcements and upcoming activities',
-      'UH Hall of Fame': 'Celebrating notable UH alumni, achievements, and university history',
-      'Academic Discussion': 'Course discussions, study groups, and academic support',
-      'Student Life': 'Campus events, student organizations, and university life',
-    };
-    return descriptions[name] || 'Forum discussions and community conversations';
-  };
-
-  // Filter categories based on search
-  const filteredCategories = forumCategories ? (forumCategories as CategoryType[]).filter(category =>
-    category.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    getCategoryDescription(category.name).toLowerCase().includes(searchQuery.toLowerCase())
-  ) : [];
-
-
-  // Group categories by type
-  const mainSportsCategories = filteredCategories.filter(cat => 
-    ['Football', 'Basketball'].includes(cat.name)
+  const visibleCategories = useMemo(
+    () => categories.filter(isVisibleForumCategory),
+    [categories],
   );
 
-  const otherSportsMenCategories = filteredCategories.filter(cat => 
-    ['Baseball', 'Track & Field', 'Golf'].includes(cat.name)
-  );
+  const filteredCategories = useMemo(() => {
+    const search = searchQuery.trim().toLowerCase();
+    if (!search) return visibleCategories;
+    return visibleCategories.filter((category) =>
+      `${category.name} ${category.description || ""}`.toLowerCase().includes(search),
+    );
+  }, [searchQuery, visibleCategories]);
 
-  const otherSportsMenParent = filteredCategories.find(cat => 
-    cat.name === 'Other Sports Men'
-  );
+  const sportsCategories =
+    filteredCategories.filter(
+      (category) =>
+        sportsSlugs.has(category.slug)
+    );
 
-  const womensSportsCategories = filteredCategories.filter(cat => 
-    ['Women\'s Basketball', 'Women\'s Golf', 'Women\'s Soccer', 'Softball', 'Women\'s Tennis', 'Women\'s Track & Field', 'Women\'s Swimming & Diving'].includes(cat.name)
-  );
+  /*
+   * EVERYTHING that is not sports belongs in Community,
+   * except Water Cooler Talk which has its own third section.
+   */
+  const waterCoolerCategory =
+    filteredCategories.find(
+      (category) =>
+        category.slug === "water-cooler-talk" ||
+        category.slug === "water-cooler"
+    );
 
-  const womensSportsParent = filteredCategories.find(cat => 
-    cat.name === 'Women\'s Sports'
-  );
+  const communityCategories =
+    filteredCategories.filter(
+      (category) =>
+        !sportsSlugs.has(category.slug) &&
+        category.slug !== "water-cooler-talk" &&
+        category.slug !== "water-cooler"
+    );
 
-  // Coogs Lounge subcategories (as static data for dropdown)
-  const coogsLoungeSubcategories = [
-    { id: 101, name: "Current Events", categoryId: 24 },
-    { id: 102, name: "Science", categoryId: 24 },
-    { id: 103, name: "Education", categoryId: 24 },
-    { id: 104, name: "Event Announcements", categoryId: 24 }
-  ];
 
-  const coogsLoungeParent = filteredCategories.find(cat => 
-    cat.name === 'Coogs Lounge'
-  );
-  
-  const communityCategories = filteredCategories.filter(cat => 
-    ['Water Cooler Talk', 'UH Hall of Fame', 'Recruiting'].includes(cat.name)
-  );
-  
-  const academicCategories = filteredCategories.filter(cat => 
-    ['Academic Discussion', 'Student Life'].includes(cat.name)
-  );
+  const communityGroups = useMemo<CommunityGroup[]>(() => {
+    const categoriesBySlug =
+      new Map(
+        communityCategories.map(
+          (category) => [
+            category.slug,
+            category,
+          ]
+        )
+      );
 
-  const otherCategories = filteredCategories.filter(cat => 
-    ![...mainSportsCategories, ...otherSportsMenCategories, ...womensSportsCategories, ...communityCategories, ...academicCategories].includes(cat) &&
-    cat.name !== 'Other Sports Men' && cat.name !== 'Women\'s Sports'
-  );
+    return communityGroupDefinitions
+      .map((group) => ({
+        ...group,
+        categories: group.items
+          .map((item) => {
+            const category =
+              categoriesBySlug.get(item.slug);
 
+            return category
+              ? {
+                  category,
+                  label: item.label,
+                }
+              : null;
+          })
+          .filter(
+            (
+              item
+            ): item is {
+              category: ForumCategory;
+              label: string;
+            } => item !== null
+          ),
+      }))
+      .filter(
+        (group) =>
+          group.categories.length > 0
+      );
+  }, [communityCategories]);
+
+
+
+  const activeBoardCount = useMemo(() => {
+    const displayedSportsCount =
+      sportsCategories.filter(
+        (category) =>
+          !womensSportsDetailSlugs.has(
+            category.slug
+          )
+      ).length;
+
+    const displayedCommunityCount =
+      communityGroups.length;
+
+    const waterCoolerCount =
+      waterCoolerCategory ? 1 : 0;
+
+    const coogPawsCount = 1;
+
+    // Ticket Purchase is a Sports utility card rather
+    // than a discussion-board database category.
+    const ticketPurchaseCount = 1;
+
+    return (
+      displayedSportsCount +
+      ticketPurchaseCount +
+      displayedCommunityCount +
+      waterCoolerCount +
+      coogPawsCount
+    );
+  }, [
+    sportsCategories,
+    communityGroups,
+    waterCoolerCategory,
+  ]);
+
+  const categoryById = useMemo(
+    () => new Map(visibleCategories.map((category) => [category.id, category])),
+    [visibleCategories],
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        {/* Hero Section */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-uh-black mb-4">CoogsNation Forums</h1>
-          <p className="text-xl text-gray-600 mb-6">
-            Connect, discuss, and engage with the Houston Cougar community
-          </p>
-          <div className="max-w-2xl mx-auto">
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <section className="mb-10 text-center">
+          <h1 className="text-4xl font-bold text-uh-black">CoogsNation Forums</h1>
+          <p className="mt-3 text-lg text-gray-600">The familiar standard board for topics, replies, and community conversation.</p>
+          <div className="mx-auto mt-6 max-w-2xl">
+            <label htmlFor="forum-category-filter" className="sr-only">Filter forum categories</label>
             <Input
+              id="forum-category-filter"
               type="search"
-              placeholder="Search forums and topics..."
+              placeholder="Filter forum categories"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full text-lg py-3 pl-4 pr-12 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-uh-red focus:border-transparent"
+              onChange={(event) => setSearchQuery(event.target.value)}
+              className="w-full text-lg"
             />
-            <i className="fas fa-search absolute right-4 top-3 text-gray-400 text-lg"></i>
           </div>
-        </div>
+        </section>
 
-        {/* Forum Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <section className="mb-10 grid gap-4 md:grid-cols-3">
           <Card>
-            <CardContent className="p-6 text-center">
-              <div className="mb-2">
-                <i className="fas fa-comments text-3xl text-uh-red"></i>
-              </div>
-              <h3 className="text-2xl font-bold text-uh-black">{filteredCategories.length}</h3>
-              <p className="text-gray-600">Active Forums</p>
+            <CardContent className="p-5 text-center">
+              <div className="text-3xl font-bold text-uh-red">{activeBoardCount}</div>
+              <div className="text-sm text-gray-600">Active boards</div>
             </CardContent>
           </Card>
-          
           <Card>
-            <CardContent className="p-6 text-center">
-              <div className="mb-2">
-                <i className="fas fa-users text-3xl text-blue-600"></i>
-              </div>
-              <h3 className="text-2xl font-bold text-uh-black">2,847</h3>
-              <p className="text-gray-600">Members</p>
+            <CardContent className="p-5 text-center">
+              <div className="text-3xl font-bold text-uh-red">{recentTopics.length}</div>
+              <div className="text-sm text-gray-600">Recent topics shown</div>
             </CardContent>
           </Card>
-          
-          <Card>
-            <CardContent className="p-6 text-center">
-              <div className="mb-2">
-                <i className="fas fa-file-alt text-3xl text-green-600"></i>
-              </div>
-              <h3 className="text-2xl font-bold text-uh-black">15,429</h3>
-              <p className="text-gray-600">Topics</p>
+          <Card className="border-purple-200 bg-purple-50">
+            <CardContent className="p-5 text-center">
+              <div className="font-bold text-purple-900">Want the immersive option?</div>
+              <Link href="/coogpaws-chat" className="mt-2 inline-block font-semibold text-purple-700 hover:underline">
+                Enter Coog Paws Lounge →
+              </Link>
             </CardContent>
           </Card>
-          
-          <Card>
-            <CardContent className="p-6 text-center">
-              <div className="mb-2">
-                <i className="fas fa-comment text-3xl text-purple-600"></i>
-              </div>
-              <h3 className="text-2xl font-bold text-uh-black">89,341</h3>
-              <p className="text-gray-600">Posts</p>
-            </CardContent>
-          </Card>
-        </div>
+        </section>
 
-        {/* Tabbed Categories */}
-        <Tabs defaultValue="sports" className="mb-8">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="sports">Sports</TabsTrigger>
-            <TabsTrigger value="community">Community</TabsTrigger>
-            <TabsTrigger value="academic">Academic</TabsTrigger>
-            <TabsTrigger value="all">All Forums</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="sports" className="mt-6" style={{overflow: 'visible'}}>
-            <div className="mb-4">
-              <h2 className="text-2xl font-bold text-uh-black mb-2">Houston Cougar Sports</h2>
-              <p className="text-gray-600">Discuss all UH athletics and follow your favorite teams</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" style={{overflow: 'visible'}}>
-              {/* Main Sports Categories */}
-              {mainSportsCategories.map((category) => (
-                <Link key={category.id} to={`/forums/categories/${category.id}`}>
-                  <Card className="hover:shadow-lg transition-shadow duration-200 cursor-pointer">
-                    <CardContent className="p-6">
-                      <div className="flex items-start space-x-4">
-                        <div className={`w-12 h-12 ${getCategoryColor(category.name)} rounded-lg flex items-center justify-center`}>
-                          <i className={`fas fa-${getCategoryIcon(category.name)} text-white text-lg`}></i>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-bold text-uh-black mb-1">{category.name}</h3>
-                          <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                            {getCategoryDescription(category.name)}
-                          </p>
-                          <div className="flex items-center justify-between text-sm text-gray-500">
-                            <span>{0 || 0} topics</span>
-                            <span>Last: {formatDistance(new Date(category.createdAt || new Date()), new Date(), { addSuffix: true })}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
+        {categoriesError ? (
+          <Card className="mb-10 border-red-200 bg-red-50">
+            <CardContent className="p-6 text-red-800">Forum categories could not be loaded. Please try again.</CardContent>
+          </Card>
+        ) : categoriesLoading ? (
+          <CategorySkeleton />
+        ) : (
+          <Tabs defaultValue="sports" className="mb-10">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="sports">
+                Sports
+              </TabsTrigger>
 
-              {/* Other Sports Men Dropdown Category - USING AbsoluteDropdown */}
-              {otherSportsMenParent && otherSportsMenCategories.length > 0 && (
-                <PopperDropdown
-                  open={otherSportsMenOpen}
-                  onOpenChange={setOtherSportsMenOpen}
-                  trigger={
-                    <Card className="hover:shadow-lg transition-shadow duration-200 cursor-pointer" data-testid="card-other-sports-men">
-                      <CardContent className="p-6">
-                        <div className="flex items-start space-x-4">
-                          <div className={`w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center`}>
-                            <i className={`fas fa-trophy text-white text-lg`}></i>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="text-lg font-bold text-uh-black mb-1 flex items-center">
-                              {otherSportsMenParent.name}
-                              <i className="fas fa-chevron-down ml-2 text-sm text-gray-400"></i>
-                            </h3>
-                            <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                              All other Houston Cougar men's athletics
-                            </p>
-                            <div className="flex items-center justify-between text-sm text-gray-500">
-                              <span>{otherSportsMenCategories.length} categories</span>
-                              <span>Hover to expand</span>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  }
+              <TabsTrigger value="community">
+                Community
+              </TabsTrigger>
+
+              <TabsTrigger value="conversation">
+                Coog Paws & Water Cooler
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="sports" className="mt-6">
+              <CategoryGrid
+                categories={sportsCategories}
+              />
+            </TabsContent>
+
+            <TabsContent value="community" className="mt-6">
+              <CommunityGroupGrid
+                groups={communityGroups}
+              />
+            </TabsContent>
+
+            <TabsContent
+              value="conversation"
+              className="mt-6"
+            >
+              <div className="grid gap-5 md:grid-cols-2">
+
+                <Link
+                  href="/coogpaws-chat"
+                  className="block h-full"
                 >
-                  {otherSportsMenCategories.map((subCategory) => (
-                    <Link key={subCategory.id} to={`/forums/categories/${subCategory.id}`} className="block" data-testid={`link-sports-category-${subCategory.id}`}>
-                      <div className="px-4 py-3 text-uh-black hover:bg-blue-50 hover:text-blue-600 transition-colors border-b border-gray-100 last:border-b-0">
-                        <div className="flex items-center">
-                          <i className={`fas fa-${getCategoryIcon(subCategory.name)} mr-3 text-lg`}></i>
-                          <div>
-                            <div className="font-medium">{subCategory.name}</div>
-                            <div className="text-xs text-gray-500 mt-1">
-                              {getCategoryDescription(subCategory.name).substring(0, 60)}...
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </PopperDropdown>
-              )}
+                  <Card className="h-full overflow-hidden border border-gray-200 transition hover:-translate-y-0.5 hover:shadow-lg">
 
-              {/* Women's Sports Dropdown Category - USING AbsoluteDropdown */}
-              {womensSportsParent && womensSportsCategories.length > 0 && (
-                <PopperDropdown
-                  open={womensSportsOpen}
-                  onOpenChange={setWomensSportsOpen}
-                  trigger={
-                    <Card className="hover:shadow-lg transition-shadow duration-200 cursor-pointer" data-testid="card-womens-sports">
-                      <CardContent className="p-6">
-                        <div className="flex items-start space-x-4">
-                          <div className={`w-12 h-12 bg-pink-600 rounded-lg flex items-center justify-center`}>
-                            <i className={`fas fa-venus text-white text-lg`}></i>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="text-lg font-bold text-uh-black mb-1 flex items-center">
-                              {womensSportsParent.name}
-                              <i className="fas fa-chevron-down ml-2 text-sm text-gray-400"></i>
-                            </h3>
-                            <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                              All Houston Cougar women's athletics
-                            </p>
-                            <div className="flex items-center justify-between text-sm text-gray-500">
-                              <span>{womensSportsCategories.length} categories</span>
-                              <span>Hover to expand</span>
-                            </div>
-                          </div>
-                        </div>
+                    <div className="flex min-h-16 items-center gap-3 bg-red-700 px-5 py-4 text-white">
+                      <span
+                        className="text-2xl"
+                        aria-hidden="true"
+                      >
+                        🐾
+                      </span>
+
+                      <h2 className="text-lg font-bold">
+                        Coog Paws
+                      </h2>
+                    </div>
+
+                    <CardContent className="bg-white p-5">
+                      <p className="text-sm leading-6 text-gray-700">
+                        Live CoogsNation community chat and lounge conversation.
+                      </p>
+                    </CardContent>
+
+                  </Card>
+                </Link>
+
+                {waterCoolerCategory ? (
+                  <Link
+                    href={forumCategoryPath(
+                      waterCoolerCategory.slug
+                    )}
+                    className="block h-full"
+                  >
+                    <Card className="h-full overflow-hidden border border-gray-200 transition hover:-translate-y-0.5 hover:shadow-lg">
+
+                      <div className="flex min-h-16 items-center gap-3 bg-sky-500 px-5 py-4 text-white">
+                        <span
+                          className="text-2xl"
+                          aria-hidden="true"
+                        >
+                          ☕
+                        </span>
+
+                        <h2 className="text-lg font-bold">
+                          Water Cooler Talk
+                        </h2>
+                      </div>
+
+                      <CardContent className="bg-white p-5">
+                        <p className="text-sm leading-6 text-gray-700">
+                          General discussion, off-topic conversation, and community talk.
+                        </p>
                       </CardContent>
+
                     </Card>
-                  }
-                >
-                  {womensSportsCategories.map((subCategory) => (
-                    <Link key={subCategory.id} to={`/forums/categories/${subCategory.id}`} className="block" data-testid={`link-womens-category-${subCategory.id}`}>
-                      <div className="px-4 py-3 text-uh-black hover:bg-pink-50 hover:text-pink-600 transition-colors border-b border-gray-100 last:border-b-0">
-                        <div className="flex items-center">
-                          <i className={`fas fa-${getCategoryIcon(subCategory.name)} mr-3 text-lg`}></i>
-                          <div>
-                            <div className="font-medium">{subCategory.name}</div>
-                            <div className="text-xs text-gray-500 mt-1">
-                              {getCategoryDescription(subCategory.name).substring(0, 60)}...
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </PopperDropdown>
-              )}
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="community" className="mt-6" style={{overflow: 'visible'}}>
-            <div className="mb-4">
-              <h2 className="text-2xl font-bold text-uh-black mb-2">Community Connection</h2>
-              <p className="text-gray-600">Connect with fellow Coogs and celebrate our community</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" style={{overflow: 'visible'}}>
-              {/* Community Categories - FILL POSITIONS 1-16 (Everything to the left) */}
-              {communityCategories.slice(0, 16).map((category) => (
-                <Link key={category.id} to={`/forums/categories/${category.id}`}>
-                  <Card className="hover:shadow-lg transition-shadow duration-200 cursor-pointer">
+                  </Link>
+                ) : (
+                  <Card className="h-full">
                     <CardContent className="p-6">
-                      <div className="flex items-start space-x-4">
-                        <div className={`w-12 h-12 ${getCategoryColor(category.name)} rounded-lg flex items-center justify-center`}>
-                          <i className={`fas fa-${getCategoryIcon(category.name)} text-white text-lg`}></i>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-bold text-uh-black mb-1">{category.name}</h3>
-                          <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                            {getCategoryDescription(category.name)}
-                          </p>
-                          <div className="flex items-center justify-between text-sm text-gray-500">
-                            <span>{0 || 0} topics</span>
-                            <span>Last: {formatDistance(new Date(category.createdAt || new Date()), new Date(), { addSuffix: true })}</span>
-                          </div>
-                        </div>
+                      <div className="mb-3 text-3xl">
+                        ☕
                       </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
 
-              {/* Coogs Lounge - USING AbsoluteDropdown */}
-              <PopperDropdown
-                open={coogsLoungeOpen}
-                onOpenChange={setCoogsLoungeOpen}
-                trigger={
-                  <Card className="hover:shadow-lg transition-shadow duration-200 cursor-pointer" data-testid="card-coogs-lounge">
-                    <CardContent className="p-6">
-                      <div className="flex items-start space-x-4">
-                        <div className={`w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center`}>
-                          <i className={`fas fa-users text-white text-lg`}></i>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-bold text-uh-black mb-1 flex items-center">
-                            Coogs Lounge
-                            <i className="fas fa-chevron-down ml-2 text-sm text-gray-400"></i>
-                          </h3>
-                          <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                            Community discussions, current events, science, education, and announcements
-                          </p>
-                          <div className="flex items-center justify-between text-sm text-gray-500">
-                            <span>4 categories</span>
-                            <span>Hover to expand</span>
-                          </div>
-                          <Badge className="mt-2 bg-purple-100 text-purple-800">
-                            <i className="fas fa-users mr-1"></i>
-                            Community Hub
-                          </Badge>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                }
-              >
-                <Link to="/forums/categories/24" className="block" data-testid="link-current-events">
-                  <div className="px-4 py-3 text-uh-black hover:bg-purple-50 hover:text-purple-600 transition-colors border-b border-gray-100">
-                    <div className="flex items-center">
-                      <i className="fas fa-newspaper mr-3 text-lg"></i>
-                      <div>
-                        <div className="font-medium">Current Events</div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          Discuss current events, news, and trending topics
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-                <Link to="/forums/categories/24" className="block" data-testid="link-science">
-                  <div className="px-4 py-3 text-uh-black hover:bg-purple-50 hover:text-purple-600 transition-colors border-b border-gray-100">
-                    <div className="flex items-center">
-                      <i className="fas fa-flask mr-3 text-lg"></i>
-                      <div>
-                        <div className="font-medium">Science</div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          Science discussions, research, and STEM topics
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-                <Link to="/forums/categories/24" className="block" data-testid="link-education">
-                  <div className="px-4 py-3 text-uh-black hover:bg-purple-50 hover:text-purple-600 transition-colors border-b border-gray-100">
-                    <div className="flex items-center">
-                      <i className="fas fa-graduation-cap mr-3 text-lg"></i>
-                      <div>
-                        <div className="font-medium">Education</div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          Educational resources, learning discussions, and academic topics
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-                <Link to="/forums/categories/24" className="block" data-testid="link-event-announcements">
-                  <div className="px-4 py-3 text-uh-black hover:bg-purple-50 hover:text-purple-600 transition-colors">
-                    <div className="flex items-center">
-                      <i className="fas fa-bullhorn mr-3 text-lg"></i>
-                      <div>
-                        <div className="font-medium">Event Announcements</div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          Community event announcements and upcoming activities
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              </PopperDropdown>
+                      <h2 className="text-lg font-bold text-uh-black">
+                        Water Cooler Talk
+                      </h2>
 
-              {/* Remaining Community Categories - FILL AFTER COOGS LOUNGE */}
-              {communityCategories.slice(16).map((category) => (
-                <Link key={category.id} to={`/forums/categories/${category.id}`}>
-                  <Card className="hover:shadow-lg transition-shadow duration-200 cursor-pointer">
-                    <CardContent className="p-6">
-                      <div className="flex items-start space-x-4">
-                        <div className={`w-12 h-12 ${getCategoryColor(category.name)} rounded-lg flex items-center justify-center`}>
-                          <i className={`fas fa-${getCategoryIcon(category.name)} text-white text-lg`}></i>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-bold text-uh-black mb-1">{category.name}</h3>
-                          <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                            {getCategoryDescription(category.name)}
-                          </p>
-                          <div className="flex items-center justify-between text-sm text-gray-500">
-                            <span>{0 || 0} topics</span>
-                            <span>Last: {formatDistance(new Date(category.createdAt || new Date()), new Date(), { addSuffix: true })}</span>
-                          </div>
-                        </div>
-                      </div>
+                      <p className="mt-2 text-sm text-gray-600">
+                        Water Cooler Talk is temporarily unavailable.
+                      </p>
                     </CardContent>
                   </Card>
-                </Link>
-              ))}
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="academic" className="mt-6" style={{overflow: 'visible'}}>
-            <div className="mb-4">
-              <h2 className="text-2xl font-bold text-uh-black mb-2">Academic & Student Life</h2>
-              <p className="text-gray-600">Academic support, campus life, and student resources</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" style={{overflow: 'visible'}}>
-              {academicCategories.map((category) => (
-                <Link key={category.id} to={`/forums/categories/${category.id}`}>
-                  <Card className="hover:shadow-lg transition-shadow duration-200 cursor-pointer">
-                    <CardContent className="p-6">
-                      <div className="flex items-start space-x-4">
-                        <div className={`w-12 h-12 ${getCategoryColor(category.name)} rounded-lg flex items-center justify-center`}>
-                          <i className={`fas fa-${getCategoryIcon(category.name)} text-white text-lg`}></i>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-bold text-uh-black mb-1">{category.name}</h3>
-                          <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                            {getCategoryDescription(category.name)}
-                          </p>
-                          <div className="flex items-center justify-between text-sm text-gray-500">
-                            <span>{0 || 0} topics</span>
-                            <span>Last: {formatDistance(new Date(category.createdAt || new Date()), new Date(), { addSuffix: true })}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="all" className="mt-6" style={{overflow: 'visible'}}>
-            <div className="mb-4">
-              <h2 className="text-2xl font-bold text-uh-black mb-2">All Forum Categories</h2>
-              <p className="text-gray-600">Browse all available discussion forums</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" style={{overflow: 'visible'}}>
-              {filteredCategories.map((category) => (
-                <Link key={category.id} to={`/forums/categories/${category.id}`}>
-                  <Card className="hover:shadow-lg transition-shadow duration-200 cursor-pointer">
-                    <CardContent className="p-6">
-                      <div className="flex items-start space-x-4">
-                        <div className={`w-12 h-12 ${getCategoryColor(category.name)} rounded-lg flex items-center justify-center`}>
-                          <i className={`fas fa-${getCategoryIcon(category.name)} text-white text-lg`}></i>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-bold text-uh-black mb-1">{category.name}</h3>
-                          <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                            {getCategoryDescription(category.name)}
-                          </p>
-                          <div className="flex items-center justify-between text-sm text-gray-500">
-                            <span>{0 || 0} topics</span>
-                            <span>Last: {formatDistance(new Date(category.createdAt || new Date()), new Date(), { addSuffix: true })}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          </TabsContent>
-        </Tabs>
+                )}
 
-        {/* Recent Activity */}
+              </div>
+            </TabsContent>
+          </Tabs>
+        )}
+
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <i className="fas fa-clock mr-2"></i>
-              Recent Forum Activity
-            </CardTitle>
+            <CardTitle>Recent Forum Activity</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {[
-                { id: 1, user: "User1", category: "Football Discussion", categoryId: 1 },
-                { id: 2, user: "User2", category: "Basketball Discussion", categoryId: 2 },
-                { id: 3, user: "User3", category: "Other Sports", categoryId: 3 },
-                { id: 4, user: "User4", category: "Water Cooler Talk", categoryId: 4 },
-                { id: 5, user: "User5", category: "Coogs Lounge", categoryId: 5 }
-              ].map((item, i) => (
-                <div key={item.id} className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
-                  <Avatar>
-                    <AvatarFallback className="bg-uh-red text-white">
-                      U{item.id}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-900">
-                      <span className="font-medium">{item.user}</span> posted in{" "}
-                      <Link to={`/forums/categories/${item.categoryId}`} className="text-uh-red hover:underline">
-                        {item.category}
+            {recentLoading ? (
+              <p className="text-sm text-gray-600">Loading recent topics…</p>
+            ) : recentTopics.length === 0 ? (
+              <p className="text-sm text-gray-600">No forum topics have been posted yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {recentTopics.map((topic) => {
+                  const category = categoryById.get(topic.categoryId);
+                  return (
+                    <div key={topic.id} className="flex items-center gap-4 rounded-lg bg-gray-50 p-4">
+                      <Avatar>
+                        <AvatarFallback className="bg-uh-red text-white">
+                          {(topic.authorId || "C").charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <Link href={`/forums/topics/${topic.id}`} className="font-semibold text-gray-950 hover:text-uh-red">
+                          {topic.title}
+                        </Link>
+                        <p className="text-xs text-gray-500">
+                          {category ? (
+                            <Link href={forumCategoryPath(category.slug)} className="hover:underline">{category.name}</Link>
+                          ) : (
+                            "Forum"
+                          )}
+                          {" · "}
+                          {topic.createdAt
+                            ? formatDistance(new Date(topic.createdAt), new Date(), { addSuffix: true })
+                            : "Recently"}
+                        </p>
+                      </div>
+                      <Link href={`/forums/topics/${topic.id}`}>
+                        <Button variant="ghost" size="sm" className="text-uh-red">View</Button>
                       </Link>
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {formatDistance(new Date(Date.now() - (i + 1) * 1000 * 60 * 15), new Date(), { addSuffix: true })}
-                    </p>
-                  </div>
-                  <Link to={`/forums/topics/${item.id}`}>
-                    <Button variant="ghost" size="sm" className="text-uh-red" data-testid={`button-view-topic-${item.id}`}>
-                      View
-                    </Button>
-                  </Link>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Forum Guidelines */}
-        <Card className="mt-8 bg-blue-50 border-blue-200">
-          <CardHeader>
-            <CardTitle className="flex items-center text-blue-800">
-              <i className="fas fa-info-circle mr-2"></i>
-              Community Guidelines
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-blue-700">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h4 className="font-semibold mb-2">Be Respectful</h4>
-                <ul className="space-y-1 text-sm">
-                  <li>• Treat all members with dignity and respect</li>
-                  <li>• No personal attacks or harassment</li>
-                  <li>• Keep discussions civil and constructive</li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold mb-2">Stay On Topic</h4>
-                <ul className="space-y-1 text-sm">
-                  <li>• Post in relevant forum categories</li>
-                  <li>• Use descriptive topic titles</li>
-                  <li>• Search before creating duplicate topics</li>
-                </ul>
-              </div>
-            </div>
-            {!isAuthenticated && (
-              <div className="mt-6 text-center">
-                <Link to="/forums/categories/1">
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                    <i className="fas fa-football-ball mr-2"></i>
-                    Join the Discussion
-                  </Button>
-                </Link>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </CardContent>
         </Card>
-      </div>
 
+        <Card className="mt-8 border-blue-200 bg-blue-50">
+          <CardContent className="p-6 text-blue-900">
+            <h2 className="font-bold">Community basics</h2>
+            <p className="mt-2 text-sm">Be respectful, use descriptive topic titles, and place discussions in the most relevant board.</p>
+            {!isAuthenticated && (
+              <Link href="/join" className="mt-4 inline-block font-semibold text-blue-700 hover:underline">Join to post and reply →</Link>
+            )}
+          </CardContent>
+        </Card>
+      </main>
       <Footer />
+    </div>
+  );
+}
+
+
+function CommunityGroupGrid({
+  groups,
+}: {
+  groups: CommunityGroup[];
+}) {
+  if (groups.length === 0) {
+    return (
+      <Card>
+        <CardContent className="p-10 text-center text-gray-600">
+          No matching community categories.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="grid items-stretch gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {groups.map((group) => (
+        <details
+          key={group.title}
+          className="group h-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:shadow-lg"
+        >
+          <summary
+            className={`flex min-h-28 cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 [&::-webkit-details-marker]:hidden ${group.headerClasses}`}
+          >
+            <div>
+              <h2 className="text-lg font-bold">
+                {group.title}
+              </h2>
+
+              <p className="mt-1 text-xs leading-5 opacity-90">
+                {group.description}
+              </p>
+            </div>
+
+            <span
+              aria-hidden="true"
+              className="shrink-0 text-xl transition-transform duration-200 group-open:rotate-180"
+            >
+              ▼
+            </span>
+          </summary>
+
+          <div className="border-t border-gray-200">
+            {group.categories.map(
+              (
+                {
+                  category,
+                  label,
+                },
+                index
+              ) => {
+                let rowClasses =
+                  "bg-white text-gray-800 hover:bg-gray-50";
+
+                if (group.uhAlternating) {
+                  const startRed =
+                    group.alternateStart !==
+                    "white";
+
+                  const useRed =
+                    startRed
+                      ? index % 2 === 0
+                      : index % 2 !== 0;
+
+                  rowClasses = useRed
+                    ? "bg-red-700 !text-white hover:bg-red-800"
+                    : "bg-white !text-red-700 hover:bg-red-50";
+                }
+
+                return (
+                  <Link
+                    key={category.id}
+                    href={forumCategoryPath(
+                      category.slug
+                    )}
+                    className={`flex items-center justify-between gap-4 border-b border-gray-200 px-5 py-4 font-semibold last:border-b-0 ${rowClasses}`}
+                  >
+                    <span>
+                      {label}
+                    </span>
+
+                    <span
+                      aria-hidden="true"
+                      className="text-sm"
+                    >
+                      →
+                    </span>
+                  </Link>
+                );
+              }
+            )}
+          </div>
+        </details>
+      ))}
+    </div>
+  );
+}
+
+
+function categoryHeaderClasses(
+  category: ForumCategory,
+): string {
+  const slug =
+    String(category.slug || "").toLowerCase();
+
+  // Football
+  if (slug === "football") {
+    return "bg-red-700 text-white";
+  }
+
+  // Men's Basketball
+  if (slug === "basketball") {
+    return "bg-white text-red-700 border-b-2 border-red-600";
+  }
+
+  // Consolidated women's athletics
+  if (slug === "womens-sports") {
+    return "bg-pink-300 text-red-800";
+  }
+
+  // Original category color scheme
+  switch (
+    String(category.color || "").toLowerCase()
+  ) {
+    case "red":
+      return "bg-red-700 text-white";
+
+    case "blue":
+      return "bg-blue-700 text-white";
+
+    case "green":
+      return "bg-green-700 text-white";
+
+    case "orange":
+      return "bg-orange-600 text-white";
+
+    case "purple":
+      return "bg-purple-700 text-white";
+
+    case "gray":
+      return "bg-slate-700 text-white";
+
+    case "gold":
+      return "bg-amber-500 text-black";
+
+    case "cyan":
+      return "bg-cyan-700 text-white";
+
+    case "amber":
+      return "bg-amber-600 text-white";
+
+    case "lime":
+      return "bg-lime-700 text-white";
+
+    case "violet":
+      return "bg-violet-700 text-white";
+
+    case "teal":
+      return "bg-teal-700 text-white";
+
+    case "indigo":
+      return "bg-indigo-700 text-white";
+
+    default:
+      return "bg-red-700 text-white";
+  }
+}
+
+const womensSportsDetailSlugs =
+  new Set([
+    "womens-basketball",
+    "womens-golf",
+    "womens-soccer",
+    "softball",
+    "womens-tennis",
+    "womens-track-field",
+    "womens-swimming-diving",
+  ]);
+
+function CategoryGrid({
+  categories,
+}: {
+  categories: ForumCategory[];
+}) {
+  /*
+   * Individual women's sport boards remain in the
+   * underlying system but are represented here by
+   * one Women Sports umbrella card.
+   */
+  const displayCategories =
+    categories.filter(
+      (category) =>
+        !womensSportsDetailSlugs.has(
+          category.slug
+        )
+    );
+
+  if (displayCategories.length === 0) {
+    return (
+      <Card>
+        <CardContent className="p-10 text-center text-gray-600">
+          No matching forum categories.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+      {displayCategories.map((category) => {
+        const isWomenSports =
+          category.slug === "womens-sports";
+
+        const isIntramural =
+          category.slug === "other-sports-men";
+
+        const displayName =
+          isWomenSports
+            ? "Women Sports"
+            : isIntramural
+              ? "Intramural Sports"
+              : category.name;
+
+        return (
+          <Link
+            key={category.id}
+            href={forumCategoryPath(
+              category.slug
+            )}
+            className="block h-full"
+          >
+            <Card className="h-full overflow-hidden border border-gray-200 transition hover:-translate-y-0.5 hover:shadow-lg">
+
+              <div
+                className={`flex min-h-16 items-center gap-3 px-5 py-4 ${categoryHeaderClasses(
+                  category
+                )}`}
+              >
+                <span
+                  className="text-2xl"
+                  aria-hidden="true"
+                >
+                  {categoryIcon(category)}
+                </span>
+
+                <h2 className="text-lg font-bold">
+                  {displayName}
+                </h2>
+              </div>
+
+              <CardContent className="bg-white p-5">
+
+                {isIntramural ? (
+                  <p className="leading-6 text-gray-700">
+
+                    <span className="text-sm font-medium">
+                      Activities
+                    </span>
+
+                    <span className="ml-1 text-xs">
+                      / announcements on and off campus
+                    </span>
+
+                  </p>
+                ) : (
+                  <p className="text-sm leading-6 text-gray-700">
+                    {category.description ||
+                      "Community discussion board"}
+                  </p>
+                )}
+
+              </CardContent>
+
+            </Card>
+          </Link>
+        );
+      })}
+
+      <TicketPurchaseCard />
+    </div>
+  );
+}
+
+
+function TicketPurchaseCard() {
+  return (
+    <details className="group h-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
+
+      <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 bg-green-700 px-5 py-4 text-white [&::-webkit-details-marker]:hidden">
+
+        <div className="flex items-center gap-3">
+          <span
+            className="text-2xl"
+            aria-hidden="true"
+          >
+            🎟️
+          </span>
+
+          <h2 className="text-lg font-bold">
+            Ticket Purchase
+          </h2>
+        </div>
+
+        <span
+          aria-hidden="true"
+          className="text-lg transition-transform duration-200 group-open:rotate-180"
+        >
+          ▼
+        </span>
+
+      </summary>
+
+      <div className="border-t border-gray-200">
+
+        <div className="flex items-center justify-between border-b border-gray-200 bg-white px-5 py-4">
+          <div>
+            <div className="font-bold text-gray-900">
+              Ticketmaster
+            </div>
+
+            <div className="mt-1 text-xs text-gray-500">
+              Ticket marketplace
+            </div>
+          </div>
+
+          <span className="text-lg text-green-700">
+            🎫
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between bg-gray-50 px-5 py-4">
+          <div>
+            <div className="font-bold text-gray-900">
+              StubHub
+            </div>
+
+            <div className="mt-1 text-xs text-gray-500">
+              Ticket marketplace
+            </div>
+          </div>
+
+          <span className="text-lg text-green-700">
+            🎫
+          </span>
+        </div>
+
+        <div className="bg-white px-5 py-3 text-xs leading-5 text-gray-500">
+          Tracked affiliate purchase links will connect here.
+        </div>
+
+      </div>
+    </details>
+  );
+}
+
+
+function CategorySkeleton() {
+  return (
+    <div className="mb-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+      {[1, 2, 3, 4, 5, 6].map((item) => (
+        <Card key={item} className="animate-pulse"><CardContent className="h-36 p-6"><div className="h-5 w-1/2 rounded bg-gray-200" /><div className="mt-4 h-4 rounded bg-gray-200" /></CardContent></Card>
+      ))}
     </div>
   );
 }
