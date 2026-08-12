@@ -49,6 +49,8 @@ import { registerAdminDashboardRoutes } from "./adminDashboard";
 import { registerPublicAIRoutes } from "./publicAI";
 import { registerCommerceRoutes } from "./commerce/routes";
 import { registerVenueRoutes } from "./venue/routes";
+import { registerSportsHttpRoutes, registerSportsSocketNamespace, startSportsFactsService } from "./sports/routes";
+import { seedSportsTickerDemo } from "./sports/devSeed";
 
 // Helper function to verify Google reCAPTCHA
 async function verifyRecaptcha(recaptchaResponse: string, clientIP?: string): Promise<boolean> {
@@ -204,6 +206,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Auth middleware
   const sessionMiddleware = await setupAuth(app);
+  registerSportsHttpRoutes(app);
 
   /*
    * DEVELOPMENT-ONLY UNLIMITED MEMBER TEST ACCESS.
@@ -2419,6 +2422,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   io.engine.use(sessionMiddleware as any);
+
+  // Public read-only NGF sports events. Collection happens server-side.
+  registerSportsSocketNamespace(io.of("/sports"));
+  seedSportsTickerDemo();
+  void startSportsFactsService().catch((error) => console.error("[SPORTS] Service start failed", error));
 
   /**
    * Socket authentication — the SAME security HTTP requests get.

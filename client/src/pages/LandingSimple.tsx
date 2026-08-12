@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import bannerImage from "@assets/file_00000000881861f9be677e55822b57a5_1757784057972.png";
 import logoImage from "@assets/webiste master logo_1761671161849.jpg";
 import { useAuth } from "@/hooks/useAuth";
+import { LiveScoreTicker } from "@/components/LiveScoreTicker";
 
 type MenuItem = {
   label: string;
@@ -1232,6 +1233,8 @@ export default function Landing() {
           Terms
         </a>
       </nav>
+
+      <LiveScoreTicker />
 
       <section className="cn-hero">
         <div

@@ -5,6 +5,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useGuest } from "@/hooks/useGuest";
 import { FORUM_NAVIGATION, forumCategoryPath } from "@/lib/forumNavigation";
+import { LiveScoreTicker } from "@/components/LiveScoreTicker";
 
 export function Header() {
   const { isAuthenticated, user } = useAuth();
@@ -219,6 +220,7 @@ export function Header() {
           </div>
         </nav>
       )}
+      <LiveScoreTicker />
     </header>
   );
 }
