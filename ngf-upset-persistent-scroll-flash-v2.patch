@@ -1,0 +1,75 @@
+diff -ruN a/client/src/components/LiveScoreTicker.tsx b/client/src/components/LiveScoreTicker.tsx
+--- a/client/src/components/LiveScoreTicker.tsx	2026-08-12 15:30:15.665856885 +0000
++++ b/client/src/components/LiveScoreTicker.tsx	2026-08-12 15:30:16.167460183 +0000
+@@ -10,6 +10,7 @@
+   status: string;
+   priority: number;
+   accentKey: string;
++  upsetSeverity?: "top25" | "top10" | "top5" | "number1" | null;
+ };
+ 
+ type TickerSnapshot = {
+@@ -83,10 +84,12 @@
+         .ngf-score-game:before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(110deg,var(--ngf-a),var(--ngf-b),transparent 92%);opacity:.58}
+         .ngf-score-sep{color:rgba(255,255,255,.55)}
+         .ngf-score-status{font-size:11px;background:rgba(255,255,255,.16);padding:4px 8px;border-radius:999px;color:#dff7ff;letter-spacing:.04em}
+-        .ngf-score-game.is-upset-game{border-right:2px solid #fff7ad;border-left:2px solid #fff7ad;animation:ngfUpsetGameFlash 1.15s ease-in-out infinite}
+-        .ngf-score-upset-badge{font-size:10px;background:#fff7ad;color:#7f1d1d;padding:4px 7px;border-radius:999px;letter-spacing:.08em;box-shadow:0 0 12px rgba(255,247,173,.95)}
++        .ngf-score-game.is-upset-game{border-right:3px solid #fff7ad;border-left:3px solid #fff7ad;background:linear-gradient(90deg,#7f1d1d,#dc2626,#f59e0b,#dc2626,#7f1d1d);animation:ngfUpsetGameFlash 1.05s ease-in-out infinite}
++        .ngf-score-game.is-upset-game:before{opacity:.18}
++        .ngf-score-upset-badge{font-size:10px;background:#fff7ad;color:#7f1d1d;padding:4px 7px;border-radius:999px;letter-spacing:.08em;box-shadow:0 0 16px rgba(255,247,173,1);animation:ngfUpsetBadgePulse 1.05s ease-in-out infinite}
+         @keyframes ngfScoreScroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+-        @keyframes ngfUpsetGameFlash{0%,100%{filter:brightness(1);box-shadow:inset 0 0 0 rgba(255,247,173,0)}50%{filter:brightness(1.85);box-shadow:inset 0 0 22px rgba(255,247,173,.72),0 0 18px rgba(245,158,11,.85)}}
++        @keyframes ngfUpsetGameFlash{0%,100%{filter:brightness(1);box-shadow:inset 0 0 0 rgba(255,247,173,0),0 0 0 rgba(245,158,11,0)}50%{filter:brightness(2.15) saturate(1.35);box-shadow:inset 0 0 30px rgba(255,247,173,.88),0 0 24px rgba(245,158,11,1)}}
++        @keyframes ngfUpsetBadgePulse{0%,100%{transform:scale(1);filter:brightness(1)}50%{transform:scale(1.12);filter:brightness(1.45)}}
+         @media(max-width:620px){.ngf-score-badge{padding:0 10px;font-size:10px}.ngf-score-game{padding:0 14px;font-size:13px}.ngf-score-upset-badge{font-size:9px;padding:3px 6px}}
+         @media(prefers-reduced-motion:reduce){.ngf-score-track,.ngf-score-game.is-upset-game{animation:none!important}.ngf-score-game.is-upset-game{outline:3px solid #fff7ad}}
+       `}</style>
+@@ -96,7 +99,7 @@
+         <div className="ngf-score-track">
+           {loopGames.map((game, index) => {
+             const colors = RAINBOW[index % RAINBOW.length];
+-            const isUpsetGame = upset?.gameId === game.gameId;
++            const isUpsetGame = Boolean(game.upsetSeverity) || upset?.gameId === game.gameId;
+             return (
+               <div
+                 key={`${game.gameId}-${index}`}
+diff -ruN a/server/sports/ticker.ts b/server/sports/ticker.ts
+--- a/server/sports/ticker.ts	2026-08-12 15:30:15.667538940 +0000
++++ b/server/sports/ticker.ts	2026-08-12 15:30:16.167590307 +0000
+@@ -1,4 +1,5 @@
+-import type { ReconciledGame } from "../../shared/ngfSportsTypes";
++import type { ReconciledGame, UpsetSeverity } from "../../shared/ngfSportsTypes";
++import { detectUpset } from "./upset";
+ 
+ export interface TickerItem {
+   gameId: string;
+@@ -9,6 +10,7 @@
+   status: string;
+   priority: number;
+   accentKey: string;
++  upsetSeverity?: UpsetSeverity | null;
+ }
+ 
+ function statusFor(game: ReconciledGame): string {
+@@ -26,10 +28,12 @@
+ }
+ 
+ export function toTickerItem(game: ReconciledGame, focusTeamId?: string): TickerItem {
++  const upset = detectUpset(game);
+   let priority = 10;
+   if (game.phase === "live" || game.phase === "halftime") priority += 30;
+   if (game.phase === "final") priority += 5;
+   if (game.game.away.rank || game.game.home.rank) priority += 10;
++  if (upset) priority += 25;
+   if (focusTeamId && [game.game.away.ngfTeamId, game.game.home.ngfTeamId].includes(focusTeamId)) priority += 100;
+ 
+   return {
+@@ -41,6 +45,7 @@
+     status: statusFor(game),
+     priority,
+     accentKey: game.game.away.ngfTeamId,
++    upsetSeverity: upset?.severity ?? null,
+   };
+ }
+ 
