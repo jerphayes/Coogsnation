@@ -956,15 +956,15 @@ export const userProfileCompletionSchema = z.object({
   email: z.string().trim().toLowerCase().email("Please enter a valid email address"),
   address: z.string()
     .trim()
-    .min(1, "Street address is required")
-    .max(255, "Street address is too long"),
+    .max(255, "Street address is too long")
+  .optional(),    
   city: z.string()
-    .trim()
-    .min(1, "City is required")
-    .max(100, "City is too long"),
-  state: requiredStateSchema,
-  zipCode: requiredZipCodeSchema,
-  dateOfBirth: z.coerce.date(),
+  .trim()
+  .max(100, "City is too long")
+  .optional(),
+  state: requiredStateSchema.optional(),
+  zipCode: requiredZipCodeSchema.optional(),
+  dateOfBirth: z.coerce.date().optional(),  
   graduationYear: optionalGraduationYearSchema,
   fanType: z.enum(["Student", "Ex-Student", "Graduate", "Post Graduate", "Faculty", "Staff", "Coog Crazy Fan", "Friend"]).optional(),
   interest: z.string().optional(),

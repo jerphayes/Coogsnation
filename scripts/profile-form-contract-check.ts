@@ -44,8 +44,13 @@ const requiredRegistrationFields = {
   lastName: "Cougar",
   password: "StrongPass1!",
   confirmPassword: "StrongPass1!",
+  address: "123 Main St",
+  city: "Houston",
+  state: "TX",
+  zipCode: "77002",
   dateOfBirth: new Date("1990-01-01T00:00:00.000Z"),
   hasConsentedToDataUse: true,
+  country: "USA",
 };
 
 const minimalRegistration = localAccountRegistrationSchema.safeParse(requiredRegistrationFields);
@@ -59,13 +64,8 @@ const blankOptionalRegistration = localAccountRegistrationSchema.safeParse({
   ...requiredRegistrationFields,
   handle: "",
   backupEmail: "",
-  address: "",
-  city: "",
-  state: "",
-  zipCode: "",
-  graduationYear: "",
   memberCategory: "",
-  country: "",
+  country: "USA",
   socialLinks: {
     twitter: "",
     linkedin: "",
@@ -87,6 +87,7 @@ const minimalProfileCompletion = userProfileCompletionSchema.safeParse({
   lastName: "Cougar",
   dateOfBirth: new Date("1985-05-15T00:00:00.000Z"),
   hasConsentedToDataUse: true,
+  country: "USA",  
 });
 assert.equal(
   minimalProfileCompletion.success,
