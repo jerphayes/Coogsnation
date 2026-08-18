@@ -1,5 +1,6 @@
 import { EventEmitter } from "node:events";
 import type {
+  GameRef,
   ReconciledGame,
   ScoreObservation,
   SourceHealth,
@@ -29,30 +30,98 @@ export class SportsFactsEngine extends EventEmitter {
     this.health.set(health.sourceId, health);
   }
 
+  setScheduledSlate(games: GameRef[], now = new Date()) {
+    const incoming = new Set(games.map((game) => game.ngfGameId));
+
+    for (const [gameId, current] of this.current.entries()) {
+      if (
+        (current.phase === "scheduled" || current.phase === "pregame") &&
+        !incoming.has(gameId)
+      ) {
+        this.current.delete(gameId);
+      }
+    }
+
+    for (const game of games) {
+      const existing = this.current.get(game.ngfGameId);
+
+      if (
+        existing &&
+        existing.phase !== "scheduled" &&
+        existing.phase !== "pregame"
+      ) {
+        continue;
+      }
+
+      const kickoff = new Date(game.scheduledStart);
+
+      const statusText = Number.isNaN(kickoff.getTime())
+        ? "UPCOMING"
+        : kickoff
+            .toLocaleString("en-US", {
+              weekday: "short",
+              month: "short",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+              timeZone: "America/Chicago",
+              timeZoneName: "short",
+            })
+            .toUpperCase();
+
+      this.current.set(game.ngfGameId, {
+        game,
+        awayScore: 0,
+        homeScore: 0,
+        phase: "scheduled",
+        statusText,
+        acceptedAt: now.toISOString(),
+        confidence: 1,
+        agreeingSources: ["schedule"],
+        conflictingSources: [],
+      });
+    }
+
+    this.emit("ticker:update", this.snapshot(now));
+  }
+
   ingest(observation: ScoreObservation, now = new Date()): ReconciledGame | null {
-    const perGame = this.observations.get(observation.game.ngfGameId) ?? new Map<string, ScoreObservation>();
+    const perGame =
+      this.observations.get(observation.game.ngfGameId) ??
+      new Map<string, ScoreObservation>();
+
     perGame.set(observation.sourceId, observation);
     this.observations.set(observation.game.ngfGameId, perGame);
 
-    const reconciled = reconcileGame([...perGame.values()], [...this.health.values()], now);
+    const reconciled = reconcileGame(
+      [...perGame.values()],
+      [...this.health.values()],
+      now,
+    );
+
     if (!reconciled) return null;
 
     const previous = this.current.get(observation.game.ngfGameId);
     this.current.set(observation.game.ngfGameId, reconciled);
 
-    const materiallyChanged = !previous
-      || previous.awayScore !== reconciled.awayScore
-      || previous.homeScore !== reconciled.homeScore
-      || previous.phase !== reconciled.phase
-      || previous.period !== reconciled.period
-      || previous.clock !== reconciled.clock;
+    const materiallyChanged =
+      !previous ||
+      previous.awayScore !== reconciled.awayScore ||
+      previous.homeScore !== reconciled.homeScore ||
+      previous.phase !== reconciled.phase ||
+      previous.period !== reconciled.period ||
+      previous.clock !== reconciled.clock;
 
     if (materiallyChanged) {
       this.emit("ticker:update", this.snapshot(now));
     }
 
-    if (reconciled.phase === "final" && !this.emittedFinalUpsets.has(reconciled.game.ngfGameId)) {
+    if (
+      reconciled.phase === "final" &&
+      !this.emittedFinalUpsets.has(reconciled.game.ngfGameId)
+    ) {
       const upset = detectUpset(reconciled);
+
       if (upset && reconciled.agreeingSources.length >= 2) {
         this.emittedFinalUpsets.add(reconciled.game.ngfGameId);
         this.emit("upset:alert", upset);
@@ -67,8 +136,16 @@ export class SportsFactsEngine extends EventEmitter {
   }
 
   snapshot(now = new Date()): TickerSnapshot {
-    const games = sortTicker([...this.current.values()].map((game) => toTickerItem(game, this.focusTeamId)));
-    return { generatedAt: now.toISOString(), games };
+    const games = sortTicker(
+      [...this.current.values()].map((game) =>
+        toTickerItem(game, this.focusTeamId),
+      ),
+    );
+
+    return {
+      generatedAt: now.toISOString(),
+      games,
+    };
   }
 
   clear() {
