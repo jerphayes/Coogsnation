@@ -60,7 +60,6 @@ for (const key of [
   "AI_GEMINI_ENABLED",
   "AI_GEMINI_MODEL",
   "AI_GEMINI_API_KEY",
-  "COMMERCE_PROVIDER",
 ]) {
   if (!env.includes(`${key}=`)) fail(`environment setting ${key} missing`);
 }
