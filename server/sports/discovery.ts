@@ -98,27 +98,19 @@ function embeddedJson(html: string): unknown[] {
   return values;
 }
 
-function fallbackTextGames(html: string, division: Division, fallbackDate: string): DiscoveredGame[] {
-  // Conservative fallback: only parse explicit "A vs B" / "A at B" strings.
-  // This intentionally avoids guessing when a page's text structure is ambiguous.
-  const text = htmlToText(html);
-  const games: DiscoveredGame[] = [];
-  const regex = /([A-Z][A-Za-z0-9 .&'()\-]{2,45})\s+(?:vs\.?|at)\s+([A-Z][A-Za-z0-9 .&'()\-]{2,45})/g;
-  let match: RegExpExecArray | null;
-  while ((match = regex.exec(text))) {
-    const away = team(match[1], division);
-    const home = team(match[2], division);
-    if (away.ngfTeamId === home.ngfTeamId) continue;
-    games.push({
-      ngfGameId: `${fallbackDate.slice(0, 10)}-${away.ngfTeamId}-${home.ngfTeamId}`,
-      sport: "football",
-      season: new Date(fallbackDate).getUTCFullYear(),
-      scheduledStart: fallbackDate,
-      away,
-      home,
-    });
-  }
-  return games;
+function fallbackTextGames(
+  _html: string,
+  _division: Division,
+  _fallbackDate: string,
+): DiscoveredGame[] {
+  /*
+   * NEVER infer games from arbitrary page prose.
+   *
+   * NCAA pages contain headlines and article/navigation text such as
+   * "FCS wins vs FBS teams". A generic "A vs B" regex can therefore create
+   * fake games. Only structured embedded game data is accepted.
+   */
+  return [];
 }
 
 export function discoverGamesFromPublicPage(html: string, division: Division, fallbackDate: string): DiscoveredGame[] {
