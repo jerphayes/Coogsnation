@@ -1137,17 +1137,105 @@ export default function Landing() {
           />
         </a>
 
-        <a href="/forums" className="cn-nav-link">
-          Forums
-        </a>
+        <Dropdown
+          id="top-forums"
+          label="Forums"
+          items={forumItems}
+          openMenu={openMenu}
+          setOpenMenu={setOpenMenu}
+        />
 
-        <a href="/members" className="cn-nav-link">
-          Members
-        </a>
+        <Dropdown
+          id="top-members"
+          label="Members"
+          items={[
+            {
+              label: "Member Directory",
+              href: "/members",
+              icon: "👥",
+            },
+            {
+              label: "Messages",
+              href: "/messages",
+              icon: "💬",
+            },
+            {
+              label: "Events",
+              href: "/events",
+              icon: "📅",
+            },
+            ...(isAuthenticated
+              ? [
+                  {
+                    label: "My Profile",
+                    href: "/profile",
+                    icon: "👤",
+                  },
+                  {
+                    label: "Dashboard",
+                    href: "/dashboard",
+                    icon: "🏠",
+                  },
+                ]
+              : []),
+          ]}
+          openMenu={openMenu}
+          setOpenMenu={setOpenMenu}
+        />
 
-        <a href="/store" className="cn-nav-link">
-          Shopping
-        </a>
+        <Dropdown
+          id="top-shopping"
+          label="Shopping"
+          items={[
+            {
+              label: "Store Home",
+              href: "/store",
+              icon: "🛍️",
+            },
+            {
+              label: "Wear Your Pride",
+              href: "/store/wear-your-pride",
+              icon: "👕",
+            },
+            {
+              label: "Everyday Alumni",
+              href: "/store/everyday-alumni",
+              icon: "🎓",
+            },
+            {
+              label: "Keepsakes & Gifts",
+              href: "/store/keepsakes-gifts",
+              icon: "🎁",
+            },
+            {
+              label: "Limited Editions",
+              href: "/store/limited-editions",
+              icon: "⭐",
+            },
+            {
+              label: "Legacy Jewelry",
+              href: "/store/legacy-jewelry",
+              icon: "💎",
+            },
+            {
+              label: "CoogsNation Originals",
+              href: "/store/coogsnation-originals",
+              icon: "🐾",
+            },
+            {
+              label: "Store Concierge",
+              href: "/store/concierge",
+              icon: "🤝",
+            },
+            {
+              label: "Cart",
+              href: "/cart",
+              icon: "🛒",
+            },
+          ]}
+          openMenu={openMenu}
+          setOpenMenu={setOpenMenu}
+        />
 
         <Dropdown
           id="top-community"
