@@ -171,6 +171,16 @@ export default function Forums() {
   const { isAuthenticated } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
 
+  const [selectedTab, setSelectedTab] = useState(() => {
+    const requestedTab = new URLSearchParams(window.location.search).get("tab");
+
+    if (requestedTab === "community" || requestedTab === "conversation") {
+      return requestedTab;
+    }
+
+    return "sports";
+  });
+
   const {
     data: categories = [],
     isLoading: categoriesLoading,
@@ -352,7 +362,11 @@ export default function Forums() {
         ) : categoriesLoading ? (
           <CategorySkeleton />
         ) : (
-          <Tabs defaultValue="sports" className="mb-10">
+          <Tabs
+            value={selectedTab}
+            onValueChange={setSelectedTab}
+            className="mb-10"
+          >
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="sports">
                 Sports

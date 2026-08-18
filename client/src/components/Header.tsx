@@ -99,7 +99,7 @@ export function Header() {
                   id="desktop-community-menu"
                   className="absolute left-0 top-full mt-2 min-w-[220px] overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg"
                 >
-                  <HeaderMenuLink href="/community" onNavigate={closeMenus} testId="link-community">
+                  <HeaderMenuLink href="/forums?tab=community" onNavigate={closeMenus} testId="link-community">
                     Community Home
                   </HeaderMenuLink>
                   {communityLinks}
@@ -196,7 +196,7 @@ export function Header() {
             <MobileLink href="/messages" onNavigate={closeMenus}>Messages</MobileLink>
             <MobileLink href="/events" onNavigate={closeMenus}>Events</MobileLink>
             <MobileLink href="/store" onNavigate={closeMenus}>Shopping</MobileLink>
-            <MobileLink href="/community" onNavigate={closeMenus}>Community</MobileLink>
+            <MobileLink href="/forums?tab=community" onNavigate={closeMenus}>Community</MobileLink>
             <MobileLink href="/terms" onNavigate={closeMenus}>Terms</MobileLink>
 
             <div className="my-2 border-t border-gray-700" />
