@@ -14,6 +14,7 @@ type MenuItem = {
 type DropdownProps = {
   id: string;
   label: string;
+  href?: string;
   items: MenuItem[];
   openMenu: string | null;
   setOpenMenu: (value: string | null) => void;
@@ -23,6 +24,7 @@ type DropdownProps = {
 function Dropdown({
   id,
   label,
+  href,
   items,
   openMenu,
   setOpenMenu,
@@ -36,15 +38,31 @@ function Dropdown({
       onMouseEnter={() => setOpenMenu(id)}
       onMouseLeave={() => setOpenMenu(null)}
     >
-      <button
-        type="button"
-        className="cn-nav-dropdown-button"
-        aria-expanded={open}
-        aria-haspopup="menu"
-        onClick={() => setOpenMenu(open ? null : id)}
-      >
-        {label} ▼
-      </button>
+      {href ? (
+        <>
+          <a href={href} className="cn-nav-link">{label}</a>
+          <button
+            type="button"
+            className="cn-nav-dropdown-button"
+            aria-expanded={open}
+            aria-haspopup="menu"
+            aria-label={`Open ${label} menu`}
+            onClick={() => setOpenMenu(open ? null : id)}
+          >
+            ▼
+          </button>
+        </>
+      ) : (
+        <button
+          type="button"
+          className="cn-nav-dropdown-button"
+          aria-expanded={open}
+          aria-haspopup="menu"
+          onClick={() => setOpenMenu(open ? null : id)}
+        >
+          {label} ▼
+        </button>
+      )}
 
       <div
         className={`cn-dropdown ${open ? "is-open" : ""} ${
@@ -402,13 +420,19 @@ export default function Landing() {
       icon: "🤝",
     },
     {
+      label: "Coog Paws Lounge",
+      href: "/coogpaws-chat",
+      icon: "🐾",
+      description: "Cougar Dens multi-chat lounge.",
+    },
+    {
       label: "Water Cooler Talk",
       href: forumHref("Water Cooler Talk"),
       icon: "☕",
       description: "General conversation beyond sports.",
     },
     {
-      label: "UH Hall of Fame",
+      label: "Coog's Hall of Fame",
       href: forumHref("UH Hall of Fame"),
       icon: "🏅",
     },
@@ -467,18 +491,6 @@ export default function Landing() {
   ];
 
   const communityItems: MenuItem[] = [
-    {
-      label: "Coog Paws Chat",
-      href: "/coogpaws-chat",
-      icon: "🐾",
-      description: "Connect with fellow Coogs.",
-    },
-    {
-      label: "Water Cooler Talk",
-      href: forumHref("Water Cooler Talk"),
-      icon: "☕",
-      description: "General conversation beyond sports.",
-    },
     {
       label: "Life Happens",
       href: "/life-happens",
@@ -1139,6 +1151,7 @@ export default function Landing() {
 
         <Dropdown
           id="top-forums"
+          href="/forums"
           label="Forums"
           items={forumItems}
           openMenu={openMenu}
@@ -1147,6 +1160,7 @@ export default function Landing() {
 
         <Dropdown
           id="top-members"
+          href="/members"
           label="Members"
           items={[
             {
@@ -1185,6 +1199,7 @@ export default function Landing() {
 
         <Dropdown
           id="top-shopping"
+          href="/store"
           label="Shopping"
           items={[
             {
@@ -1239,6 +1254,7 @@ export default function Landing() {
 
         <Dropdown
           id="top-community"
+          href="/forums?tab=community"
           label="Community"
           items={communityItems}
           openMenu={openMenu}

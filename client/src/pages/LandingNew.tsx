@@ -129,7 +129,7 @@ export default function Landing() {
                   <li>Academic Forums</li>
                   <li>Water Cooler Talk</li>
                   <li>🐾 Coog Paws Chat</li>
-                  <li>UH Hall of Fame</li>
+                  <li>Coog's Hall of Fame</li>
                 </ul>
               </div>
 

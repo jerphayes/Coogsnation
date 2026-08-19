@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import { formatDistance } from "date-fns";
 import type { ForumCategory, ForumTopic } from "@shared/schema";
 import { forumCategoryPath, isVisibleForumCategory } from "@/lib/forumNavigation";
@@ -17,6 +17,7 @@ const sportsSlugs = new Set([
   "football",
   "basketball",
   "baseball",
+  "uh-hall-of-fame",
   "recruiting",
   "game-day-central",
   "tailgate-roundup",
@@ -81,7 +82,7 @@ const communityGroupDefinitions: CommunityGroupDefinition[] = [
       },
       {
         slug: "uh-hall-of-fame",
-        label: "UH Hall of Fame",
+        label: "Coog's Hall of Fame",
       },
       {
         slug: "professional-networking",
@@ -169,17 +170,23 @@ function categoryIcon(category: ForumCategory): string {
 
 export default function Forums() {
   const { isAuthenticated } = useAuth();
+  const search = useSearch();
   const [searchQuery, setSearchQuery] = useState("");
 
   const [selectedTab, setSelectedTab] = useState(() => {
     const requestedTab = new URLSearchParams(window.location.search).get("tab");
 
-    if (requestedTab === "community" || requestedTab === "conversation") {
+    if (requestedTab === "community") {
       return requestedTab;
     }
 
     return "sports";
   });
+
+  useEffect(() => {
+    const requestedTab = new URLSearchParams(search).get("tab");
+    setSelectedTab(requestedTab === "community" ? "community" : "sports");
+  }, [search]);
 
   const {
     data: categories = [],
@@ -212,7 +219,7 @@ export default function Forums() {
 
   /*
    * EVERYTHING that is not sports belongs in Community,
-   * except Water Cooler Talk which has its own third section.
+   * Water Cooler Talk is grouped under Cougar Dens in Sports.
    */
   const waterCoolerCategory =
     filteredCategories.find(
@@ -367,7 +374,7 @@ export default function Forums() {
             onValueChange={setSelectedTab}
             className="mb-10"
           >
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="sports">
                 Sports
               </TabsTrigger>
@@ -376,9 +383,6 @@ export default function Forums() {
                 Community
               </TabsTrigger>
 
-              <TabsTrigger value="conversation">
-                Coog Paws & Water Cooler
-              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="sports" className="mt-6">
@@ -394,9 +398,13 @@ export default function Forums() {
             </TabsContent>
 
             <TabsContent
-              value="conversation"
+              value="sports"
               className="mt-6"
             >
+              <div className="mb-4">
+                <h2 className="text-2xl font-bold text-uh-black">Cougar Dens</h2>
+                <p className="mt-1 text-sm text-gray-600">Live CoogsNation social spaces for fan conversation.</p>
+              </div>
               <div className="grid gap-5 md:grid-cols-2">
 
                 <Link
@@ -414,7 +422,7 @@ export default function Forums() {
                       </span>
 
                       <h2 className="text-lg font-bold">
-                        Coog Paws
+                        Coog Paws Lounge
                       </h2>
                     </div>
 
@@ -765,7 +773,7 @@ function CategoryGrid({
             ? "Women Sports"
             : isIntramural
               ? "Intramural Sports"
-              : category.name;
+              : category.slug === "uh-hall-of-fame" ? "Coog's Hall of Fame" : category.name;
 
         return (
           <Link

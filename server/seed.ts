@@ -52,7 +52,7 @@ async function seedDatabase() {
       sortOrder: 5
     },
     {
-      name: "UH Hall of Fame",
+      name: "Coog's Hall of Fame",
       description: "Celebrating famous UH alumni, athletes, coaches, and faculty",
       slug: "hall-of-fame",
       icon: "fas fa-medal",

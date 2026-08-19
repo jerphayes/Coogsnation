@@ -15,7 +15,7 @@ export const FORUM_NAVIGATION = {
   baseball: { label: "Baseball", slug: "baseball" },
   recruiting: { label: "Recruiting", slug: "recruiting" },
   waterCooler: { label: "Water Cooler Talk", slug: "water-cooler-talk" },
-  hallOfFame: { label: "UH Hall of Fame", slug: "uh-hall-of-fame" },
+  hallOfFame: { label: "Coog's Hall of Fame", slug: "uh-hall-of-fame" },
 } as const;
 
 export const LEGACY_COOGPAWS_FORUM_SLUG = "coogpaws";

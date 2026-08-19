@@ -12,12 +12,18 @@ export function Header() {
   const { isGuestMode, enableGuestMode } = useGuest();
   const [, navigate] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [forumsOpen, setForumsOpen] = useState(false);
+  const [membersOpen, setMembersOpen] = useState(false);
+  const [shoppingOpen, setShoppingOpen] = useState(false);
   const [communityOpen, setCommunityOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
 
   const closeMenus = () => {
     setMobileOpen(false);
+    setForumsOpen(false);
+    setMembersOpen(false);
+    setShoppingOpen(false);
     setCommunityOpen(false);
     setLoginOpen(false);
     setJoinOpen(false);
@@ -42,8 +48,11 @@ export function Header() {
     }
   };
 
-  const communityLinks = (
+  const forumsLinks = (
     <>
+      <HeaderMenuLink href="/forums?tab=sports" onNavigate={closeMenus}>
+        🏟️ Sports Forums
+      </HeaderMenuLink>
       <HeaderMenuLink href="/coogpaws-chat" onNavigate={closeMenus} testId="link-coogpaws">
         🐾 Coog Paws Lounge
       </HeaderMenuLink>
@@ -59,13 +68,24 @@ export function Header() {
         onNavigate={closeMenus}
         testId="link-halloffame"
       >
-        🏆 UH Hall of Fame
+        🏆 Coog's Hall of Fame
       </HeaderMenuLink>
+    </>
+  );
+
+  const communityLinks = (
+    <>
       <HeaderMenuLink href="/life-happens" onNavigate={closeMenus} testId="link-lifehappens">
         🌟 Life Happens
       </HeaderMenuLink>
       <HeaderMenuLink href="/life-solutions" onNavigate={closeMenus} testId="link-lifesolutions">
         💡 Life Solutions
+      </HeaderMenuLink>
+      <HeaderMenuLink href="/members" onNavigate={closeMenus}>
+        👥 Members
+      </HeaderMenuLink>
+      <HeaderMenuLink href="/events" onNavigate={closeMenus}>
+        📅 Events
       </HeaderMenuLink>
     </>
   );
@@ -79,33 +99,132 @@ export function Header() {
           </Link>
 
           <nav className="hidden items-center gap-6 md:flex" aria-label="Primary navigation">
-            <DesktopLink href="/forums" testId="link-forums">Forums</DesktopLink>
-            <DesktopLink href="/members" testId="link-members">Members</DesktopLink>
-            <DesktopLink href="/store" testId="link-store">Shopping</DesktopLink>
 
-            <div className="relative">
+            <div className="relative flex items-center gap-1">
+              <DesktopLink href="/forums" testId="link-forums">Forums</DesktopLink>
               <button
                 type="button"
-                onClick={() => setCommunityOpen((open) => !open)}
-                className="flex items-center gap-1 font-bold text-white transition-colors hover:text-red-500"
+                onClick={() => {
+                  setMembersOpen(false);
+                  setShoppingOpen(false);
+                  setCommunityOpen(false);
+                  setForumsOpen((open) => !open);
+                }}
+                className="font-bold text-white transition-colors hover:text-red-500"
+                aria-expanded={forumsOpen}
+                aria-controls="desktop-forums-menu"
+                aria-label="Open Forums menu"
+                data-testid="button-forums-menu"
+              >
+                ▼
+              </button>
+              {forumsOpen && (
+                <div
+                  id="desktop-forums-menu"
+                  className="absolute left-0 top-full mt-2 min-w-[230px] overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg"
+                >
+                  <HeaderMenuLink href="/forums" onNavigate={closeMenus}>
+                    Forums Home
+                  </HeaderMenuLink>
+                  {forumsLinks}
+                </div>
+              )}
+            </div>
+
+            <div className="relative flex items-center gap-1">
+              <DesktopLink href="/members" testId="link-members">Members</DesktopLink>
+              <button
+                type="button"
+                onClick={() => {
+                  setForumsOpen(false);
+                  setShoppingOpen(false);
+                  setCommunityOpen(false);
+                  setMembersOpen((open) => !open);
+                }}
+                className="font-bold text-white transition-colors hover:text-red-500"
+                aria-expanded={membersOpen}
+                aria-controls="desktop-members-menu"
+                aria-label="Open Members menu"
+                data-testid="button-members-menu"
+              >
+                ▼
+              </button>
+              {membersOpen && (
+                <div
+                  id="desktop-members-menu"
+                  className="absolute left-0 top-full mt-2 min-w-[220px] overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg"
+                >
+                  <HeaderMenuLink href="/members" onNavigate={closeMenus}>Member Directory</HeaderMenuLink>
+                  <HeaderMenuLink href="/messages" onNavigate={closeMenus}>Messages</HeaderMenuLink>
+                  <HeaderMenuLink href="/events" onNavigate={closeMenus}>Events</HeaderMenuLink>
+                </div>
+              )}
+            </div>
+
+            <div className="relative flex items-center gap-1">
+              <DesktopLink href="/store" testId="link-store">Shopping</DesktopLink>
+              <button
+                type="button"
+                onClick={() => {
+                  setForumsOpen(false);
+                  setMembersOpen(false);
+                  setCommunityOpen(false);
+                  setShoppingOpen((open) => !open);
+                }}
+                className="font-bold text-white transition-colors hover:text-red-500"
+                aria-expanded={shoppingOpen}
+                aria-controls="desktop-shopping-menu"
+                aria-label="Open Shopping menu"
+                data-testid="button-shopping-menu"
+              >
+                ▼
+              </button>
+              {shoppingOpen && (
+                <div
+                  id="desktop-shopping-menu"
+                  className="absolute left-0 top-full mt-2 min-w-[230px] overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg"
+                >
+                  <HeaderMenuLink href="/store" onNavigate={closeMenus}>Store Home</HeaderMenuLink>
+                  <HeaderMenuLink href="/store/wear-your-pride" onNavigate={closeMenus}>Wear Your Pride</HeaderMenuLink>
+                  <HeaderMenuLink href="/store/keepsakes-gifts" onNavigate={closeMenus}>Keepsakes & Gifts</HeaderMenuLink>
+                  <HeaderMenuLink href="/store/limited-editions" onNavigate={closeMenus}>Limited Editions</HeaderMenuLink>
+                  <HeaderMenuLink href="/store/legacy-jewelry" onNavigate={closeMenus}>Legacy Jewelry</HeaderMenuLink>
+                  <HeaderMenuLink href="/cart" onNavigate={closeMenus}>🛒 Cart</HeaderMenuLink>
+                </div>
+              )}
+            </div>
+
+            <div className="relative flex items-center gap-1">
+              <DesktopLink href="/forums?tab=community" testId="link-community">Community</DesktopLink>
+              <button
+                type="button"
+                onClick={() => {
+                  setForumsOpen(false);
+                  setMembersOpen(false);
+                  setShoppingOpen(false);
+                  setCommunityOpen((open) => !open);
+                }}
+                className="font-bold text-white transition-colors hover:text-red-500"
                 aria-expanded={communityOpen}
                 aria-controls="desktop-community-menu"
+                aria-label="Open Community menu"
                 data-testid="button-community-menu"
               >
-                Community <span className="text-sm" aria-hidden="true">▼</span>
+                ▼
               </button>
               {communityOpen && (
                 <div
                   id="desktop-community-menu"
                   className="absolute left-0 top-full mt-2 min-w-[220px] overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg"
                 >
-                  <HeaderMenuLink href="/forums?tab=community" onNavigate={closeMenus} testId="link-community">
+                  <HeaderMenuLink href="/forums?tab=community" onNavigate={closeMenus}>
                     Community Home
                   </HeaderMenuLink>
                   {communityLinks}
                 </div>
               )}
             </div>
+
           </nav>
         </div>
 
