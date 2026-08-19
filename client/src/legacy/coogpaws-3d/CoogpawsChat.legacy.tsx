@@ -82,10 +82,7 @@ export default function CoogpawsChat() {
   const [showAi, setShowAi] = useState(false);
   const [seatNotice, setSeatNotice] = useState<string | null>(null);
   const [seatBusy, setSeatBusy] = useState(false);
-  // 3D venue intentionally quarantined on 2026-08-19.
-  // Preserved at client/src/legacy/coogpaws-3d/.
-  // Active Coog Paws Lounge is transitioning to the 2D visual-environment design.
-  const render3d = false;
+  const [render3d] = useState(() => (typeof window === "undefined" ? false : webglAvailable()));
 
   /* Chat runs independently of the renderer, and starts as soon as the member
    * is authenticated. A failed venue must never take the room down with it. */
