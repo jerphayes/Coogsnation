@@ -131,7 +131,7 @@ export const LOUNGE_ROOMS: Record<string, LoungeRoomDefinition> = {
 };
 
 export function getForumTopicIdFromRoomId(roomId: string): number | null {
-  const match = /^forum-topic-(\\d+)$/.exec(roomId);
+  const match = /^forum-topic-(\d+)$/.exec(roomId);
   if (!match) return null;
   const topicId = Number(match[1]);
   return Number.isSafeInteger(topicId) && topicId > 0 ? topicId : null;
