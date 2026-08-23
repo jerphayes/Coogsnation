@@ -18,7 +18,7 @@
  */
 
 import type { Server as SocketIOServer, Namespace, Socket } from "socket.io";
-import { randomUUID } from "crypto";
+import { randomUUID, createHash } from "crypto";
 import { pool } from "../db";
 import {
   LOUNGE_NAMESPACE,
@@ -29,6 +29,7 @@ import {
   loungeBlockSchema,
   loungeReportSchema,
   getLoungeRoom,
+  getForumTopicIdFromRoomId,
   type LoungeRoomDefinition,
   type LoungeOccupant,
   type LoungeChatMessage,
@@ -137,6 +138,266 @@ async function persistLoungeMessage(message: LoungeChatMessage): Promise<void> {
       Boolean(message.system),
     ],
   );
+}
+
+
+function deterministicDiscussionMessageId(seed: string): string {
+  const bytes = Buffer.from(createHash("sha256").update(seed).digest().subarray(0, 16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x50;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = bytes.toString("hex");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+function forumContentToDiscussionText(value: unknown): string {
+  return String(value ?? "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .trim();
+}
+
+async function resolveDiscussionRoom(roomId: string): Promise<LoungeRoomDefinition | null> {
+  const baseRoom = getLoungeRoom(roomId);
+  const topicId = getForumTopicIdFromRoomId(roomId);
+
+  if (topicId === null) return baseRoom;
+  if (!baseRoom) return null;
+
+  const result = await pool.query(
+    `
+      SELECT t.id, t.title
+        FROM forum_topics t
+        JOIN forum_categories c ON c.id = t.category_id
+       WHERE t.id = $1
+         AND c.is_active = true
+         AND c.slug <> 'coogpaws'
+       LIMIT 1
+    `,
+    [topicId],
+  );
+
+  if (result.rowCount !== 1) return null;
+
+  return {
+    ...baseRoom,
+    label: String(result.rows[0].title || "Forum Discussion"),
+  };
+}
+
+async function mirrorForumMessage(
+  roomId: string,
+  id: string,
+  userId: string,
+  displayName: string,
+  message: string,
+  sentAt: Date | string,
+): Promise<void> {
+  await pool.query(
+    `
+      INSERT INTO lounge_chat_messages
+        (id, room_id, user_id, display_name, message, sent_at, system)
+      VALUES
+        ($1, $2, $3, $4, $5, $6, false)
+      ON CONFLICT (id) DO UPDATE SET
+        display_name = EXCLUDED.display_name,
+        message = EXCLUDED.message,
+        sent_at = EXCLUDED.sent_at
+    `,
+    [id, roomId, userId, displayName, message, sentAt],
+  );
+}
+
+async function syncForumTopicHistory(roomId: string): Promise<void> {
+  const topicId = getForumTopicIdFromRoomId(roomId);
+  if (topicId === null) return;
+
+  const topicResult = await pool.query(
+    `
+      SELECT
+        t.id,
+        t.author_id,
+        t.content,
+        t.created_at,
+        COALESCE(
+          NULLIF(BTRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''),
+          NULLIF(u.username, ''),
+          NULLIF(u.handle, ''),
+          'Cougar'
+        ) AS display_name
+      FROM forum_topics t
+      JOIN forum_categories c ON c.id = t.category_id
+      LEFT JOIN users u ON u.id = t.author_id
+      WHERE t.id = $1
+        AND c.is_active = true
+        AND c.slug <> 'coogpaws'
+      LIMIT 1
+    `,
+    [topicId],
+  );
+
+  if (topicResult.rowCount !== 1) return;
+
+  const topic = topicResult.rows[0];
+
+  await mirrorForumMessage(
+    roomId,
+    deterministicDiscussionMessageId(`forum-topic:${topicId}:topic`),
+    String(topic.author_id),
+    String(topic.display_name || "Cougar"),
+    forumContentToDiscussionText(topic.content),
+    topic.created_at || new Date(),
+  );
+
+  const postsResult = await pool.query(
+    `
+      SELECT
+        p.id,
+        p.author_id,
+        p.content,
+        p.created_at,
+        COALESCE(
+          NULLIF(BTRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''),
+          NULLIF(u.username, ''),
+          NULLIF(u.handle, ''),
+          'Cougar'
+        ) AS display_name
+      FROM forum_posts p
+      LEFT JOIN users u ON u.id = p.author_id
+      WHERE p.topic_id = $1
+        AND p.is_deleted = false
+      ORDER BY p.created_at ASC, p.id ASC
+    `,
+    [topicId],
+  );
+
+  for (const post of postsResult.rows) {
+    await mirrorForumMessage(
+      roomId,
+      deterministicDiscussionMessageId(`forum-topic:${topicId}:post:${post.id}`),
+      String(post.author_id),
+      String(post.display_name || "Cougar"),
+      forumContentToDiscussionText(post.content),
+      post.created_at || new Date(),
+    );
+  }
+}
+
+async function persistForumReplyAndMessage(
+  roomId: string,
+  userId: string,
+  displayName: string,
+  message: string,
+): Promise<LoungeChatMessage> {
+  const topicId = getForumTopicIdFromRoomId(roomId);
+  if (topicId === null) {
+    throw new Error("NOT_FORUM_DISCUSSION");
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const topicResult = await client.query(
+      `
+        SELECT t.id, t.is_locked
+          FROM forum_topics t
+         WHERE t.id = $1
+           AND EXISTS (
+             SELECT 1
+               FROM forum_categories c
+              WHERE c.id = t.category_id
+                AND c.is_active = true
+                AND c.slug <> 'coogpaws'
+           )
+         FOR UPDATE
+      `,
+      [topicId],
+    );
+
+    if (topicResult.rowCount !== 1) {
+      throw new Error("FORUM_TOPIC_NOT_FOUND");
+    }
+
+    if (topicResult.rows[0].is_locked) {
+      throw new Error("FORUM_TOPIC_LOCKED");
+    }
+
+    const postResult = await client.query(
+      `
+        INSERT INTO forum_posts
+          (topic_id, author_id, content, is_deleted, created_at, updated_at)
+        VALUES
+          ($1, $2, $3, false, NOW(), NOW())
+        RETURNING id, created_at
+      `,
+      [topicId, userId, message],
+    );
+
+    const post = postResult.rows[0];
+    const messageId = deterministicDiscussionMessageId(
+      `forum-topic:${topicId}:post:${post.id}`,
+    );
+
+    const payload: LoungeChatMessage = {
+      id: messageId,
+      roomId,
+      userId,
+      displayName,
+      message,
+      sentAt:
+        post.created_at instanceof Date
+          ? post.created_at.toISOString()
+          : new Date(post.created_at).toISOString(),
+      pawCount: 0,
+      pawedByMe: false,
+    };
+
+    await client.query(
+      `
+        INSERT INTO lounge_chat_messages
+          (id, room_id, user_id, display_name, message, sent_at, system)
+        VALUES
+          ($1, $2, $3, $4, $5, $6, false)
+      `,
+      [
+        payload.id,
+        payload.roomId,
+        payload.userId,
+        payload.displayName,
+        payload.message,
+        payload.sentAt,
+      ],
+    );
+
+    await client.query(
+      `
+        UPDATE forum_topics
+           SET reply_count = COALESCE(reply_count, 0) + 1,
+               last_reply_at = NOW(),
+               last_reply_by_id = $2,
+               updated_at = NOW()
+         WHERE id = $1
+      `,
+      [topicId, userId],
+    );
+
+    await client.query("COMMIT");
+    return payload;
+  } catch (error) {
+    try {
+      await client.query("ROLLBACK");
+    } catch {}
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 async function togglePersistentPaw(
@@ -317,26 +578,9 @@ export function registerLoungeNamespace(options: LoungeNamespaceOptions): Namesp
   const { io, requireSocketUser } = options;
   const lounge = io.of(LOUNGE_NAMESPACE);
 
-  // TEMPORARY PRODUCTION TEST MODE:
-  // Allow anonymous Coog Paws testers directly into /lounge without
-  // depending on the normal login/session path.
-  lounge.use(((socket: any, next: any) => {
-    if (process.env.DEV_GUEST_FULL_ACCESS === "true") {
-      socket.data.userId = `guest-${socket.id}`;
-      socket.data.user = {
-        firstName: "Guest",
-        lastName: "Tester",
-        username: "Guest",
-        handle: "Guest",
-        role: "member",
-        isAdmin: false,
-        isModerator: false,
-      };
-      return next();
-    }
-
-    return requireSocketUser(socket, next);
-  }) as any);
+  // Guest Mode now establishes a real authenticated member session.
+  // Every discussion socket uses that session identity.
+  lounge.use(requireSocketUser as any);
 
   lounge.on("connection", (socket: Socket) => {
     /** Rooms this SOCKET has joined. A socket may occupy more than one. */
@@ -383,7 +627,7 @@ export function registerLoungeNamespace(options: LoungeNamespaceOptions): Namesp
       if (!parsed.success) return fail("UNKNOWN_ROOM", "That room does not exist.");
 
       const { roomId } = parsed.data;
-      const room = getLoungeRoom(roomId);
+      const room = await resolveDiscussionRoom(roomId);
       if (!room) return fail("UNKNOWN_ROOM", "That room does not exist.", roomId);
 
       const user = socket.data.user;
@@ -429,6 +673,10 @@ export function registerLoungeNamespace(options: LoungeNamespaceOptions): Namesp
       });
 
       try {
+        if (getForumTopicIdFromRoomId(roomId) !== null) {
+          await syncForumTopicHistory(roomId);
+        }
+
         const persistentHistory = await loadPersistentLoungeHistory(roomId, userId);
         if (persistentHistory.length) {
           socket.emit(LOUNGE_EVENTS.history, { roomId, messages: persistentHistory });
@@ -467,7 +715,7 @@ export function registerLoungeNamespace(options: LoungeNamespaceOptions): Namesp
         return fail("NOT_IN_ROOM", "Join the lounge before sending a message.", roomId);
       }
 
-      const room = getLoungeRoom(roomId);
+      const room = await resolveDiscussionRoom(roomId);
       if (!room) return fail("UNKNOWN_ROOM", "That room does not exist.", roomId);
 
       /* Re-check access on every message. Membership can be revoked while a
@@ -494,12 +742,40 @@ export function registerLoungeNamespace(options: LoungeNamespaceOptions): Namesp
       payload.pawedByMe = false;
 
       try {
-        await persistLoungeMessage(payload);
+        if (getForumTopicIdFromRoomId(roomId) !== null) {
+          const forumPayload = await persistForumReplyAndMessage(
+            roomId,
+            userId,
+            payload.displayName,
+            message,
+          );
+          Object.assign(payload, forumPayload);
+        } else {
+          await persistLoungeMessage(payload);
+        }
       } catch (error) {
-        console.error("[lounge] message persistence failed", error);
+        const reason = error instanceof Error ? error.message : "";
+
+        if (reason === "FORUM_TOPIC_LOCKED") {
+          return fail(
+            "INVALID_MESSAGE",
+            "This discussion is locked and no longer accepts replies.",
+            roomId,
+          );
+        }
+
+        if (reason === "FORUM_TOPIC_NOT_FOUND") {
+          return fail(
+            "UNKNOWN_ROOM",
+            "That discussion is no longer available.",
+            roomId,
+          );
+        }
+
+        console.error("[lounge] discussion persistence failed", error);
         return fail(
           "INVALID_MESSAGE",
-          "The Lounge could not save that message. Try again.",
+          "The discussion could not save that message. Try again.",
           roomId,
           true,
         );
@@ -522,7 +798,7 @@ export function registerLoungeNamespace(options: LoungeNamespaceOptions): Namesp
         return fail("NOT_IN_ROOM", "Join the lounge before giving a Coog Paw.", roomId);
       }
 
-      const room = getLoungeRoom(roomId);
+      const room = await resolveDiscussionRoom(roomId);
       if (!room) return fail("UNKNOWN_ROOM", "That room does not exist.", roomId);
 
       const access = evaluateLoungeAccess(room, socket.data.user || {});

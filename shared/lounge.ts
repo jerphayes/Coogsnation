@@ -130,10 +130,33 @@ export const LOUNGE_ROOMS: Record<string, LoungeRoomDefinition> = {
   },
 };
 
+export function getForumTopicIdFromRoomId(roomId: string): number | null {
+  const match = /^forum-topic-(\\d+)$/.exec(roomId);
+  if (!match) return null;
+  const topicId = Number(match[1]);
+  return Number.isSafeInteger(topicId) && topicId > 0 ? topicId : null;
+}
+
 export function getLoungeRoom(roomId: string): LoungeRoomDefinition | null {
-  return Object.prototype.hasOwnProperty.call(LOUNGE_ROOMS, roomId)
-    ? LOUNGE_ROOMS[roomId]
-    : null;
+  if (Object.prototype.hasOwnProperty.call(LOUNGE_ROOMS, roomId)) {
+    return LOUNGE_ROOMS[roomId];
+  }
+
+  const forumTopicId = getForumTopicIdFromRoomId(roomId);
+  if (forumTopicId !== null) {
+    return {
+      id: roomId,
+      label: "Forum Discussion",
+      description: "Persistent CoogsNation forum discussion using the universal discussion experience.",
+      venueId: "coogpaws",
+      access: "open",
+      enabled: true,
+      capacity: 512,
+      historySize: 300,
+    };
+  }
+
+  return null;
 }
 
 export function listLoungeRooms(): LoungeRoomDefinition[] {
