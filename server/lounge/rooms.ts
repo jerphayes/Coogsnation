@@ -19,15 +19,20 @@
 
 import type { Server as SocketIOServer, Namespace, Socket } from "socket.io";
 import { randomUUID } from "crypto";
+import { pool } from "../db";
 import {
   LOUNGE_NAMESPACE,
   LOUNGE_EVENTS,
   loungeJoinSchema,
   loungeMessageSchema,
+  loungePawSchema,
+  loungeBlockSchema,
+  loungeReportSchema,
   getLoungeRoom,
   type LoungeRoomDefinition,
   type LoungeOccupant,
   type LoungeChatMessage,
+  type LoungePawUpdate,
   type LoungeErrorCode,
 } from "@shared/lounge";
 
@@ -58,6 +63,158 @@ function stateFor(roomId: string): RoomState {
     rooms.set(roomId, state);
   }
   return state;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * DURABLE CHAT + COOG PAWS
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+const PERSISTED_HISTORY_LIMIT = 100;
+
+async function loadPersistentLoungeHistory(
+  roomId: string,
+  userId: string,
+): Promise<LoungeChatMessage[]> {
+  const result = await pool.query(
+    `
+      SELECT
+        m.id,
+        m.room_id,
+        m.user_id,
+        m.display_name,
+        m.message,
+        m.sent_at,
+        m.system,
+        (SELECT COUNT(*)::int
+           FROM lounge_message_paws p
+          WHERE p.message_id = m.id) AS paw_count,
+        EXISTS (
+          SELECT 1
+            FROM lounge_message_paws p
+           WHERE p.message_id = m.id
+             AND p.user_id = $2
+        ) AS pawed_by_me
+      FROM lounge_chat_messages m
+      WHERE m.room_id = $1
+      ORDER BY m.sent_at DESC
+      LIMIT $3
+    `,
+    [roomId, userId, PERSISTED_HISTORY_LIMIT],
+  );
+
+  return result.rows.reverse().map((row) => ({
+    id: String(row.id),
+    roomId: String(row.room_id),
+    userId: String(row.user_id),
+    displayName: String(row.display_name),
+    message: String(row.message),
+    sentAt:
+      row.sent_at instanceof Date
+        ? row.sent_at.toISOString()
+        : new Date(row.sent_at).toISOString(),
+    pawCount: Number(row.paw_count ?? 0),
+    pawedByMe: Boolean(row.pawed_by_me),
+    system: Boolean(row.system),
+  }));
+}
+
+async function persistLoungeMessage(message: LoungeChatMessage): Promise<void> {
+  await pool.query(
+    `
+      INSERT INTO lounge_chat_messages
+        (id, room_id, user_id, display_name, message, sent_at, system)
+      VALUES
+        ($1, $2, $3, $4, $5, $6, $7)
+    `,
+    [
+      message.id,
+      message.roomId,
+      message.userId,
+      message.displayName,
+      message.message,
+      message.sentAt,
+      Boolean(message.system),
+    ],
+  );
+}
+
+async function togglePersistentPaw(
+  roomId: string,
+  messageId: string,
+  userId: string,
+): Promise<{ pawed: boolean; pawCount: number } | null> {
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const messageResult = await client.query(
+      `
+        SELECT id
+          FROM lounge_chat_messages
+         WHERE id = $1
+           AND room_id = $2
+         FOR UPDATE
+      `,
+      [messageId, roomId],
+    );
+
+    if (!messageResult.rowCount) {
+      await client.query("ROLLBACK");
+      return null;
+    }
+
+    const existing = await client.query(
+      `
+        SELECT 1
+          FROM lounge_message_paws
+         WHERE message_id = $1
+           AND user_id = $2
+      `,
+      [messageId, userId],
+    );
+
+    let pawed: boolean;
+
+    if (existing.rowCount) {
+      await client.query(
+        `DELETE FROM lounge_message_paws
+          WHERE message_id = $1
+            AND user_id = $2`,
+        [messageId, userId],
+      );
+      pawed = false;
+    } else {
+      await client.query(
+        `INSERT INTO lounge_message_paws (message_id, user_id)
+         VALUES ($1, $2)`,
+        [messageId, userId],
+      );
+      pawed = true;
+    }
+
+    const countResult = await client.query(
+      `SELECT COUNT(*)::int AS paw_count
+         FROM lounge_message_paws
+        WHERE message_id = $1`,
+      [messageId],
+    );
+
+    await client.query("COMMIT");
+
+    return {
+      pawed,
+      pawCount: Number(countResult.rows[0]?.paw_count ?? 0),
+    };
+  } catch (error) {
+    try {
+      await client.query("ROLLBACK");
+    } catch {}
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -160,7 +317,26 @@ export function registerLoungeNamespace(options: LoungeNamespaceOptions): Namesp
   const { io, requireSocketUser } = options;
   const lounge = io.of(LOUNGE_NAMESPACE);
 
-  lounge.use(requireSocketUser as any);
+  // TEMPORARY PRODUCTION TEST MODE:
+  // Allow anonymous Coog Paws testers directly into /lounge without
+  // depending on the normal login/session path.
+  lounge.use(((socket: any, next: any) => {
+    if (process.env.DEV_GUEST_FULL_ACCESS === "true") {
+      socket.data.userId = `guest-${socket.id}`;
+      socket.data.user = {
+        firstName: "Guest",
+        lastName: "Tester",
+        username: "Guest",
+        handle: "Guest",
+        role: "member",
+        isAdmin: false,
+        isModerator: false,
+      };
+      return next();
+    }
+
+    return requireSocketUser(socket, next);
+  }) as any);
 
   lounge.on("connection", (socket: Socket) => {
     /** Rooms this SOCKET has joined. A socket may occupy more than one. */
@@ -202,7 +378,7 @@ export function registerLoungeNamespace(options: LoungeNamespaceOptions): Namesp
 
     /* ── join ──────────────────────────────────────────────────────── */
 
-    socket.on(LOUNGE_EVENTS.join, (raw: unknown) => {
+    socket.on(LOUNGE_EVENTS.join, async (raw: unknown) => {
       const parsed = loungeJoinSchema.safeParse(raw);
       if (!parsed.success) return fail("UNKNOWN_ROOM", "That room does not exist.");
 
@@ -252,8 +428,18 @@ export function registerLoungeNamespace(options: LoungeNamespaceOptions): Namesp
         occupants: occupantsOf(roomId),
       });
 
-      if (state.history.length) {
-        socket.emit(LOUNGE_EVENTS.history, { roomId, messages: state.history.slice() });
+      try {
+        const persistentHistory = await loadPersistentLoungeHistory(roomId, userId);
+        if (persistentHistory.length) {
+          socket.emit(LOUNGE_EVENTS.history, { roomId, messages: persistentHistory });
+        } else if (state.history.length) {
+          socket.emit(LOUNGE_EVENTS.history, { roomId, messages: state.history.slice() });
+        }
+      } catch (error) {
+        console.error("[lounge] persistent history unavailable", error);
+        if (state.history.length) {
+          socket.emit(LOUNGE_EVENTS.history, { roomId, messages: state.history.slice() });
+        }
       }
 
       /* Announce only a member's FIRST socket. Opening a second tab is not an
@@ -270,7 +456,7 @@ export function registerLoungeNamespace(options: LoungeNamespaceOptions): Namesp
 
     /* ── message ───────────────────────────────────────────────────── */
 
-    socket.on(LOUNGE_EVENTS.message, (raw: unknown) => {
+    socket.on(LOUNGE_EVENTS.message, async (raw: unknown) => {
       const parsed = loungeMessageSchema.safeParse(raw);
       if (!parsed.success) {
         return fail("INVALID_MESSAGE", "That message could not be sent.");
@@ -304,11 +490,196 @@ export function registerLoungeNamespace(options: LoungeNamespaceOptions): Namesp
         sentAt: new Date().toISOString(),
       };
 
+      payload.pawCount = 0;
+      payload.pawedByMe = false;
+
+      try {
+        await persistLoungeMessage(payload);
+      } catch (error) {
+        console.error("[lounge] message persistence failed", error);
+        return fail(
+          "INVALID_MESSAGE",
+          "The Lounge could not save that message. Try again.",
+          roomId,
+          true,
+        );
+      }
+
       lounge.to(roomId).emit(LOUNGE_EVENTS.chat, payload);
       remember(roomId, payload);
     });
 
+    /* ── Coog Paw vote ─────────────────────────────────────────────── */
+
+    socket.on(LOUNGE_EVENTS.paw, async (raw: unknown) => {
+      const parsed = loungePawSchema.safeParse(raw);
+      if (!parsed.success) {
+        return fail("INVALID_MESSAGE", "That Coog Paw could not be recorded.");
+      }
+
+      const { roomId, messageId } = parsed.data;
+      if (!joined.has(roomId)) {
+        return fail("NOT_IN_ROOM", "Join the lounge before giving a Coog Paw.", roomId);
+      }
+
+      const room = getLoungeRoom(roomId);
+      if (!room) return fail("UNKNOWN_ROOM", "That room does not exist.", roomId);
+
+      const access = evaluateLoungeAccess(room, socket.data.user || {});
+      if (!access.allowed) return fail(access.code!, access.message!, roomId);
+
+      const userId = String(socket.data.userId);
+
+      try {
+        const ownerResult = await pool.query(
+          `
+            SELECT user_id
+            FROM lounge_chat_messages
+            WHERE id = $1
+              AND room_id = $2
+            LIMIT 1
+          `,
+          [messageId, roomId],
+        );
+
+        if (ownerResult.rowCount !== 1) {
+          return fail(
+            "INVALID_MESSAGE",
+            "That message is no longer available for voting.",
+            roomId,
+          );
+        }
+
+        if (String(ownerResult.rows[0].user_id) === userId) {
+          return fail(
+            "INVALID_MESSAGE",
+            "You cannot give a Coog Paw to your own post.",
+            roomId,
+          );
+        }
+
+        const result = await togglePersistentPaw(roomId, messageId, userId);
+        if (!result) {
+          return fail(
+            "INVALID_MESSAGE",
+            "That message is no longer available for voting.",
+            roomId,
+          );
+        }
+
+        const update: LoungePawUpdate = {
+          roomId,
+          messageId,
+          pawCount: result.pawCount,
+          actorUserId: userId,
+          pawed: result.pawed,
+        };
+
+        lounge.to(roomId).emit(LOUNGE_EVENTS.pawUpdated, update);
+      } catch (error) {
+        console.error("[lounge] Coog Paw persistence failed", error);
+        return fail(
+          "INVALID_MESSAGE",
+          "That Coog Paw could not be saved. Try again.",
+          roomId,
+          true,
+        );
+      }
+    });
+
     /* ── leave / disconnect ────────────────────────────────────────── */
+
+    socket.on(LOUNGE_EVENTS.blocksRequest, async (raw: unknown) => {
+      const parsed = loungeJoinSchema.safeParse(raw);
+      if (!parsed.success) return fail("INVALID_MESSAGE", "Block list request was invalid.");
+      const { roomId } = parsed.data;
+      if (!joined.has(roomId)) return fail("NOT_IN_ROOM", "Join the lounge first.", roomId);
+      try {
+        const result = await pool.query(
+          `SELECT blocked_user_id FROM lounge_blocks WHERE blocker_user_id = $1`,
+          [String(socket.data.userId)],
+        );
+        socket.emit(LOUNGE_EVENTS.blocks, {
+          roomId,
+          blockedUserIds: result.rows.map((row) => String(row.blocked_user_id)),
+        });
+      } catch (error) {
+        console.error("[lounge] block list failed", error);
+      }
+    });
+
+    socket.on(LOUNGE_EVENTS.block, async (raw: unknown) => {
+      const parsed = loungeBlockSchema.safeParse(raw);
+      if (!parsed.success) return fail("INVALID_MESSAGE", "That block request was invalid.");
+
+      const { roomId, blockedUserId } = parsed.data;
+      if (!joined.has(roomId)) return fail("NOT_IN_ROOM", "Join the lounge first.", roomId);
+
+      const userId = String(socket.data.userId);
+      if (blockedUserId === userId) {
+        return fail("INVALID_MESSAGE", "You cannot block yourself.", roomId);
+      }
+
+      try {
+        const existing = await pool.query(
+          `SELECT 1 FROM lounge_blocks
+           WHERE blocker_user_id = $1 AND blocked_user_id = $2`,
+          [userId, blockedUserId],
+        );
+
+        let blocked = true;
+
+        if (existing.rowCount) {
+          await pool.query(
+            `DELETE FROM lounge_blocks
+             WHERE blocker_user_id = $1 AND blocked_user_id = $2`,
+            [userId, blockedUserId],
+          );
+          blocked = false;
+        } else {
+          await pool.query(
+            `INSERT INTO lounge_blocks (blocker_user_id, blocked_user_id)
+             VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+            [userId, blockedUserId],
+          );
+        }
+
+        socket.emit(LOUNGE_EVENTS.blockUpdated, {
+          roomId,
+          blockedUserId,
+          blocked,
+        });
+      } catch (error) {
+        console.error("[lounge] block persistence failed", error);
+        return fail("INVALID_MESSAGE", "Block could not be saved.", roomId, true);
+      }
+    });
+
+    socket.on(LOUNGE_EVENTS.report, async (raw: unknown) => {
+      const parsed = loungeReportSchema.safeParse(raw);
+      if (!parsed.success) return fail("INVALID_MESSAGE", "That report was invalid.");
+      const { roomId, messageId, reportedUserId, reason, details } = parsed.data;
+      if (!joined.has(roomId)) return fail("NOT_IN_ROOM", "Join the lounge first.", roomId);
+      const reporterUserId = String(socket.data.userId);
+      if (reporterUserId === reportedUserId) return fail("INVALID_MESSAGE", "You cannot report your own post.", roomId);
+      try {
+        const mr = await pool.query(
+          "SELECT user_id FROM lounge_chat_messages WHERE id = $1 AND room_id = $2 LIMIT 1",
+          [messageId, roomId],
+        );
+        if (mr.rowCount !== 1 || String(mr.rows[0].user_id) !== reportedUserId)
+          return fail("INVALID_MESSAGE", "That message is no longer available.", roomId);
+        const reportId = randomUUID();
+        await pool.query(
+          "INSERT INTO lounge_reports (id, room_id, message_id, reporter_user_id, reported_user_id, reason, details) VALUES ($1,$2,$3,$4,$5,$6,$7)",
+          [reportId, roomId, messageId, reporterUserId, reportedUserId, reason, details],
+        );
+        socket.emit(LOUNGE_EVENTS.reportSaved, { roomId, messageId, reportId });
+      } catch (error) {
+        console.error("[lounge] report persistence failed", error);
+        return fail("INVALID_MESSAGE", "Report could not be saved.", roomId, true);
+      }
+    });
 
     const departRoom = (roomId: string) => {
       const state = rooms.get(roomId);
