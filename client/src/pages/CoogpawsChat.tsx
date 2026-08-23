@@ -43,8 +43,6 @@ import { VENUE_API, type VenueUserContext } from "@shared/venue";
 import { getLoungeRoom } from "@shared/lounge";
 import type { VenueOption, VenueSession } from "@/venue-engine";
 
-const CoogpawsAiPanel = lazy(() => import("@/components/lounge/CoogpawsAiPanel"));
-
 /** The room this page presents. The only Coog Paws-specific value in the file. */
 const ROOM_ID = "coogpaws";
 
@@ -67,6 +65,10 @@ function webglAvailable(): boolean {
 export default function CoogpawsChat() {
   const [, navigate] = useLocation();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  // TEMP TEST MODE:
+  // Coog Paws uses direct anonymous /lounge socket access.
+  // Do not create or poll an HTTP guest session.
+
   const room = getLoungeRoom(ROOM_ID);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -79,7 +81,6 @@ export default function CoogpawsChat() {
   const [venueError, setVenueError] = useState<string | null>(null);
   const [options, setOptions] = useState<VenueOption[]>([]);
   const [seatIndex, setSeatIndex] = useState<number | null>(null);
-  const [showAi, setShowAi] = useState(false);
   const [seatNotice, setSeatNotice] = useState<string | null>(null);
   const [seatBusy, setSeatBusy] = useState(false);
   // 3D venue intentionally quarantined on 2026-08-19.
@@ -87,9 +88,46 @@ export default function CoogpawsChat() {
   // Active Coog Paws Lounge is transitioning to the 2D visual-environment design.
   const render3d = false;
 
+  // Clock-based A → B → C rotation. Every visitor sees the same room.
+  const loungeBackgrounds = [
+    "/coogpaws/lounge/rotation/A.png",
+    "/coogpaws/lounge/rotation/B.png",
+    "/coogpaws/lounge/rotation/C.png",
+  ];
+
+  const currentLoungeBackground = () =>
+    loungeBackgrounds[
+      Math.floor(Date.now() / 3_600_000) % loungeBackgrounds.length
+    ];
+
+  const [loungeBackground, setLoungeBackground] =
+    useState(currentLoungeBackground);
+
+  useEffect(() => {
+    const updateBackground = () =>
+      setLoungeBackground(currentLoungeBackground());
+
+    let intervalId: number | undefined;
+
+    const timeoutId = window.setTimeout(() => {
+      updateBackground();
+      intervalId = window.setInterval(
+        updateBackground,
+        3_600_000,
+      );
+    }, 3_600_000 - (Date.now() % 3_600_000) + 100);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      if (intervalId !== undefined) {
+        window.clearInterval(intervalId);
+      }
+    };
+  }, []);
+
   /* Chat runs independently of the renderer, and starts as soon as the member
    * is authenticated. A failed venue must never take the room down with it. */
-  const lounge = useLoungeRoom(ROOM_ID, { enabled: isAuthenticated });
+  const lounge = useLoungeRoom(ROOM_ID, { enabled: true });
 
   const { data: contextData, isLoading: contextLoading } = useQuery<{ context: VenueUserContext }>({
     queryKey: [VENUE_API.context],
@@ -224,19 +262,11 @@ export default function CoogpawsChat() {
     return <PageMessage title="Lounge unavailable" detail="This room is not configured." />;
   }
 
-  if (authLoading) {
-    return <PageMessage title="Loading" detail="Checking your session…" />;
-  }
+  // TEMP TEST MODE:
+  // Coog Paws guest access does not wait on the normal account session.
 
-  if (!isAuthenticated) {
-    return (
-      <PageMessage
-        title="Sign in to enter the lounge"
-        detail="Coog Paws is open to CoogsNation members."
-        action={{ label: "Sign in", onClick: () => navigate("/login") }}
-      />
-    );
-  }
+  // TEMP TEST MODE: Coog Paws is intentionally open to anonymous guests.
+  // Normal site authentication remains unchanged elsewhere.
 
   const projection = options.find((option) => option.key === "projection");
   const houseLights = options.find((option) => option.key === "houseLights");
@@ -245,18 +275,12 @@ export default function CoogpawsChat() {
     <div className="min-h-screen bg-black">
       <Header />
 
-      <div className="relative h-[calc(100vh-4rem)] w-full overflow-hidden bg-black">
+      <div className="flex h-[calc(100vh-4rem)] w-full flex-col overflow-hidden bg-black">
+
+        <div className="relative min-h-0 flex-1 overflow-hidden bg-black">
         {render3d && <div ref={containerRef} className="absolute inset-0" />}
 
         <nav className="absolute left-2 top-2 z-30 flex gap-2" aria-label="Lounge navigation">
-          <button
-            type="button"
-            onClick={() => navigate("/forums")}
-            className="rounded border border-white/25 bg-black/75 px-3 py-2 text-xs font-semibold text-white backdrop-blur-md hover:bg-white hover:text-black"
-            data-testid="button-standard-board"
-          >
-            Standard Board
-          </button>
           <button
             type="button"
             onClick={() => navigate("/community")}
@@ -282,16 +306,24 @@ export default function CoogpawsChat() {
           </div>
         )}
 
-        {/* Degraded mode: no WebGL, or the engine failed. Chat continues. */}
-        {(!render3d || venueError) && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-b from-[#1c1230] to-black p-6 text-center text-white">
-            <h1 className="text-2xl font-semibold">Coog Paws Lounge</h1>
-            <p className="max-w-md text-sm text-white/70">
-              {venueError
-                ? "The 3D lounge could not be rendered on this device, so it has been turned off. Chat is still live."
-                : "This device does not support 3D graphics, so the lounge is showing in chat-only mode."}
-            </p>
+        {/* Active 2D Lounge environment.
+            The member + conversation are now the centerpiece.
+            3D is preserved separately under client/src/legacy/coogpaws-3d/. */}
+        {!render3d && (
+          <div
+            className="absolute inset-0 bg-black bg-cover bg-center bg-no-repeat"
+            style={{
+              backgroundImage:
+                `linear-gradient(rgba(0,0,0,.15), rgba(0,0,0,.30)), url('${loungeBackground}')`,
+            }}
+            aria-label="Coog Paws Lounge"
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_25%,rgba(0,0,0,.18)_62%,rgba(0,0,0,.55)_100%)]" />
           </div>
+        )}
+
+        {venueError && render3d && (
+          <div className="absolute inset-0 bg-black" />
         )}
 
         {/* ── venue controls ─────────────────────────────────────── */}
@@ -355,30 +387,7 @@ export default function CoogpawsChat() {
                   Stand
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => setShowAi((v) => !v)}
-                aria-pressed={showAi}
-                className="rounded px-3 py-1.5 text-[11px] uppercase tracking-[0.14em] text-white/70 transition hover:bg-white/10 hover:text-white"
-              >
-                Assistant
-              </button>
             </div>
-          </div>
-        )}
-
-        {/* Assistant available even in degraded mode. */}
-        {!ready && render3d ? null : (
-          <div className="pointer-events-none absolute left-2 top-14 z-10">
-            {!ready && (
-              <button
-                type="button"
-                onClick={() => setShowAi((v) => !v)}
-                className="pointer-events-auto rounded border border-white/20 bg-black/65 px-3 py-1.5 text-[11px] uppercase tracking-[0.14em] text-white/70 hover:text-white"
-              >
-                Assistant
-              </button>
-            )}
           </div>
         )}
 
@@ -393,11 +402,7 @@ export default function CoogpawsChat() {
           </div>
         )}
 
-        {showAi && (
-          <Suspense fallback={null}>
-            <CoogpawsAiPanel onClose={() => setShowAi(false)} />
-          </Suspense>
-        )}
+
 
         <LoungeChatOverlay
           roomLabel={room.label}
@@ -406,10 +411,15 @@ export default function CoogpawsChat() {
           inRoom={lounge.inRoom}
           occupants={lounge.occupants}
           messages={lounge.messages}
+          blockedUserIds={lounge.blockedUserIds}
           canSend={lounge.canSend}
           onSend={lounge.sendMessage}
+          onTogglePaw={lounge.togglePaw}
+          onReport={lounge.reportMessage}
+          onToggleBlock={lounge.toggleBlock}
           onRetry={lounge.reconnect}
         />
+        </div>
       </div>
     </div>
   );

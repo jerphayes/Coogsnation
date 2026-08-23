@@ -28,6 +28,9 @@ import {
   LOUNGE_NAMESPACE,
   LOUNGE_EVENTS,
   type LoungeChatMessage,
+  type LoungePawUpdate,
+  type LoungeBlocksPayload,
+  type LoungeBlockUpdate,
   type LoungeConnectionState,
   type LoungeErrorPayload,
   type LoungeJoinedPayload,
@@ -44,9 +47,13 @@ export interface UseLoungeRoomResult {
   inRoom: boolean;
   occupants: LoungeOccupant[];
   messages: LoungeChatMessage[];
+  blockedUserIds: string[];
   /** The only correct condition for enabling a send control. */
   canSend: boolean;
   sendMessage: (text: string) => boolean;
+  togglePaw: (messageId: string) => boolean;
+  reportMessage: (messageId: string, reportedUserId: string, reason: string, details?: string) => boolean;
+  toggleBlock: (blockedUserId: string) => boolean;
   /** Manual retry after a terminal error. */
   reconnect: () => void;
 }
@@ -64,9 +71,11 @@ export function useLoungeRoom(
   const [inRoom, setInRoom] = useState(false);
   const [occupants, setOccupants] = useState<LoungeOccupant[]>([]);
   const [messages, setMessages] = useState<LoungeChatMessage[]>([]);
+  const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
   const [attempt, setAttempt] = useState(0);
 
   const socketRef = useRef<Socket | null>(null);
+  const selfUserIdRef = useRef<string | null>(null);
 
   const append = useCallback((incoming: LoungeChatMessage | LoungeChatMessage[]) => {
     setMessages((prior) => {
@@ -121,6 +130,7 @@ export function useLoungeRoom(
     });
 
     socket.on("disconnect", (reason: string) => {
+      selfUserIdRef.current = null;
       setInRoom(false);
       setOccupants([]);
       /* An explicit server-side disconnect will not auto-reconnect, so it is
@@ -141,9 +151,11 @@ export function useLoungeRoom(
 
     socket.on(LOUNGE_EVENTS.joined, (payload: LoungeJoinedPayload) => {
       if (payload.roomId !== roomId) return;
+      selfUserIdRef.current = payload.you.userId;
       setInRoom(true);
       setProblem(null);
       setOccupants(payload.occupants);
+      socket.emit(LOUNGE_EVENTS.blocksRequest, { roomId });
     });
 
     socket.on(LOUNGE_EVENTS.history, (payload: { roomId: string; messages: LoungeChatMessage[] }) => {
@@ -154,6 +166,35 @@ export function useLoungeRoom(
     socket.on(LOUNGE_EVENTS.chat, (payload: LoungeChatMessage) => {
       if (payload.roomId !== roomId) return;
       append(payload);
+    });
+
+    socket.on(LOUNGE_EVENTS.pawUpdated, (payload: LoungePawUpdate) => {
+      if (payload.roomId !== roomId) return;
+
+      setMessages((prior) =>
+        prior.map((message) =>
+          message.id === payload.messageId
+            ? {
+                ...message,
+                pawCount: payload.pawCount,
+                pawedByMe:
+                  payload.actorUserId === selfUserIdRef.current
+                    ? payload.pawed
+                    : message.pawedByMe,
+              }
+            : message,
+        ),
+      );
+    });
+
+    socket.on(LOUNGE_EVENTS.blocks, (payload: LoungeBlocksPayload) => {
+      if (payload.roomId !== roomId) return;
+      setBlockedUserIds(payload.blockedUserIds);
+    });
+
+    socket.on(LOUNGE_EVENTS.blockUpdated, (payload: LoungeBlockUpdate) => {
+      if (payload.roomId !== roomId) return;
+      setBlockedUserIds((prior) => payload.blocked ? Array.from(new Set([...prior, payload.blockedUserId])) : prior.filter((id) => id !== payload.blockedUserId));
     });
 
     socket.on(LOUNGE_EVENTS.presence, (payload: LoungePresencePayload) => {
@@ -209,11 +250,35 @@ export function useLoungeRoom(
     [roomId],
   );
 
+  const togglePaw = useCallback(
+    (messageId: string) => {
+      const socket = socketRef.current;
+      if (!messageId || !socket || !socket.connected || !inRoom) return false;
+      socket.emit(LOUNGE_EVENTS.paw, { roomId, messageId });
+      return true;
+    },
+    [roomId, inRoom],
+  );
+
+  const reportMessage = useCallback((messageId: string, reportedUserId: string, reason: string, details = "") => {
+    const socket = socketRef.current;
+    if (!socket || !socket.connected || !inRoom) return false;
+    socket.emit(LOUNGE_EVENTS.report, { roomId, messageId, reportedUserId, reason, details });
+    return true;
+  }, [roomId, inRoom]);
+
+  const toggleBlock = useCallback((blockedUserId: string) => {
+    const socket = socketRef.current;
+    if (!blockedUserId || !socket || !socket.connected || !inRoom) return false;
+    socket.emit(LOUNGE_EVENTS.block, { roomId, blockedUserId });
+    return true;
+  }, [roomId, inRoom]);
+
   const reconnect = useCallback(() => setAttempt((n) => n + 1), []);
 
   return useMemo(
-    () => ({ state, problem, inRoom, occupants, messages, canSend, sendMessage, reconnect }),
-    [state, problem, inRoom, occupants, messages, canSend, sendMessage, reconnect],
+    () => ({ state, problem, inRoom, occupants, messages, blockedUserIds, canSend, sendMessage, togglePaw, reportMessage, toggleBlock, reconnect }),
+    [state, problem, inRoom, occupants, messages, blockedUserIds, canSend, sendMessage, togglePaw, reportMessage, toggleBlock, reconnect],
   );
 }
 

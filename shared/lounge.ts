@@ -176,10 +176,18 @@ export const LOUNGE_EVENTS = {
   join: "lounge:join",
   leave: "lounge:leave",
   message: "lounge:message",
+  paw: "lounge:paw",
+  report: "lounge:report",
+  block: "lounge:block",
+  blocksRequest: "lounge:blocks-request",
   /** server → client */
   joined: "lounge:joined",
   history: "lounge:history",
   chat: "lounge:chat",
+  pawUpdated: "lounge:paw-updated",
+  blocks: "lounge:blocks",
+  blockUpdated: "lounge:block-updated",
+  reportSaved: "lounge:report-saved",
   presence: "lounge:presence",
   userJoined: "lounge:user-joined",
   userLeft: "lounge:user-left",
@@ -197,8 +205,31 @@ export const loungeMessageSchema = z
   })
   .strict();
 
+export const loungePawSchema = z
+  .object({
+    roomId: loungeRoomIdSchema,
+    messageId: z.string().uuid(),
+  })
+  .strict();
+
 export type LoungeJoinRequest = z.infer<typeof loungeJoinSchema>;
 export type LoungeMessageRequest = z.infer<typeof loungeMessageSchema>;
+export const loungeBlockSchema = z.object({
+  roomId: loungeRoomIdSchema,
+  blockedUserId: z.string().min(1).max(255),
+}).strict();
+
+export const loungeReportSchema = z.object({
+  roomId: loungeRoomIdSchema,
+  messageId: z.string().uuid(),
+  reportedUserId: z.string().min(1).max(255),
+  reason: z.string().min(1).max(80),
+  details: z.string().trim().max(1000).optional().default(""),
+}).strict();
+
+export type LoungePawRequest = z.infer<typeof loungePawSchema>;
+export type LoungeBlockRequest = z.infer<typeof loungeBlockSchema>;
+export type LoungeReportRequest = z.infer<typeof loungeReportSchema>;
 
 /* ── server → client shapes ──────────────────────────────────────────── */
 
@@ -216,8 +247,35 @@ export interface LoungeChatMessage {
   displayName: string;
   message: string;
   sentAt: string;
+  pawCount?: number;
+  pawedByMe?: boolean;
   /** System notices (join/leave) carry no author and render differently. */
   system?: boolean;
+}
+
+export interface LoungePawUpdate {
+  roomId: string;
+  messageId: string;
+  pawCount: number;
+  actorUserId: string;
+  pawed: boolean;
+}
+
+export interface LoungeBlocksPayload {
+  roomId: string;
+  blockedUserIds: string[];
+}
+
+export interface LoungeBlockUpdate {
+  roomId: string;
+  blockedUserId: string;
+  blocked: boolean;
+}
+
+export interface LoungeReportSaved {
+  roomId: string;
+  messageId: string;
+  reportId: string;
 }
 
 export interface LoungeJoinedPayload {
