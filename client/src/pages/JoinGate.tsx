@@ -1,212 +1,198 @@
-import { useEffect, useState } from "react";
-import { ShieldCheck } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ReCaptcha } from "@/components/ReCaptcha";
-import ProfileCompletion from "@/pages/ProfileCompletion";
+import { useQuery } from "@tanstack/react-query";
+import {
+  ArrowRight,
+  Mail,
+  ShieldCheck,
+  UserRound, X } from "lucide-react";
 
-type GateState =
-  | "checking"
-  | "locked"
-  | "verifying"
-  | "verified";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+
+type AuthProviders = {
+  local: boolean;
+  google?: boolean;
+  apple?: boolean;
+};
+
+function safeReturnTo(): string {
+  const value =
+    new URLSearchParams(
+      window.location.search,
+    ).get("returnTo") || "/dashboard";
+
+  if (
+    !value.startsWith("/") ||
+    value.startsWith("//")
+  ) {
+    return "/dashboard";
+  }
+
+  return value;
+}
 
 export default function JoinGate() {
-  const [state, setState] =
-    useState<GateState>("checking");
+  const returnTo = safeReturnTo();
 
-  const [token, setToken] =
-    useState<string | null>(null);
+  const { data: providers } =
+    useQuery<AuthProviders>({
+      queryKey: ["/api/auth/providers"],
+    });
 
-  const [message, setMessage] =
-    useState("");
-
-  const siteKey =
-    import.meta.env.VITE_JOIN_RECAPTCHA_SITE_KEY || "";
-
-  useEffect(() => {
-    fetch("/api/auth/join-gate/status", {
-      credentials: "include",
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        setState(
-          data?.verified
-            ? "verified"
-            : "locked"
-        );
-      })
-      .catch(() => {
-        setMessage(
-          "Unable to check membership entrance."
-        );
-        setState("locked");
-      });
-  }, []);
-
-  useEffect(() => {
-    if (
-      state !== "locked" ||
-      !siteKey
-    ) {
-      return;
-    }
-
-    if (
-      document.getElementById(
-        "coogsnation-recaptcha-script"
-      )
-    ) {
-      window.grecaptchaReadyCallback?.();
-      return;
-    }
-
-    const script =
-      document.createElement("script");
-
-    script.id =
-      "coogsnation-recaptcha-script";
-
-    script.src =
-      "https://www.google.com/recaptcha/api.js?render=explicit";
-
-    script.async = true;
-    script.defer = true;
-
-    script.onload = () => {
-      window.grecaptchaReadyCallback?.();
-    };
-
-    document.head.appendChild(script);
-
-  }, [state, siteKey]);
-
-  async function verifyHuman() {
-    if (!token) return;
-
-    setState("verifying");
-    setMessage("");
-
-    try {
-      const response = await fetch(
-        "/api/auth/join-gate",
-        {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-          body: JSON.stringify({
-            "g-recaptcha-response":
-              token,
-          }),
-        }
-      );
-
-      const data =
-        await response
-          .json()
-          .catch(() => ({}));
-
-      if (!response.ok) {
-        setMessage(
-          data?.message ||
-          "Human verification failed."
-        );
-
-        setToken(null);
-        setState("locked");
-
-        window.grecaptcha?.reset?.();
-
-        return;
-      }
-
-      setState("verified");
-
-    } catch {
-      setMessage(
-        "Verification service unavailable."
-      );
-
-      setToken(null);
-      setState("locked");
-    }
+  function startOAuth(
+    provider: "google" | "apple",
+  ) {
+    window.location.href =
+      `/api/auth/${provider}` +
+      `?returnTo=${encodeURIComponent(returnTo)}`;
   }
 
-  if (state === "checking") {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 text-black">
-        Checking membership entrance…
-      </div>
+  function startEmail() {
+    window.location.href =
+      `/join/email` +
+      `?returnTo=${encodeURIComponent(returnTo)}`;
+  }
+
+  function continueAsGuest() {
+    localStorage.setItem(
+      "guestMode",
+      "true",
     );
-  }
 
-  if (state === "verified") {
-    return <ProfileCompletion />;
+    window.location.href =
+      returnTo === "/dashboard"
+        ? "/forums"
+        : returnTo;
   }
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 text-black">
-      <Card className="w-full max-w-lg">
+      <Card className="w-full max-w-lg shadow-xl">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-600">
             <ShieldCheck className="h-8 w-8 text-white" />
           </div>
 
-          <CardTitle className="text-2xl">
-            Join CoogsNation
+          <CardTitle className="text-3xl relative">
+        {/* UNIVERSAL_PAGE_CARD_CLOSE_V1 */}
+        <button
+          type="button"
+          aria-label="Close"
+          title="Close"
+          onClick={() => {
+            if (window.history.length > 1) {
+              window.history.back();
+            } else {
+              window.location.assign("/");
+            }
+          }}
+          className="absolute right-4 top-4 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white !text-gray-900 shadow-sm transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2"
+        >
+          <X className="h-5 w-5" aria-hidden="true" />
+        </button>
+
+            Join the CoogsNation Community
           </CardTitle>
 
-          <p className="text-gray-600">
-            Complete the human-verification challenge
-            to open the membership form.
-          </p>
+          <CardDescription className="pt-2 text-base">
+            Create your free member profile to
+            post, reply and participate.
+          </CardDescription>
         </CardHeader>
 
-        <CardContent className="space-y-5">
-          {!siteKey ? (
-            <div className="rounded border border-red-300 bg-red-50 p-3 text-red-700">
-              CAPTCHA configuration unavailable.
-            </div>
-          ) : (
-            <div className="flex justify-center">
-              <ReCaptcha
-                siteKey={siteKey}
-                onChange={setToken}
-                onExpired={() =>
-                  setToken(null)
-                }
-                onError={() => {
-                  setToken(null);
-                  setMessage(
-                    "CAPTCHA failed to load."
-                  );
-                }}
-              />
-            </div>
+        <CardContent className="space-y-3">
+          {providers?.google && (
+            <Button
+              type="button"
+              variant="outline"
+              className="h-12 w-full justify-start text-base"
+              onClick={() =>
+                startOAuth("google")
+              }
+            >
+              <span className="mr-3 flex h-7 w-7 items-center justify-center rounded-full border font-bold">
+                G
+              </span>
+
+              <span className="flex-1 text-left">
+                Continue with Google
+              </span>
+
+              <ArrowRight className="h-4 w-4" />
+            </Button>
           )}
 
-          {message && (
-            <div className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">
-              {message}
-            </div>
+          {providers?.apple && (
+            <Button
+              type="button"
+              variant="outline"
+              className="h-12 w-full justify-start text-base"
+              onClick={() =>
+                startOAuth("apple")
+              }
+            >
+              <span className="mr-3 flex h-7 w-7 items-center justify-center rounded-full border font-bold">
+                
+              </span>
+
+              <span className="flex-1 text-left">
+                Continue with Apple
+              </span>
+
+              <ArrowRight className="h-4 w-4" />
+            </Button>
           )}
 
           <Button
             type="button"
-            className="w-full bg-red-600 hover:bg-red-700 text-white"
-            disabled={
-              !token ||
-              state === "verifying"
-            }
-            onClick={verifyHuman}
+            variant="outline"
+            className="h-12 w-full justify-start text-base"
+            onClick={startEmail}
           >
-            {state === "verifying"
-              ? "Verifying…"
-              : "Verify & Open Membership Form"}
+            <Mail className="mr-3 h-5 w-5" />
+
+            <span className="flex-1 text-left">
+              Continue with Email
+            </span>
+
+            <ArrowRight className="h-4 w-4" />
           </Button>
+
+          <div className="pt-3">
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-11 w-full text-gray-600"
+              onClick={continueAsGuest}
+            >
+              <UserRound className="mr-2 h-4 w-4" />
+              Not now — continue as Guest
+            </Button>
+          </div>
+
+          <p className="pt-3 text-center text-xs text-gray-500">
+            Guests can browse public CoogsNation
+            content. Membership is required to post,
+            reply and participate.
+          </p>
+
+          <p className="text-center text-sm text-gray-600">
+            Already a member?{" "}
+            <a
+              href={
+                `/login?returnTo=` +
+                encodeURIComponent(returnTo)
+              }
+              className="font-semibold text-red-600 hover:underline"
+            >
+              Sign in
+            </a>
+          </p>
         </CardContent>
       </Card>
     </div>

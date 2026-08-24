@@ -129,7 +129,17 @@ export default function EmailVerification() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 text-black">
-      <Card className="w-full max-w-xl">
+      <Card className="relative w-full max-w-xl">
+        {/* UNIVERSAL_PAGE_CARD_CLOSE_V1 */}
+        <button
+          type="button"
+          aria-label="Close"
+          title="Close"
+          onClick={() => { window.location.href = "/"; }}
+          className="absolute right-3 top-3 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white text-2xl font-bold leading-none text-gray-800 shadow-sm hover:bg-gray-100 hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2"
+        >
+          ×
+        </button>
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-red-600">
             {icon}
@@ -160,7 +170,8 @@ export default function EmailVerification() {
 
               <a
                 href="/login/email"
-                className="inline-flex min-h-11 items-center justify-center rounded-md bg-red-600 px-6 py-3 font-bold text-white"
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-[#C8102E] px-6 py-3 font-bold !text-white hover:!text-white hover:bg-[#A50D26] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700 focus-visible:ring-offset-2"
+                style={{ color: "#ffffff" }}
               >
                 Login to CoogsNation
               </a>
@@ -182,7 +193,8 @@ export default function EmailVerification() {
 
               <a
                 href="/join"
-                className="inline-flex min-h-11 items-center justify-center rounded-md bg-red-600 px-6 py-3 font-bold text-white"
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-[#C8102E] px-6 py-3 font-bold !text-white hover:!text-white hover:bg-[#A50D26] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700 focus-visible:ring-offset-2"
+                style={{ color: "#ffffff" }}
               >
                 Join CoogsNation Again
               </a>
@@ -202,7 +214,7 @@ export default function EmailVerification() {
 
               <a
                 href="/"
-                className="font-semibold text-red-600"
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-md border-2 border-gray-400 bg-white px-5 py-2 font-bold text-gray-950 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
               >
                 Return to CoogsNation
               </a>

@@ -35,6 +35,7 @@ import Members from "@/pages/Members";
 import CampusMap from "@/pages/CampusMap";
 import ProfileCompletion from "@/pages/ProfileCompletion";
 import JoinGate from "@/pages/JoinGate";
+import JoinEmail from "@/pages/JoinEmail";
 import LiveSports from "@/pages/LiveSports";
 import CoogpawsChat from "@/pages/CoogpawsChat";
 import Login from "@/pages/Login";
@@ -87,6 +88,7 @@ function Router() {
       <Route path="/login/email" component={LoginEmail} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/login/other" component={Login} />
+      <Route path="/join/email" component={JoinEmail} />
       <Route path="/signup" component={JoinGate} />
       <Route path="/join" component={JoinGate} />
         <Route path="/verify-email-pending" component={EmailVerificationPending} />

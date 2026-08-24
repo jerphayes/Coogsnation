@@ -60,7 +60,7 @@ import {
   type InsertVenueSeatClaim,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, ne, desc, sql, and, like, isNull, isNotNull, gte, lte } from "drizzle-orm";
+import { eq, ne, desc, sql, and, like, isNull, isNotNull, gte, lte, inArray } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -621,18 +621,33 @@ export class DatabaseStorage implements IStorage {
   }
   
   async deleteForumTopic(topicId: number): Promise<void> {
-    // First delete all posts in the topic (soft delete)
-    await db
-      .update(forumPosts)
-      .set({ isDeleted: true })
-      .where(eq(forumPosts.topicId, topicId));
-    
-    // Then delete the topic itself
-    await db
-      .delete(forumTopics)
-      .where(eq(forumTopics.id, topicId));
+    // UNIVERSAL FORUM DELETE:
+    // reports -> posts -> topic, atomically.
+    // All forum categories use this shared storage method.
+    await db.transaction(async (tx) => {
+      const posts = await tx
+        .select({ id: forumPosts.id })
+        .from(forumPosts)
+        .where(eq(forumPosts.topicId, topicId));
+
+      const postIds = posts.map((post) => post.id);
+
+      if (postIds.length > 0) {
+        await tx
+          .delete(forumPostReports)
+          .where(inArray(forumPostReports.postId, postIds));
+      }
+
+      await tx
+        .delete(forumPosts)
+        .where(eq(forumPosts.topicId, topicId));
+
+      await tx
+        .delete(forumTopics)
+        .where(eq(forumTopics.id, topicId));
+    });
   }
-  
+
   async deleteForumPost(postId: number): Promise<void> {
     // Soft delete the post
     await db
@@ -1074,11 +1089,55 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteUserProfile(userId: string): Promise<void> {
-    // Delete user completely - this will cascade delete related data
-    // due to foreign key constraints with onDelete: 'cascade'
-    await db
-      .delete(users)
-      .where(eq(users.id, userId));
+    const key = userId.replace(/[^a-zA-Z0-9]/g, "");
+    const deletedEmail = `deleted-${key}@coogsnation.invalid`;
+    const deletedHandle = `deleted_${key}`;
+
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(userIdentities)
+        .where(eq(userIdentities.userId, userId));
+
+      await tx
+        .update(users)
+        .set({
+          email: deletedEmail,
+          username: deletedHandle,
+          handle: deletedHandle,
+          firstName: null,
+          lastName: null,
+          nickname: "Deleted Account",
+          profileImageUrl: null,
+          backupEmail: null,
+          passwordHash: null,
+          isLocalAccount: false,
+          emailVerifiedAt: null,
+          emailVerificationTokenHash: null,
+          emailVerificationSentAt: null,
+          phoneNumber: null,
+          address: null,
+          city: null,
+          state: null,
+          zipCode: null,
+          location: null,
+          addressLine1: null,
+          socialLinks: null,
+          bio: null,
+          aboutMe: null,
+          interests: null,
+          hasConsentedToDataUse: false,
+          hasConsentedToMarketing: false,
+          isProfileComplete: false,
+          profileCompletedAt: null,
+          accountStatus: "disabled",
+          sessionVersion: sql`${users.sessionVersion} + 1`,
+          isOnline: false,
+          lastActiveAt: null,
+          scheduledDeletionAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userId));
+    });
   }
 
   async getUserPosts(userId: string, limit = 20): Promise<ForumPost[]> {

@@ -1,15 +1,5 @@
-import { MailService } from '@sendgrid/mail';
-import { User, AchievementLevel, achievementLevels } from '@shared/schema';
-
-// Initialize SendGrid service
-const mailService = new MailService();
-
-// Check for API key and set it if available
-if (process.env.SENDGRID_API_KEY) {
-  mailService.setApiKey(process.env.SENDGRID_API_KEY);
-} else {
-  console.warn('SENDGRID_API_KEY environment variable not set. Email notifications will not work.');
-}
+import { createTransport, type Transporter } from "nodemailer";
+import { User, AchievementLevel, achievementLevels } from "@shared/schema";
 
 interface EmailParams {
   to: string;
@@ -19,71 +9,84 @@ interface EmailParams {
   html?: string;
 }
 
-// Generic email sending function with enhanced error handling
-export async function sendEmail(params: EmailParams, retryCount: number = 0): Promise<boolean> {
-  const maxRetries = 3;
-  const retryDelay = 1000 * Math.pow(2, retryCount); // Exponential backoff
-  
-  if (!process.env.SENDGRID_API_KEY) {
-    console.error('[EMAIL] Configuration error: SENDGRID_API_KEY not configured');
-    return false;
+let smtpTransporter: Transporter | null = null;
+
+function getSmtpTransporter(): Transporter | null {
+  const host = process.env.SMTP_HOST;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASSWORD;
+  const port = Number(process.env.SMTP_PORT || "465");
+  const secure = String(process.env.SMTP_SECURE || "true").toLowerCase() === "true";
+
+  if (!host || !user || !pass || !Number.isFinite(port)) {
+    console.error("[EMAIL] SMTP configuration is incomplete");
+    return null;
   }
 
-  // Validate email parameters
-  if (!params.to || !params.from || !params.subject) {
-    console.error('[EMAIL] Validation error: Missing required email parameters', {
-      to: !!params.to,
-      from: !!params.from,
-      subject: !!params.subject
+  if (!smtpTransporter) {
+    smtpTransporter = createTransport({
+      host,
+      port,
+      secure,
+      auth: { user, pass },
     });
+  }
+
+  return smtpTransporter;
+}
+
+export async function sendEmail(
+  params: EmailParams,
+  retryCount: number = 0,
+): Promise<boolean> {
+  const maxRetries = 3;
+  const retryDelay = 1000 * Math.pow(2, retryCount);
+  const transporter = getSmtpTransporter();
+  const from = process.env.SMTP_FROM || params.from;
+
+  if (!transporter) return false;
+
+  if (!params.to || !from || !params.subject) {
+    console.error("[EMAIL] Validation error: Missing required email parameters");
     return false;
   }
 
   try {
-    const mailData: any = {
-      to: params.to,
-      from: params.from,
-      subject: params.subject,
-    };
+    console.log(
+      `[EMAIL] Sending email attempt ${retryCount + 1}/${maxRetries + 1} to ${params.to}, subject: "${params.subject}"`,
+    );
 
-    // Add either text or html content
-    if (params.text) {
-      mailData.text = params.text;
-    }
-    if (params.html) {
-      mailData.html = params.html;
-    }
-    
-    // Ensure at least text is provided if neither is available
-    if (!params.text && !params.html) {
-      mailData.text = params.subject; // Fallback to subject as text
-    }
-
-    console.log(`[EMAIL] Sending email attempt ${retryCount + 1}/${maxRetries + 1} to ${params.to}, subject: "${params.subject}"`);
-    
-    await mailService.send(mailData);
-    console.log(`[EMAIL] ✅ Email sent successfully to ${params.to}`);
-    return true;
-  } catch (error: any) {
-    const isRetryableError = error.code >= 500 || error.code === 429; // Server errors or rate limits
-    
-    console.error(`[EMAIL] ❌ SendGrid error (attempt ${retryCount + 1}/${maxRetries + 1}):`, {
+    await transporter.sendMail({
       to: params.to,
+      from,
       subject: params.subject,
-      error: error.message || error,
-      code: error.code,
-      response: error.response?.body,
-      isRetryable: isRetryableError
+      text: params.text || (!params.html ? params.subject : undefined),
+      html: params.html,
     });
 
-    // Retry logic for transient failures
-    if (isRetryableError && retryCount < maxRetries) {
-      console.log(`[EMAIL] Retrying email send in ${retryDelay}ms...`);
-      await new Promise(resolve => setTimeout(resolve, retryDelay));
+    console.log(`[EMAIL] Email sent successfully to ${params.to}`);
+    return true;
+  } catch (error: any) {
+    const responseCode = Number(error?.responseCode || 0);
+    const retryableCodes = new Set(["ETIMEDOUT", "ECONNECTION", "ECONNRESET", "ESOCKET"]);
+    const isRetryable =
+      (responseCode >= 400 && responseCode < 500) ||
+      retryableCodes.has(error?.code);
+
+    console.error(`[EMAIL] SMTP error:`, {
+      to: params.to,
+      subject: params.subject,
+      error: error?.message || error,
+      code: error?.code,
+      responseCode,
+      isRetryable,
+    });
+
+    if (isRetryable && retryCount < maxRetries) {
+      await new Promise((resolve) => setTimeout(resolve, retryDelay));
       return sendEmail(params, retryCount + 1);
     }
-    
-    console.error(`[EMAIL] 💥 Email sending failed permanently after ${retryCount + 1} attempts`);
+
     return false;
   }
 }

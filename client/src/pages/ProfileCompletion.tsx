@@ -17,7 +17,6 @@ import { apiRequest, queryClient } from '@/lib/queryClient';
 import { userProfileCompletionSchema, localAccountRegistrationSchema } from '@shared/schema';
 import { User, UserPlus, MapPin, Calendar, Shield, Info, Eye, EyeOff, Lock, MessageSquare } from 'lucide-react';
 import { PasswordStrengthIndicator } from '@/components/ui/PasswordStrengthIndicator';
-import { ReCaptcha } from '@/components/ReCaptcha';
 import type { z } from 'zod';
 
 type ProfileCompletionData = z.infer<typeof userProfileCompletionSchema>;
@@ -41,7 +40,6 @@ export default function ProfileCompletion() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const [uploadedAvatarPath, setUploadedAvatarPath] = useState<string | null>(null);
   const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
@@ -272,12 +270,7 @@ export default function ProfileCompletion() {
   // Complete an authenticated member profile
   const profileCompletionMutation = useMutation({
     mutationFn: async (data: ProfileCompletionData) => {
-      // Include reCAPTCHA token in the payload for profile completion too
-      const payload = {
-        ...data,
-        "g-recaptcha-response": recaptchaToken
-      };
-      return apiRequest('POST', '/api/auth/complete-profile', payload);
+      return apiRequest('POST', '/api/auth/complete-profile', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
@@ -300,14 +293,11 @@ export default function ProfileCompletion() {
   // Membership remains pending until email confirmation.
   const localRegistrationMutation = useMutation({
     mutationFn: async (data: LocalRegistrationData) => {
-      const payload = {
-        ...data,
-        "g-recaptcha-response": recaptchaToken
-      };
+      const payload = { email: data.email, handle: data.handle, password: data.password, confirmPassword: data.confirmPassword, hasConsentedToDataUse: data.hasConsentedToDataUse, returnTo: "/dashboard" };
 
       const response = await apiRequest(
         'POST',
-        '/api/auth/register-local',
+        '/api/auth/register-email',
         payload
       );
 
@@ -355,23 +345,9 @@ export default function ProfileCompletion() {
       return;
     }
     
-    const recaptchaConfigured = Boolean(import.meta.env.VITE_RECAPTCHA_SITE_KEY);
-    if (isLocalRegistration && recaptchaConfigured && !recaptchaToken) {
-      toast({
-        title: 'reCAPTCHA Required',
-        description: 'Please complete the reCAPTCHA verification to continue.',
-        variant: 'destructive',
-      });
-      return;
-    }
     
     if (isLocalRegistration) {
-      // Include reCAPTCHA token in the form data
-      const registrationData = {
-        ...data,
-        'g-recaptcha-response': recaptchaToken
-      } as any;
-      localRegistrationMutation.mutate(registrationData);
+      localRegistrationMutation.mutate(data as LocalRegistrationData);
     } else {
       profileCompletionMutation.mutate(data as ProfileCompletionData);
     }
@@ -1217,37 +1193,6 @@ export default function ProfileCompletion() {
               </CardContent>
             </Card>
 
-            {/* reCAPTCHA appears when a site key is configured. Codespaces can
-                use the explicit non-production server bypass instead. */}
-            {isLocalRegistration && import.meta.env.VITE_RECAPTCHA_SITE_KEY && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Shield className="w-5 h-5" />
-                    Security Verification
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex justify-center">
-                    <ReCaptcha
-                      siteKey={import.meta.env.VITE_RECAPTCHA_SITE_KEY || ''}
-                      onChange={(token) => setRecaptchaToken(token)}
-                      onExpired={() => setRecaptchaToken(null)}
-                      onError={() => {
-                        setRecaptchaToken(null);
-                        toast({
-                          title: 'reCAPTCHA Error',
-                          description: 'There was an error loading reCAPTCHA. Please refresh the page.',
-                          variant: 'destructive',
-                        });
-                      }}
-                      theme="light"
-                      size="normal"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            )}
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -1255,7 +1200,7 @@ export default function ProfileCompletion() {
                 type="button"
                 size="lg"
                 variant="outline"
-                className="w-full max-w-xs border-gray-300 text-gray-700 hover:bg-gray-50"
+                className="w-full max-w-xs border-2 border-gray-400 bg-white text-gray-950 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800"
                 onClick={() => setLocation('/')}
                 data-testid="button-exit"
               >
@@ -1264,7 +1209,7 @@ export default function ProfileCompletion() {
               <Button
                 type="submit"
                 size="lg"
-                className="w-full max-w-xs bg-red-600 hover:bg-red-700 text-white"
+                className="w-full max-w-xs bg-red-700 text-white hover:bg-red-800 disabled:bg-gray-400 disabled:text-gray-800"
                 disabled={
                   profileCompletionMutation.isPending ||
                   localRegistrationMutation.isPending ||

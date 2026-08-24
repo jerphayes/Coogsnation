@@ -18,7 +18,6 @@ import {
   insertCampusLocationSchema,
   userProfileCompletionSchema,
   userProfileUpdateSchema,
-  localAccountRegistrationSchema,
   localLoginSchema,
   passwordResetRequestSchema,
   passwordResetVerifyMfaSchema,
@@ -49,46 +48,9 @@ import { registerAdminDashboardRoutes } from "./adminDashboard";
 import { registerPublicAIRoutes } from "./publicAI";
 import { registerCommerceRoutes } from "./commerce/routes";
 import { registerVenueRoutes } from "./venue/routes";
+import { registerMembershipRegistrationRoutes } from "./membershipRegistration";
 import { registerSportsHttpRoutes, registerSportsSocketNamespace, startSportsFactsService } from "./sports/routes";
 import { seedSportsTickerDemo } from "./sports/devSeed";
-
-// Helper function to verify Google reCAPTCHA
-async function verifyRecaptcha(recaptchaResponse: string, clientIP?: string): Promise<boolean> {
-  // Codespaces/local development can opt into an explicit bypass. The bypass
-  // is ignored in production even if the variable is accidentally present.
-  if (process.env.NODE_ENV !== "production" && process.env.RECAPTCHA_DEV_BYPASS === "true") {
-    console.log(`[RECAPTCHA] Development bypass accepted from IP: ${clientIP}`);
-    return true;
-  }
-
-  if (!recaptchaResponse) {
-    console.log(`[RECAPTCHA] No captcha response provided from IP: ${clientIP}`);
-    return false;
-  }
-
-  const secretKey = process.env.RECAPTCHA_SECRET_KEY;
-  if (!secretKey) {
-    console.error('[RECAPTCHA] Secret key not configured');
-    return false;
-  }
-
-  try {
-    const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${recaptchaResponse}`;
-    const response = await fetch(verifyUrl, { method: "POST" });
-    const data = await response.json() as any;
-
-    if (data.success) {
-      console.log(`[RECAPTCHA] ✅ Successful verification from IP: ${clientIP}`);
-      return true;
-    } else {
-      console.log(`[RECAPTCHA] 🚫 Failed verification from IP: ${clientIP}, errors:`, data['error-codes']);
-      return false;
-    }
-  } catch (error) {
-    console.error(`[RECAPTCHA] ⚠️ Error verifying captcha for IP: ${clientIP}`, error);
-    return false;
-  }
-}
 
 // Helper function to update user statistics and check for achievements with enhanced error handling
 async function updateUserStatisticsAndCheckAchievements(userId: string): Promise<void> {
@@ -208,165 +170,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const sessionMiddleware = await setupAuth(app);
   registerSportsHttpRoutes(app);
 
-  /*
-   * DEVELOPMENT-ONLY UNLIMITED MEMBER TEST ACCESS.
-   *
-   * Anonymous visitors can exercise all normal MEMBER
-   * functionality during the build/debug cycle.
-   *
-   * Production: disabled.
-   * Administrator/owner authority: never granted.
-   */
-  app.get(
-    "/api/auth/dev-guest/status",
-    (_req, res) => {
-      const enabled =
-        process.env.NODE_ENV !== "production" &&
-        process.env.DEV_GUEST_FULL_ACCESS === "true";
-
-      return res.json({
-        enabled,
-        unlimited: enabled,
-      });
-    },
-  );
-
-  app.post(
-    "/api/auth/dev-guest",
-    async (req: any, res) => {
-      const enabled =
-        process.env.NODE_ENV !== "production" &&
-        process.env.DEV_GUEST_FULL_ACCESS === "true";
-
-      if (!enabled) {
-        return res.status(404).json({
-          message: "Guest Full Access is unavailable.",
-        });
-      }
-
-      try {
-        const email =
-          "guest-test-pass@coogsnation.local";
-
-        let guest =
-          await storage.getUserByEmail(email);
-
-        if (!guest) {
-          guest =
-            await storage.createLocalUser({
-              email,
-
-              firstName: "Guest",
-              lastName: "Tester",
-
-              nickname: "Guest Test Pass",
-              handle: "GuestTestPass",
-
-              role: "member",
-              accountStatus: "active",
-
-              sessionVersion: 0,
-
-              isProfileComplete: true,
-              profileCompletedAt: new Date(),
-
-              emailVerifiedAt: new Date(),
-
-              hasConsentedToDataUse: true,
-              hasConsentedToMarketing: false,
-
-              country: "USA",
-            } as any);
-        }
-
-        /*
-         * Never let this testing identity become admin.
-         */
-        if (guest.role === "admin") {
-          return res.status(403).json({
-            message:
-              "Guest testing identity cannot have administrator privileges.",
-          });
-        }
-
-        /*
-         * Make sure an old guest record is usable.
-         */
-        if (guest.accountStatus !== "active") {
-          guest =
-            await storage.updateUserProfile(
-              guest.id,
-              {
-                accountStatus: "active",
-                role: "member",
-                emailVerifiedAt:
-                  guest.emailVerifiedAt || new Date(),
-              } as any,
-            );
-        }
-
-        await new Promise<void>(
-          (resolve, reject) => {
-            req.session.regenerate(
-              (error: any) =>
-                error ? reject(error) : resolve(),
-            );
-          },
-        );
-
-        await new Promise<void>(
-          (resolve, reject) => {
-            req.logIn(
-              {
-                id: guest.id,
-                provider: "local",
-              },
-              (error: any) =>
-                error ? reject(error) : resolve(),
-            );
-          },
-        );
-
-        /*
-         * Required by CoogsNation's session-revocation
-         * protection.
-         */
-        (req.session as any).sessionVersion =
-          guest.sessionVersion ?? 0;
-
-        await new Promise<void>(
-          (resolve, reject) => {
-            req.session.save(
-              (error: any) =>
-                error ? reject(error) : resolve(),
-            );
-          },
-        );
-
-        return res.json({
-          ok: true,
-          unlimited: true,
-          userId: guest.id,
-          role: "member",
-          redirect: "/dashboard",
-        });
-
-      } catch (error) {
-        console.error(
-          "[DEV GUEST] Guest authentication failed:",
-          error,
-        );
-
-        return res.status(500).json({
-          message:
-            "Unable to establish Guest Full Access.",
-        });
-      }
-    },
-  );
-
-
-  const aiService = getAIService();
+const aiService = getAIService();
 
   const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -422,6 +226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerPublicAIRoutes(app, { aiService, isAuthenticated, aiLimiter });
   registerCommerceRoutes(app);
   registerVenueRoutes(app, isAuthenticated);
+  registerMembershipRegistrationRoutes(app);
 
   // Optional social-login aliases. Core email/password authentication is always available.
   app.get("/auth/linkedin", (req, res) => {
@@ -518,180 +323,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
-  app.get('/api/auth/join-gate/status', (req: any, res) => {
-    if (req.isAuthenticated?.()) {
-      return res.json({
-        verified: true,
-        authenticated: true
-      });
-    }
-
-    const until = Number(
-      (req.session as any)
-        ?.joinCaptchaVerifiedUntil || 0
-    );
-
-    return res.json({
-      verified: until > Date.now(),
-      authenticated: false
-    });
-  });
-
-  app.post('/api/auth/join-gate', async (req: any, res) => {
-    const token = String(
-      req.body?.["g-recaptcha-response"] || ""
-    );
-
-    if (!token) {
-      return res.status(400).json({
-        message:
-          "Complete the CAPTCHA first."
-      });
-    }
-
-    const forwarded =
-      req.headers["x-forwarded-for"];
-
-    const clientIP =
-      Array.isArray(forwarded)
-        ? forwarded[0]
-        : forwarded ||
-          req.socket.remoteAddress;
-
-    const valid =
-      await verifyRecaptcha(
-        token,
-        typeof clientIP === "string"
-          ? clientIP
-          : undefined
-      );
-
-    if (!valid) {
-      return res.status(400).json({
-        message:
-          "Human verification failed."
-      });
-    }
-
-    (req.session as any)
-      .joinCaptchaVerifiedUntil =
-        Date.now() +
-        (60 * 60 * 1000);
-
-    req.session.save(
-      (error: any) => {
-        if (error) {
-          return res.status(500).json({
-            message:
-              "Unable to open registration."
-          });
-        }
-
-        return res.json({
-          verified: true
-        });
-      }
-    );
-  });
-
-  // Local account registration (password-based)
-  app.post('/api/auth/register-local', async (req, res) => {
-    try {
-      const validatedData = localAccountRegistrationSchema.parse(req.body);
-      
-      // CAPTCHA was already completed at the
-      // CoogsNation membership entrance.
-      const gateUntil = Number(
-        (req.session as any)
-          ?.joinCaptchaVerifiedUntil || 0
-      );
-
-      if (gateUntil <= Date.now()) {
-        return res.status(403).json({
-          message:
-            "Human verification is required before joining CoogsNation.",
-          error:
-            "join_gate_required"
-        });
-      }
-
-      // Check if email is already taken
-      const existingUserByEmail = await storage.getUserByEmail(validatedData.email);
-      if (existingUserByEmail) {
-        return res.status(400).json({ message: "Email is already registered" });
-      }
-
-      // A custom handle is optional. When supplied, it must still be unique.
-      if (validatedData.handle) {
-        const existingUserByHandle = await storage.getUserByHandle(validatedData.handle);
-        if (existingUserByHandle) {
-          return res.status(400).json({ message: "Handle is already taken" });
-        }
-      }
-
-      // Hash the password
-      const passwordHash = await PasswordService.hashPassword(validatedData.password);
-
-      // Create local user
-      const newUser = await storage.createLocalUser({
-        id: undefined, // Let database generate UUID
-        email: validatedData.email,
-        firstName: validatedData.firstName,
-        lastName: validatedData.lastName,
-        nickname: validatedData.nickname || null,
-        handle: validatedData.handle || null,
-        passwordHash,
-        backupEmail: validatedData.backupEmail || null,
-        address: validatedData.address || null,
-        city: validatedData.city || null,
-        state: validatedData.state || null,
-        zipCode: validatedData.zipCode || null,
-        dateOfBirth: validatedData.dateOfBirth,
-        fanType: validatedData.fanType || null,
-        memberCategory: validatedData.memberCategory || null,
-        commentsAndSuggestions: validatedData.commentsAndSuggestions || null,
-        favoriteSports: validatedData.favoriteSports ? JSON.stringify(validatedData.favoriteSports) : null,
-        otherSportComment: validatedData.otherSportComment,
-        hasConsentedToDataUse: validatedData.hasConsentedToDataUse,
-        hasConsentedToMarketing: validatedData.hasConsentedToMarketing || false,
-        consentedAt: new Date(),
-        isProfileComplete: true,
-        profileCompletedAt: new Date(),
-        isLocalAccount: true,
-        // Enhanced membership fields
-        aboutMe: validatedData.aboutMe || null,
-        interests: validatedData.interests || null,
-        affiliation: validatedData.affiliation || null,
-        defaultAvatarChoice: validatedData.defaultAvatarChoice || null,
-        graduationYear: validatedData.graduationYear || null,
-        majorOrDepartment: validatedData.majorOrDepartment || null,
-        socialLinks: validatedData.socialLinks || null,
-        addressLine1: validatedData.addressLine1 || null,
-        country: validatedData.country || null,
-        optInOffers: validatedData.optInOffers || false,
-      });
-
-      res.status(201).json({ 
-        message: "Account created successfully",
-        user: {
-          id: newUser.id,
-          email: newUser.email,
-          firstName: newUser.firstName,
-          lastName: newUser.lastName,
-          handle: newUser.handle,
-        }
-      });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ 
-          message: "Validation error", 
-          errors: error.errors 
-        });
-      }
-      console.error("Error creating local account:", error);
-      res.status(500).json({ message: "Failed to create account" });
-    }
-  });
+  // Legacy CAPTCHA registration removed. Email registration now uses verified email membership.
 
   // Local login verification - uses handle as username with account lockout
   app.post('/api/auth/login-local', loginLimiter, async (req, res) => {
@@ -1943,6 +1575,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete('/api/users/profile', isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.deleteUserProfile(req.user.id);
+      return res.json({
+        message: "Membership deleted. Email and handle released for reuse.",
+      });
+    } catch (error) {
+      console.error("Error deleting membership:", error);
+      return res.status(500).json({ message: "Failed to delete membership" });
+    }
+  });
+
   app.delete('/api/users/profile/:userId', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
@@ -2232,7 +1876,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ========== UNIVERSAL AI API ENDPOINTS ==========
 
   const FAQS = [
-    { q: "How do I create an account?", a: "Click the 'Join' button in the header, fill out the signup form, complete the reCAPTCHA, and submit." },
+    { q: "How do I create an account?", a: "Click the 'Join' button in the header and choose Google, Apple, Email, or continue as a Guest." },
     { q: "What are the community rules?", a: "Be respectful, no spam, and keep posts on UH and sports topics. Check our Community Guidelines for more details." },
     { q: "How do I reset my password?", a: "Use the 'Forgot password' link on the login page or contact our support team." },
     { q: "Can I promote my business?", a: "Business promotions are only allowed in designated marketplace areas. Please respect our community guidelines." },
@@ -2328,30 +1972,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Additional signup endpoint for chat widget (redirects to main registration)
-  app.post('/api/signup', async (req, res) => {
-    try {
-      const captchaResponse = req.body["g-recaptcha-response"];
-      
-      if (!captchaResponse) {
-        return res.status(400).json({ message: "Captcha required" });
-      }
-
-      const isValid = await verifyRecaptcha(captchaResponse, req.ip);
-      if (!isValid) {
-        return res.status(400).json({ message: "Captcha verification failed" });
-      }
-
-      res.json({ 
-        success: true, 
-        message: "Captcha verified! Please use the main 'Join' button in the header to complete registration.",
-        redirect: "/login"
-      });
-    } catch (error) {
-      console.error("Error in chat widget signup:", error);
-      res.status(500).json({ message: "Registration error" });
-    }
-  });
+  // Chat widget signup shortcut. Membership registration is handled by /join.
+  app.post("/api/signup", (_req, res) => res.json({ success: true, message: "Continue to CoogsNation membership registration.", redirect: "/join" }));
 
   // Feature flags endpoint exposes capabilities, never API keys or secrets.
   app.get("/api/feature-flags", async (_req, res) => {
@@ -2473,7 +2095,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   };
 
-  io.of("/").use((_socket, next) => {
+  // Register the dedicated Coog Paws Lounge Socket.IO namespace.
+registerLoungeNamespace({
+  io,
+  requireSocketUser,
+});
+
+io.of("/").use((_socket, next) => {
     next(new Error("Namespace disabled"));
   });
 
