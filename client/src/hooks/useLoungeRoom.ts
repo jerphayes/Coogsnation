@@ -101,7 +101,7 @@ export function useLoungeRoom(
      * handshake is refused — which would look exactly like the old bug. */
     const socket = io(LOUNGE_NAMESPACE, {
       withCredentials: true,
-      transports: ["websocket", "polling"],
+      transports: ["polling", "websocket"],
       reconnectionAttempts: 5,
       reconnectionDelay: 800,
     });

@@ -93,9 +93,13 @@ export function registerPublicAIRoutes(app: Express, options: RegisterPublicAIRo
     res.json({ success: true, ai: aiService.publicStatus() });
   });
 
-  app.post(
+  const merlinAccess = (req: any, res: any, next: any) => {
+    return isAuthenticated(req, res, next);
+  };
+
+app.post(
     "/api/ai/v3/chat",
-    isAuthenticated,
+    merlinAccess,
     aiLimiter,
     uploadMiddleware,
     async (req: any, res) => {

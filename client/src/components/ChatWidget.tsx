@@ -1,9 +1,10 @@
+import { formatCentralChatTimestamp } from "@/lib/chatPresentation";
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { MessageCircle, Send, X, Minimize2, Paperclip, Youtube, Sparkles } from 'lucide-react';
+import { Send, X, Minimize2, Paperclip, Youtube } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -36,11 +37,11 @@ interface PublicAIStatus {
 type ProviderPreference = 'auto' | 'primary' | 'gemini';
 
 const routeLabels: Record<string, string> = {
-  approved_knowledge: 'Community knowledge',
-  primary_text: 'OpenAI conversation',
-  gemini_requested: 'Gemini selected',
-  gemini_media: 'Gemini multimedia',
-  gemini_default: 'Gemini default',
+  approved_knowledge: 'Merlin knowledge',
+  primary_text: 'Merlin',
+  gemini_requested: 'Merlin media',
+  gemini_media: 'Merlin media',
+  gemini_default: 'Merlin',
 };
 
 export function ChatWidget() {
@@ -48,7 +49,7 @@ export function ChatWidget() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: "Hi! I'm the CoogsNation AI Assistant. I use OpenAI for everyday conversation and can route images, video, PDFs, audio, and public YouTube links to Gemini when configured.",
+      text: "Greetings! I’m Merlin, your Knowing Wizard. Ask me anything about CoogsNation, sports, products, images, videos, documents, or whatever else you need help with.",
       sender: 'ai',
       timestamp: new Date(),
       source: 'ai'
@@ -150,7 +151,7 @@ export function ChatWidget() {
     }
   };
 
-  const formatTime = (date: Date) => date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const formatTime = (date: Date) => formatCentralChatTimestamp(date);
 
   if (!isOpen) {
     return (
@@ -161,7 +162,7 @@ export function ChatWidget() {
           data-testid="button-chat-open"
           aria-label="Open chat widget"
         >
-          <MessageCircle size={24} />
+          <img src="/merlin/merlin-mark.svg" alt="" className="h-11 w-11 object-contain" />
         </Button>
       </div>
     );
@@ -170,10 +171,14 @@ export function ChatWidget() {
   return (
     <div className="fixed bottom-4 right-4 z-50 w-[22rem] md:w-[28rem]">
       <Card className="shadow-2xl border-2 border-gray-200">
-        <CardHeader className="bg-uh-red text-white p-4 flex flex-row items-center justify-between rounded-t-lg">
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
-            <Sparkles size={20} />
-            CoogsNation AI v3.0
+        <CardHeader className="bg-gradient-to-r from-[#23053f] via-[#4b168c] to-[#23053f] text-white p-3 flex flex-row items-center justify-between rounded-t-lg border-b-2 border-[#d6a62e]">
+          <CardTitle className="flex items-center gap-2">
+            <img src="/merlin/merlin-mark.svg" alt="Merlin" className="h-12 w-16 object-contain shrink-0" />
+            <div className="leading-tight">
+              <div className="text-[13px] italic text-white/90">Ask</div>
+              <div className="text-xl font-bold tracking-wide text-[#f1c75b]">MERLIN</div>
+              <div className="text-[10px] font-medium text-white">Our CoogsNation Wizard Assist</div>
+            </div>
           </CardTitle>
           <div className="flex gap-1">
             <Button onClick={() => setIsOpen(false)} variant="ghost" size="sm" className="text-white hover:bg-red-700 p-1 h-8 w-8" aria-label="Minimize chat">
@@ -202,11 +207,8 @@ export function ChatWidget() {
                     <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
                     <div className={`text-xs mt-1 opacity-70 ${message.sender === 'user' ? 'text-red-100' : 'text-gray-500'}`}>
                       {formatTime(message.timestamp)}
-                      {message.source === 'faq' && ' • FAQ'}
-                      {message.source === 'ai' && ' • AI router'}
-                      {message.source === 'learned' && ' • Community knowledge'}
-                      {message.source === 'provider' && ` • ${message.provider || 'AI'}${message.model ? ` / ${message.model}` : ''}`}
-                      {message.routeReason && ` • ${routeLabels[message.routeReason] || message.routeReason}`}
+                      {message.sender === 'ai' && ' • Merlin'}
+                      {message.routeReason && message.sender === 'ai' && ` • ${routeLabels[message.routeReason] || 'Merlin'}`}
                     </div>
                   </div>
                 </div>
@@ -220,7 +222,7 @@ export function ChatWidget() {
                         <div className="rounded-full bg-gray-400 h-2 w-2" />
                         <div className="rounded-full bg-gray-400 h-2 w-2" />
                       </div>
-                      <span className="text-sm text-gray-600">Routing and analyzing...</span>
+                      <span className="text-sm text-gray-600">Merlin is thinking...</span>
                     </div>
                   </div>
                 </div>
@@ -235,11 +237,11 @@ export function ChatWidget() {
                 value={providerPreference}
                 onChange={(event) => setProviderPreference(event.target.value as ProviderPreference)}
                 className="h-9 flex-1 rounded-md border border-gray-300 bg-white px-2 text-xs"
-                aria-label="AI provider preference"
+                aria-label="Merlin mode"
               >
-                <option value="auto">Auto route</option>
-                <option value="primary">OpenAI conversation</option>
-                <option value="gemini" disabled={!gemini?.enabled}>Gemini multimedia</option>
+                <option value="auto">Ask Merlin (Auto route)</option>
+                <option value="primary">Conversation</option>
+                <option value="gemini" disabled={!gemini?.enabled}>Media &amp; YouTube</option>
               </select>
               <Button
                 type="button"
@@ -247,7 +249,7 @@ export function ChatWidget() {
                 size="sm"
                 onClick={() => setShowMedia((value) => !value)}
                 disabled={!mediaEnabled}
-                title={mediaEnabled ? 'Add image, video, audio, PDF, or YouTube URL' : 'Gemini multimedia is not configured'}
+                title={mediaEnabled ? 'Add image, video, audio, PDF, or YouTube URL' : 'Merlin media tools are not available'}
               >
                 <Paperclip size={15} className="mr-1" /> Media
               </Button>
@@ -288,7 +290,7 @@ export function ChatWidget() {
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
                 onKeyDown={handleKeyPress}
-                placeholder="Ask about CoogsNation, products, or attached media..."
+                placeholder="Ask Merlin anything about CoogsNation, products, or attached media..."
                 className="flex-1 min-h-[42px] max-h-[120px] resize-none focus:ring-uh-red focus:border-uh-red"
                 disabled={isLoading || status?.enabled === false}
                 maxLength={4000}
@@ -299,7 +301,7 @@ export function ChatWidget() {
               </Button>
             </div>
             <div className="text-xs text-gray-500 text-center">
-              OpenAI handles everyday chat. Gemini handles selected multimedia. AI can make mistakes; never share passwords, payment data, or confidential information.
+              Merlin can make mistakes. Never share passwords, payment data, or confidential information.
             </div>
           </div>
         </CardContent>

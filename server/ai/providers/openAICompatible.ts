@@ -44,7 +44,12 @@ export class OpenAICompatibleProvider implements AIProvider {
         model: this.model,
         messages: request.messages,
         [this.name === "openai" && this.model.startsWith("gpt-5") ? "max_completion_tokens" : "max_tokens"]: request.maxOutputTokens,
-        temperature: request.temperature,
+        ...(this.name === "openai" && this.model.startsWith("gpt-5")
+          ? {}
+          : { temperature: request.temperature }),
+        ...(this.name === "openai" && this.model.startsWith("gpt-5")
+          ? { reasoning_effort: "minimal" }
+          : {}),
         stream: false,
       }),
       signal: AbortSignal.timeout(this.config.timeoutMs),
@@ -77,7 +82,12 @@ export class OpenAICompatibleProvider implements AIProvider {
         model: this.model,
         messages: request.messages,
         [this.name === "openai" && this.model.startsWith("gpt-5") ? "max_completion_tokens" : "max_tokens"]: request.maxOutputTokens,
-        temperature: request.temperature,
+        ...(this.name === "openai" && this.model.startsWith("gpt-5")
+          ? {}
+          : { temperature: request.temperature }),
+        ...(this.name === "openai" && this.model.startsWith("gpt-5")
+          ? { reasoning_effort: "minimal" }
+          : {}),
         stream: true,
       }),
       signal: AbortSignal.timeout(this.config.timeoutMs),

@@ -32,8 +32,28 @@ check(openai.includes("max_completion_tokens") && openai.includes("MEDIA_PROVIDE
 check(publicRoutes.includes('app.post(\n    "/api/ai/v3/chat"') && publicRoutes.includes("isAuthenticated") && publicRoutes.includes("aiLimiter"), "v3 public route must require authentication and rate limiting");
 check(publicRoutes.includes("mediaSignatureMatches") && publicRoutes.includes("Only public HTTPS YouTube URLs"), "media content and YouTube URL validation are missing");
 check(routes.includes("registerPublicAIRoutes") && routes.includes("registerCommerceRoutes"), "v3 routes are not registered");
-check(widget.includes("CoogsNation AI v3.0") && widget.includes("/api/ai/v3/chat") && widget.includes("FormData"), "v3 chat UI is not connected to the router");
-check(widget.includes("OpenAI conversation") && widget.includes("Gemini multimedia"), "provider routing choices are not visible to members");
+check(
+  widget.includes("MERLIN") &&
+  widget.includes("Our CoogsNation Wizard Assist") &&
+  widget.includes("/api/ai/v3/chat") &&
+  widget.includes("FormData"),
+  "Merlin chat UI is not connected to the v3 router"
+);
+check(
+  widget.includes('value="primary"') &&
+  widget.includes('value="gemini"') &&
+  widget.includes("Conversation") &&
+  widget.includes("Media &amp; YouTube"),
+  "Merlin provider-routing controls are missing"
+);
+
+check(
+  !widget.includes("CoogsNation AI v3.0") &&
+  !widget.includes(">OpenAI conversation<") &&
+  !widget.includes(">Gemini multimedia<") &&
+  !widget.includes("AI router"),
+  "backend AI provider branding must not be exposed in the Merlin user interface"
+);
 check(commerce.includes("contextForAI") && commerce.includes("isShoppingIntent"), "commerce catalog context is not integrated");
 check(shopify.includes("X-Shopify-Storefront-Access-Token") && shopify.includes("2026-07") === false, "Shopify provider must use a configured API version and server-side Storefront token");
 check(shopify.includes("cartRead: false") && shopify.includes("cartMutation: false") && shopify.includes("checkoutUrl: false"), "unimplemented Shopify cart and checkout capabilities must remain disabled in v3.0");

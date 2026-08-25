@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { pool } from "./db";
 import { createAIProvider } from "./ai/providerFactory";
-import type { AIConfig } from "./ai/config";
+import { loadAIConfig, type AIConfig } from "./ai/config";
 import { AIServiceError, type PrimaryAIProviderName } from "./ai/types";
 
 type AdminAIProviderName = PrimaryAIProviderName;
@@ -55,15 +55,22 @@ export interface AdminAIConfig {
 }
 
 export function loadAdminAIConfig(): AdminAIConfig {
-  const provider = (process.env.ADMIN_AI_PROVIDER || "openai").toLowerCase() as AdminAIProviderName;
+  const inherited = loadAIConfig();
+  const provider = (process.env.ADMIN_AI_PROVIDER || inherited.provider || "openai").toLowerCase() as AdminAIProviderName;
   if (!SUPPORTED_PROVIDERS.has(provider)) {
     throw new Error(`Unsupported ADMIN_AI_PROVIDER: ${provider}`);
   }
 
-  const enabled = parseBoolean(process.env.ADMIN_AI_ENABLED, false);
-  const model = (process.env.ADMIN_AI_MODEL || "").trim();
-  const baseUrl = (process.env.ADMIN_AI_BASE_URL || defaultBaseUrl(provider)).trim().replace(/\/+$/, "");
-  const apiKey = process.env.ADMIN_AI_API_KEY?.trim() || undefined;
+  const enabled = parseBoolean(process.env.ADMIN_AI_ENABLED, inherited.enabled);
+  const model = (process.env.ADMIN_AI_MODEL || (provider === inherited.provider ? inherited.model : "") || "").trim();
+  const baseUrl = (
+    process.env.ADMIN_AI_BASE_URL ||
+    (provider === inherited.provider ? inherited.baseUrl : "") ||
+    defaultBaseUrl(provider)
+  ).trim().replace(/\/+$/, "");
+  const apiKey =
+    process.env.ADMIN_AI_API_KEY?.trim() ||
+    (provider === inherited.provider ? inherited.apiKey : undefined);
 
   if (enabled) {
     if (!model) throw new Error("ADMIN_AI_MODEL must be set when ADMIN_AI_ENABLED=true");

@@ -121,12 +121,20 @@ export async function getAdminAuditEvents(limit = 100, userId?: string): Promise
   return result.rows;
 }
 
+function isArchivedPrincipal(candidate: { email?: string | null; handle?: string | null }): boolean {
+  const email = (candidate.email || "").toLowerCase();
+  const handle = (candidate.handle || "").toLowerCase();
+  return email.endsWith("@coogsnation.invalid") || email.startsWith("deleted-") || handle.startsWith("deleted_");
+}
+
 export async function buildAdminOverview() {
   const [platform, statusRows, securityRows] = await Promise.all([
     storage.getAdminStats(),
     pool.query(
       `SELECT account_status AS status, COUNT(*)::int AS count
        FROM users
+       WHERE COALESCE(email, '') NOT ILIKE '%@coogsnation.invalid'
+         AND COALESCE(handle, '') NOT ILIKE 'deleted_%'
        GROUP BY account_status`,
     ),
     pool.query(
@@ -146,13 +154,141 @@ export async function buildAdminOverview() {
     }
   }
 
+  const memberCounts = await pool.query(
+    `SELECT
+       COUNT(*)::int AS total_users,
+       COUNT(*) FILTER (WHERE created_at >= date_trunc('day', now()))::int AS today_signups
+     FROM users
+     WHERE COALESCE(email, '') NOT ILIKE '%@coogsnation.invalid'
+       AND COALESCE(handle, '') NOT ILIKE 'deleted_%'`,
+  );
+
   return {
     version: packageVersion(),
     generatedAt: new Date().toISOString(),
     ...platform,
+    totalUsers: Number(memberCounts.rows[0]?.total_users || 0),
+    todaySignups: Number(memberCounts.rows[0]?.today_signups || 0),
     accountStatus,
     authFailures24h: Number(securityRows.rows[0]?.auth_failures_24h || 0),
     adminActions24h: Number(securityRows.rows[0]?.admin_actions_24h || 0),
+  };
+}
+
+
+export async function buildMerlinControlStatus() {
+  const now = new Date();
+
+  const [monthSummary, daySummary, providers] = await Promise.all([
+    pool.query(`
+      SELECT
+        COUNT(*)::int AS requests,
+        COALESCE(SUM(input_tokens), 0)::bigint AS input_tokens,
+        COALESCE(SUM(output_tokens), 0)::bigint AS output_tokens,
+        COALESCE(SUM(estimated_cost_micros), 0)::bigint AS estimated_cost_micros,
+        COUNT(*) FILTER (WHERE status <> 'success')::int AS failures,
+        COUNT(*) FILTER (WHERE provider = 'merlin-tool')::int AS tool_calls
+      FROM ai_interactions
+      WHERE created_at >= date_trunc('month', now())
+    `),
+    pool.query(`
+      SELECT
+        COUNT(*)::int AS requests,
+        COALESCE(SUM(input_tokens), 0)::bigint AS input_tokens,
+        COALESCE(SUM(output_tokens), 0)::bigint AS output_tokens,
+        COALESCE(SUM(estimated_cost_micros), 0)::bigint AS estimated_cost_micros,
+        COUNT(*) FILTER (WHERE status <> 'success')::int AS failures,
+        COUNT(*) FILTER (WHERE provider = 'merlin-tool')::int AS tool_calls
+      FROM ai_interactions
+      WHERE created_at >= now() - interval '24 hours'
+    `),
+    pool.query(`
+      SELECT
+        provider,
+        model,
+        COUNT(*)::int AS requests,
+        COALESCE(SUM(input_tokens), 0)::bigint AS input_tokens,
+        COALESCE(SUM(output_tokens), 0)::bigint AS output_tokens,
+        COALESCE(SUM(estimated_cost_micros), 0)::bigint AS estimated_cost_micros,
+        COUNT(*) FILTER (WHERE status <> 'success')::int AS failures,
+        MAX(created_at) AS last_used_at
+      FROM ai_interactions
+      WHERE created_at >= date_trunc('month', now())
+      GROUP BY provider, model
+      ORDER BY COUNT(*) DESC
+    `),
+  ]);
+
+  const primary =
+    process.env.MERLIN_PRIMARY_PROVIDER?.trim() ||
+    (process.env.AI_ROUTER_DEFAULT === "gemini"
+      ? "gemini"
+      : process.env.AI_PROVIDER?.trim() || "openai");
+
+  const secondary =
+    process.env.MERLIN_SECONDARY_PROVIDER?.trim() ||
+    (primary === "gemini"
+      ? process.env.AI_PROVIDER?.trim() || "openai"
+      : "gemini");
+
+  const monthlyBudgetUsd = Number(process.env.AI_MONTHLY_BUDGET_USD || 0);
+
+  const mapSummary = (row: any) => ({
+    requests: Number(row?.requests || 0),
+    inputTokens: Number(row?.input_tokens || 0),
+    outputTokens: Number(row?.output_tokens || 0),
+    estimatedCostUsd: Number(row?.estimated_cost_micros || 0) / 1_000_000,
+    failures: Number(row?.failures || 0),
+    toolCalls: Number(row?.tool_calls || 0),
+  });
+
+  const month = mapSummary(monthSummary.rows[0]);
+  const today = mapSummary(daySummary.rows[0]);
+
+  return {
+    generatedAt: now.toISOString(),
+
+    routing: {
+      primaryProvider: primary,
+      secondaryProvider: secondary,
+      currentRouterDefault: process.env.AI_ROUTER_DEFAULT || "primary",
+      automaticMediaRouting: process.env.AI_ROUTER_AUTO_MEDIA !== "false",
+      geminiEnabled: process.env.AI_GEMINI_ENABLED === "true",
+      publicAIEnabled: process.env.AI_ENABLED === "true",
+    },
+
+    models: {
+      primaryTextModel: process.env.AI_MODEL || null,
+      geminiModel: process.env.AI_GEMINI_MODEL || "default",
+    },
+
+    budget: {
+      monthlyBudgetUsd,
+      estimatedMonthCostUsd: month.estimatedCostUsd,
+      remainingUsd:
+        monthlyBudgetUsd > 0
+          ? Math.max(0, monthlyBudgetUsd - month.estimatedCostUsd)
+          : null,
+      percentUsed:
+        monthlyBudgetUsd > 0
+          ? Math.min(100, (month.estimatedCostUsd / monthlyBudgetUsd) * 100)
+          : null,
+    },
+
+    today,
+    month,
+
+    providers: providers.rows.map((row: any) => ({
+      provider: row.provider,
+      model: row.model,
+      requests: Number(row.requests || 0),
+      inputTokens: Number(row.input_tokens || 0),
+      outputTokens: Number(row.output_tokens || 0),
+      estimatedCostUsd:
+        Number(row.estimated_cost_micros || 0) / 1_000_000,
+      failures: Number(row.failures || 0),
+      lastUsedAt: row.last_used_at,
+    })),
   };
 }
 
@@ -191,11 +327,13 @@ export async function buildSystemStatus() {
     services: {
       database,
       email: {
-        configured: Boolean(process.env.SENDGRID_API_KEY && process.env.SENDGRID_FROM_EMAIL),
-      },
-      recaptcha: {
-        configured: Boolean(process.env.RECAPTCHA_SECRET_KEY),
-        developmentBypass: process.env.NODE_ENV !== "production" && process.env.RECAPTCHA_DEV_BYPASS === "true",
+        configured: Boolean(
+          process.env.SMTP_HOST &&
+          process.env.SMTP_USER &&
+          process.env.SMTP_PASSWORD &&
+          process.env.SMTP_FROM
+        ),
+        transport: "smtp",
       },
       publicAI: {
         enabled: process.env.AI_ENABLED === "true",
@@ -301,6 +439,15 @@ export function registerAdminDashboardRoutes(app: Express): void {
     }
   });
 
+
+  app.get("/api/admin/merlin-control", requireAdmin, async (_req, res) => {
+    try {
+      return res.json(await buildMerlinControlStatus());
+    } catch (error) {
+      return sendAdminError(res, error, "Failed to load Merlin control status");
+    }
+  });
+
   app.get("/api/admin/system-status", requireAdmin, async (_req, res) => {
     try {
       return res.json(await buildSystemStatus());
@@ -329,6 +476,9 @@ export function registerAdminDashboardRoutes(app: Express): void {
       const actor = await confirmAdminPassword(req.user.id, input.currentPassword);
       const target = await storage.getUser(req.params.id);
       if (!target) return res.status(404).json({ message: "User not found" });
+      if (isArchivedPrincipal(target)) {
+        throw new AdminActionError("Archived/system principals are inspect-only", 400);
+      }
 
       if (isConfiguredOwner(target.id) && input.status !== "active") {
         throw new AdminActionError("The configured owner account cannot be suspended or disabled", 400);
@@ -379,6 +529,9 @@ export function registerAdminDashboardRoutes(app: Express): void {
       const actor = await confirmAdminPassword(req.user.id, input.currentPassword);
       const target = await storage.getUser(req.params.id);
       if (!target) return res.status(404).json({ message: "User not found" });
+      if (isArchivedPrincipal(target)) {
+        throw new AdminActionError("Archived/system principals are inspect-only", 400);
+      }
       if (!target.lockedUntil || target.lockedUntil <= new Date()) {
         throw new AdminActionError("Account is not currently locked", 400);
       }
@@ -423,6 +576,9 @@ export function registerAdminDashboardRoutes(app: Express): void {
       const actor = await confirmAdminPassword(req.user.id, input.currentPassword);
       const target = await storage.getUser(req.params.id);
       if (!target) return res.status(404).json({ message: "User not found" });
+      if (isArchivedPrincipal(target)) {
+        throw new AdminActionError("Archived/system principals cannot receive administrator privileges", 400);
+      }
 
       if (isConfiguredOwner(target.id) && input.role !== "admin") {
         throw new AdminActionError("The configured owner cannot be demoted", 400);

@@ -132,7 +132,6 @@ updates = {
     # Codespaces are our development/test environment.
     # Allow Guest to exercise normal member features
     # without ever receiving admin/owner authority.
-    "DEV_GUEST_FULL_ACCESS": "true",
 }
 
 output = []

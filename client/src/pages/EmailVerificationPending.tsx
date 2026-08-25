@@ -37,7 +37,7 @@ export default function EmailVerificationPending() {
               email to:
             </p>
 
-            <p className="mt-2 font-bold">
+            <p className="mt-2 break-all rounded-md border-2 border-gray-400 bg-white px-3 py-3 text-lg font-extrabold text-gray-950">
               {email}
             </p>
 
@@ -61,7 +61,7 @@ export default function EmailVerificationPending() {
 
           <a
             href="/"
-            className="inline-block font-semibold text-red-600"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-md border-2 border-gray-400 bg-white px-5 py-2 font-bold text-gray-950 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
           >
             Return to CoogsNation
           </a>

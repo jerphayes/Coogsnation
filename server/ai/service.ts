@@ -9,6 +9,7 @@ import {
 import { createAIProvider } from "./providerFactory";
 import { AIStore } from "./store";
 import { getCommerceService, type CommerceService } from "../commerce/service";
+import { tryLiveTimeTool } from "./tools/liveTime";
 import {
   AIServiceError,
   type AICompletion,
@@ -251,6 +252,47 @@ export class UniversalAIService {
 
     return this.withUserSlot(input.userId, async () => {
       await this.store.assertQuota(input.userId);
+
+      // MERLIN TOOL LAYER:
+      // Resolve authoritative live utility requests before consulting stored
+      // knowledge or a language model. Merlin should answer these directly.
+      if (media.length === 0) {
+        const toolResult = tryLiveTimeTool(message);
+
+        if (toolResult.handled && toolResult.answer) {
+          const usage = {
+            inputTokens: estimateTokens(message),
+            outputTokens: estimateTokens(toolResult.answer),
+          };
+
+          await this.store.recordInteraction({
+            requestId,
+            userId: input.userId,
+            conversationId,
+            requestType: input.requestType || "chat",
+            provider: "merlin-tool",
+            model: toolResult.tool || "utility",
+            prompt: promptForAudit,
+            response: toolResult.answer,
+            inputTokens: usage.inputTokens,
+            outputTokens: usage.outputTokens,
+            estimatedCostMicros: 0,
+            status: "success",
+          });
+
+          return {
+            answer: toolResult.answer,
+            source: "provider",
+            requestId,
+            provider: "merlin-tool",
+            model: toolResult.tool || "utility",
+            conversationId,
+            routeReason: "primary_text",
+            usage,
+          };
+        }
+      }
+
       const mayUseKnowledge = media.length === 0 && (input.providerPreference || "auto") !== "gemini";
       const trusted = mayUseKnowledge ? await this.store.findTrustedAnswer(message) : null;
       if (trusted) {

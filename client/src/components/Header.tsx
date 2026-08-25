@@ -4,6 +4,7 @@ import logoImage from "@assets/webiste master logo_1761671161849.jpg";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useGuest } from "@/hooks/useGuest";
+import { queryClient } from "@/lib/queryClient";
 import { FORUM_NAVIGATION, forumCategoryPath } from "@/lib/forumNavigation";
 import { LiveScoreTicker } from "@/components/LiveScoreTicker";
 
@@ -30,18 +31,20 @@ export function Header() {
   };
 
   const handleGuestClick = () => {
-    enableGuestMode();
     closeMenus();
+    enableGuestMode();
     navigate("/forums");
   };
 
   const handleLogout = async () => {
     localStorage.removeItem("guestMode");
     try {
-      await fetch("/api/logout", {
+      const response = await fetch("/api/logout", {
         method: "POST",
         credentials: "same-origin",
       });
+      if (!response.ok) throw new Error("Logout failed");
+      queryClient.setQueryData(["/api/auth/user"], null);
     } finally {
       closeMenus();
       navigate("/");
@@ -243,7 +246,15 @@ export function Header() {
             </>
           ) : isGuestMode ? (
             <>
-              <span className="text-sm font-bold text-yellow-400" data-testid="text-guestmode">👤 Guest Mode</span>
+              <button
+                type="button"
+                onClick={handleGuestClick}
+                className="text-sm font-bold text-yellow-400 hover:text-yellow-300"
+                data-testid="text-guestmode"
+                aria-pressed="true"
+              >
+                👤 Guest
+              </button>
               <DesktopLink href="/join" testId="button-join">Sign Up</DesktopLink>
               <DesktopLink href="/login" testId="button-login">Login</DesktopLink>
             </>
@@ -284,8 +295,14 @@ export function Header() {
                   </div>
                 )}
               </div>
-              <button type="button" onClick={handleGuestClick} className="font-bold text-red-500 hover:text-red-400" data-testid="button-guest">
-                Continue as Guest
+              <button
+                type="button"
+                onClick={handleGuestClick}
+                className="font-bold text-red-500 hover:text-red-400"
+                data-testid="button-guest"
+                aria-pressed="false"
+              >
+                👤 Guest
               </button>
             </>
           )}
@@ -331,8 +348,13 @@ export function Header() {
               <>
                 <MobileLink href="/login" onNavigate={closeMenus}>Login</MobileLink>
                 <MobileLink href="/join" onNavigate={closeMenus}>Sign Up</MobileLink>
-                <button type="button" onClick={handleGuestClick} className="rounded px-3 py-3 text-left font-bold text-red-400 hover:bg-gray-800">
-                  Continue as Guest
+                <button
+                  type="button"
+                  onClick={handleGuestClick}
+                  className="rounded px-3 py-3 text-left font-bold text-red-400 hover:bg-gray-800"
+                  data-testid="button-guest-mobile"
+                >
+                  👤 Guest
                 </button>
               </>
             )}

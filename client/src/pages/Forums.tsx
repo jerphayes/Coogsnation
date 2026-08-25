@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -776,7 +776,8 @@ function CategoryGrid({
               : category.slug === "uh-hall-of-fame" ? "Coog's Hall of Fame" : category.name;
 
         return (
-          <Link
+          <Fragment key={category.id}>
+            <Link
             key={category.id}
             href={forumCategoryPath(
               category.slug
@@ -826,12 +827,64 @@ function CategoryGrid({
               </CardContent>
 
             </Card>
-          </Link>
+            </Link>
+
+            {category.slug === "track-field" ? (
+              <AiEntertainmentCard />
+            ) : null}
+          </Fragment>
         );
       })}
 
       <TicketPurchaseCard />
     </div>
+  );
+}
+
+
+
+function AiEntertainmentCard() {
+  return (
+    <Card className="h-full overflow-hidden border border-gray-200 shadow-sm">
+      <div className="min-h-16 bg-[#b9a7ff] px-5 py-4 text-[#2f245d]">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl" aria-hidden="true">
+            ✨
+          </span>
+
+          <h2 className="text-lg font-bold">
+            AI Entertainment
+          </h2>
+        </div>
+
+        <p className="mt-1 text-sm font-semibold leading-5">
+          Take Your Fandom to the Next Level. Show Us What You’ve Got.
+        </p>
+      </div>
+
+      <CardContent className="bg-white p-5">
+        <p className="font-bold leading-6 text-[#271f52]">
+          Create It. Share It. Take Your Fandom to the Next Level.
+        </p>
+
+        <ol className="mt-3 space-y-2 text-sm leading-5 text-gray-700">
+          <li><b>1.</b> Your Team. Your Imagination. Show Us What You’ve Got.</li>
+          <li><b>2.</b> Turn Your Fandom Into Something. Create With AI.</li>
+          <li><b>3.</b> Imagine It. Create It. Coog It Up.</li>
+          <li><b>4.</b> Bring Your Fandom to Life. Show the Coogs What You’ve Got.</li>
+        </ol>
+
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-violet-100 pt-3 text-xs">
+          <span className="text-gray-500">
+            AI images · Creator videos
+          </span>
+
+          <span className="font-bold text-violet-700">
+            🐾 Weekly Top 3 by Coog Paws
+          </span>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

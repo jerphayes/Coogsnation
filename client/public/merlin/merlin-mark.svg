@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 150">
+  <defs>
+    <linearGradient id="hat" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7b2cbf"/>
+      <stop offset=".55" stop-color="#4b168c"/>
+      <stop offset="1" stop-color="#250748"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff0a0"/>
+      <stop offset=".45" stop-color="#ffd34d"/>
+      <stop offset="1" stop-color="#c98200"/>
+    </linearGradient>
+  </defs>
+
+  <path d="M50 105 Q70 70 92 22 Q108 2 128 18 Q145 32 137 58 Q159 46 171 57 Q150 78 135 92 Q171 95 199 113 Q167 132 103 131 Q46 132 22 118 Q31 110 50 105Z"
+        fill="url(#hat)" stroke="#e0a72c" stroke-width="4"/>
+
+  <path d="M57 105 Q110 94 170 107 Q148 122 99 122 Q56 123 34 116Z"
+        fill="#6d1eb1" stroke="#e0a72c" stroke-width="3"/>
+
+  <path d="M57 95 Q103 86 146 94 L142 107 Q99 100 54 108Z"
+        fill="#c8102e"/>
+
+  <text x="88" y="105" font-family="Arial Black,Arial" font-size="24"
+        fill="white" stroke="#c8102e" stroke-width="1">UH</text>
+
+  <text x="104" y="42" font-size="22" fill="url(#gold)">★</text>
+  <text x="82" y="66" font-size="17" fill="url(#gold)">★</text>
+  <text x="124" y="70" font-size="17" fill="url(#gold)">★</text>
+  <text x="109" y="88" font-size="23" fill="url(#gold)">☾</text>
+
+  <g transform="translate(161 30) rotate(26)">
+    <rect x="0" y="0" width="8" height="78" rx="4" fill="#8a5a20" stroke="#e5b54b" stroke-width="2"/>
+    <circle cx="4" cy="-4" r="8" fill="#ffd34d"/>
+    <path d="M4 -20 L8 -8 L21 -8 L11 0 L15 13 L4 5 L-7 13 L-3 0 L-13 -8 L0 -8Z"
+          fill="#fff0a0"/>
+  </g>
+</svg>

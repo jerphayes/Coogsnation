@@ -3,6 +3,7 @@ import bannerImage from "@assets/file_00000000881861f9be677e55822b57a5_175778405
 import logoImage from "@assets/webiste master logo_1761671161849.jpg";
 import { useAuth } from "@/hooks/useAuth";
 import { LiveScoreTicker } from "@/components/LiveScoreTicker";
+import { forumCategoryPath, isVisibleForumCategory } from "@/lib/forumNavigation";
 
 type MenuItem = {
   label: string;
@@ -178,14 +179,8 @@ export default function Landing() {
   const [forumCategoryLinks, setForumCategoryLinks] =
     useState<Record<string, string>>({});
 
-  const [devGuestEnabled, setDevGuestEnabled] =
-    useState(false);
 
-  const [devGuestRemaining, setDevGuestRemaining] =
-    useState(0);
 
-  const [devGuestStarting, setDevGuestStarting] =
-    useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -215,15 +210,16 @@ export default function Landing() {
         for (const category of categories) {
           if (
             category &&
-            typeof category.name === "string" &&
-            Number.isFinite(Number(category.id))
+            typeof category.slug === "string" &&
+            isVisibleForumCategory(category)
           ) {
-            links[
-              category.name
+            const slug =
+              category.slug
                 .trim()
-                .toLowerCase()
-            ] =
-              `/forums/categories/${Number(category.id)}`;
+                .toLowerCase();
+
+            links[slug] =
+              forumCategoryPath(slug);
           }
         }
 
@@ -241,220 +237,127 @@ export default function Landing() {
     };
   }, []);
 
-  useEffect(() => {
-    fetch("/api/auth/dev-guest/status", {
-      credentials: "same-origin",
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        setDevGuestEnabled(Boolean(data?.enabled));
 
-        setDevGuestRemaining(
-          Math.max(
-            0,
-            Number(data?.remaining) || 0,
-          ),
-        );
-      })
-      .catch(() => {
-        setDevGuestEnabled(false);
-      });
-  }, []);
-
-  const forumHref = (name: string) =>
+  const forumHref = (slug: string) =>
     forumCategoryLinks[
-      name.trim().toLowerCase()
-    ] || "/forums";
+      slug.trim().toLowerCase()
+    ] || forumCategoryPath(slug);
 
+  /*
+   * CANONICAL FRONT-FACING FORUM NAVIGATION
+   *
+   * Keep this aligned with /forums.
+   * 18 top-level cards/destinations only.
+   * No retired or legacy individual boards.
+   */
   const forumItems: MenuItem[] = [
     {
       label: "Football",
-      href: forumHref("Football"),
+      href: forumHref("football"),
       icon: "🏈",
-      description: "Houston Cougar football discussions.",
+      description: "Houston Cougar football.",
     },
     {
       label: "Basketball",
-      href: forumHref("Basketball"),
+      href: forumHref("basketball"),
       icon: "🏀",
-      description: "Houston Cougar basketball discussions.",
+      description: "Houston Cougar basketball.",
     },
     {
       label: "Baseball",
-      href: forumHref("Baseball"),
+      href: forumHref("baseball"),
       icon: "⚾",
       description: "Houston Cougar baseball.",
     },
     {
-      label: "Track & Field",
-      href: forumHref("Track & Field"),
-      icon: "🏃",
-      description: "Houston Cougar track and field.",
+      label: "Recruiting",
+      href: forumHref("recruiting"),
+      icon: "📣",
+      description: "Recruiting news and commitments.",
+    },
+    {
+      label: "Game Day Central",
+      href: forumHref("game-day-central"),
+      icon: "📡",
+      description: "Game-day discussion and coverage.",
+    },
+    {
+      label: "Tailgate Roundup",
+      href: forumHref("tailgate-roundup"),
+      icon: "🍔",
+      description: "Tailgating and game-day gatherings.",
     },
     {
       label: "Golf",
-      href: forumHref("Golf"),
+      href: forumHref("golf"),
       icon: "⛳",
       description: "Houston Cougar golf.",
     },
     {
-      label: "Other Sports Men",
-      href: forumHref("Other Sports Men"),
-      icon: "🏆",
-      description: "Other Houston Cougar men's athletics.",
+      label: "Track & Field",
+      href: forumHref("track-field"),
+      icon: "🏃",
+      description: "Houston Cougar track and field.",
     },
     {
-      label: "Women's Sports",
-      href: forumHref("Women's Sports"),
-      icon: "👟",
+      label: "Intramural Sports",
+      href: forumHref("other-sports-men"),
+      icon: "🏆",
+      description: "Activities and announcements on and off campus.",
+    },
+    {
+      label: "Women Sports",
+      href: forumHref("womens-sports"),
+      icon: "🏅",
       description: "Houston Cougar women's athletics.",
     },
     {
-      label: "Women's Basketball",
-      href: forumHref("Women's Basketball"),
-      icon: "🏀",
+      label: "Coog's Hall of Fame",
+      href: forumHref("uh-hall-of-fame"),
+      icon: "🏅",
+      description: "Houston Cougar history and legends.",
     },
     {
-      label: "Women's Golf",
-      href: forumHref("Women's Golf"),
-      icon: "⛳",
+      label: "Ticket Purchase",
+      href: "/forums?tab=sports",
+      icon: "🎟️",
+      description: "Ticketmaster and StubHub purchase options.",
     },
     {
-      label: "Women's Soccer",
-      href: forumHref("Women's Soccer"),
-      icon: "⚽",
+      label: "Coogs Life",
+      href: "/forums?tab=community",
+      icon: "🐾",
+      description: "Campus, alumni, academics, careers, business and technology.",
     },
     {
-      label: "Softball",
-      href: forumHref("Softball"),
-      icon: "🥎",
+      label: "Houston Events & Happenings",
+      href: "/forums?tab=community",
+      icon: "🌆",
+      description: "Entertainment, food and things happening around Houston.",
     },
     {
-      label: "Women's Tennis",
-      href: forumHref("Women's Tennis"),
-      icon: "🎾",
-    },
-    {
-      label: "Women's Track & Field",
-      href: forumHref("Women's Track & Field"),
-      icon: "🏃",
-    },
-    {
-      label: "Women's Swimming & Diving",
-      href: forumHref("Women's Swimming & Diving"),
-      icon: "🏊",
-    },
-    {
-      label: "Recruiting",
-      href: forumHref("Recruiting"),
-      icon: "📋",
-      description: "Recruiting news and commitments.",
-    },
-    {
-      label: "Cougar Corner",
-      href: forumHref("Cougar Corner"),
-      icon: "🏠",
-      description: "General UH discussion and campus life.",
-    },
-    {
-      label: "Politics",
-      href: forumHref("Politics"),
-      icon: "🌎",
-      description: "Political discussions and current events.",
-    },
-    {
-      label: "Business",
-      href: forumHref("Business"),
-      icon: "💼",
-      description: "Business and career discussion.",
-    },
-    {
-      label: "Technology",
-      href: forumHref("Technology"),
-      icon: "💻",
-      description: "Technology, AI, gadgets, and programming.",
-    },
-    {
-      label: "Entertainment",
-      href: forumHref("Entertainment"),
-      icon: "🎬",
-      description: "Movies, television, music, and pop culture.",
-    },
-    {
-      label: "Food & Dining",
-      href: forumHref("Food & Dining"),
-      icon: "🍽️",
-      description: "Restaurants, food, and dining.",
-    },
-    {
-      label: "Real Estate",
-      href: forumHref("Real Estate"),
-      icon: "🏡",
-      description: "Houston-area property and housing.",
-    },
-    {
-      label: "Classifieds",
-      href: forumHref("Classifieds"),
+      label: "Coogs Marketplace",
+      href: "/forums?tab=community",
       icon: "🛒",
-      description: "Buy, sell, and trade with fellow Coogs.",
+      description: "Buy, sell, trade, property and housing.",
     },
     {
-      label: "Premium Lounge",
-      href: forumHref("Premium Lounge"),
-      icon: "⭐",
-    },
-    {
-      label: "Game Day Central",
-      href: forumHref("Game Day Central"),
-      icon: "📣",
-      description: "Live games and watch-party conversation.",
-    },
-    {
-      label: "Alumni Network",
-      href: forumHref("Alumni Network"),
-      icon: "🎓",
-    },
-    {
-      label: "Professional Networking",
-      href: forumHref("Professional Networking"),
-      icon: "🤝",
+      label: "Current Events",
+      href: "/forums?tab=community",
+      icon: "🌎",
+      description: "National, local and open discussion.",
     },
     {
       label: "Coog Paws Lounge",
       href: "/coogpaws-chat",
       icon: "🐾",
-      description: "Cougar Dens multi-chat lounge.",
+      description: "Live CoogsNation community chat.",
     },
     {
       label: "Water Cooler Talk",
-      href: forumHref("Water Cooler Talk"),
+      href: forumHref("water-cooler-talk"),
       icon: "☕",
-      description: "General conversation beyond sports.",
-    },
-    {
-      label: "Coog's Hall of Fame",
-      href: forumHref("UH Hall of Fame"),
-      icon: "🏅",
-    },
-    {
-      label: "Academic Discussion",
-      href: forumHref("Academic Discussion"),
-      icon: "📚",
-    },
-    {
-      label: "Student Life",
-      href: forumHref("Student Life"),
-      icon: "🏫",
-    },
-    {
-      label: "Campus Events",
-      href: "/events",
-      icon: "📅",
-    },
-    {
-      label: "View All Forums",
-      href: "/forums",
-      icon: "💬",
+      description: "General and off-topic community conversation.",
     },
   ];
 
@@ -541,59 +444,6 @@ export default function Landing() {
       icon: "✍️",
     },
   ];
-
-  async function startDevGuest() {
-    if (
-      devGuestStarting ||
-      devGuestRemaining <= 0
-    ) {
-      return;
-    }
-
-    setDevGuestStarting(true);
-
-    try {
-      const response =
-        await fetch("/api/auth/dev-guest", {
-          method: "POST",
-          credentials: "same-origin",
-        });
-
-      const data =
-        await response
-          .json()
-          .catch(() => ({}));
-
-      if (!response.ok) {
-        setDevGuestRemaining(
-          Math.max(
-            0,
-            Number(data?.remaining) || 0,
-          ),
-        );
-
-        window.alert(
-          data?.message ||
-          "Guest test access could not be started.",
-        );
-
-        return;
-      }
-
-      setDevGuestRemaining(
-        Math.max(
-          0,
-          Number(data?.remaining) || 0,
-        ),
-      );
-
-      window.location.href =
-        data?.redirect || "/dashboard";
-
-    } finally {
-      setDevGuestStarting(false);
-    }
-  }
 
   async function logout() {
     try {
@@ -682,6 +532,7 @@ export default function Landing() {
           overflow-y: auto;
           padding: 8px;
           background: white;
+          color: #111827;
           border: 1px solid #d1d5db;
           border-radius: 10px;
           box-shadow: 0 18px 35px rgba(0,0,0,.22);
@@ -903,6 +754,7 @@ export default function Landing() {
           border: 1px solid #d8dde5;
           border-radius: 12px;
           background: white;
+          color: #111827;
           box-shadow: 0 5px 16px rgba(16,24,40,.06);
         }
 
@@ -960,6 +812,7 @@ export default function Landing() {
           overflow-y: auto;
           padding: 8px;
           background: white;
+          color: #111827;
           border: 1px solid #d1d5db;
           border-radius: 10px;
           box-shadow: 0 20px 38px rgba(0,0,0,.18);
@@ -1293,25 +1146,10 @@ export default function Landing() {
               href="/forums"
               className="cn-nav-link cn-guest-link"
             >
-              Continue as Guest
+              Guest
             </a>
 
-            {devGuestEnabled && (
-              <button
-                type="button"
-                className="cn-nav-action cn-guest-link"
-                disabled={
-                  devGuestStarting ||
-                  devGuestRemaining <= 0
-                }
-                onClick={startDevGuest}
-                title="Enter CoogsNation as Guest"
-              >
-                {devGuestStarting
-                  ? "Opening Guest…"
-                  : "Guest"}
-              </button>
-            )}
+
 
             <Dropdown
               id="top-login"

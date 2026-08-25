@@ -331,6 +331,13 @@ export function evaluateSessionState(
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
+  // TEMPORARY PUBLIC PREVIEW MODE.
+  // Opens normal member-gated site areas while development is underway.
+  // Admin and owner authorization remain protected separately.
+  if (process.env.PUBLIC_PREVIEW_MODE === "true") {
+    return next();
+  }
+
   if (!req.isAuthenticated() || !req.user?.id) {
     return res.status(401).json({ message: "Unauthorized" });
   }
