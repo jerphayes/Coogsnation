@@ -42,6 +42,10 @@ import {
   AffiliatePartnersPanel,
   GetEmControlPanel,
 } from "@/pages/BusinessControlPanels";
+import {
+  AdminMfaGate,
+  type AdminMfaStatus,
+} from "@/components/admin/AdminMfaGate";
 
 interface AdminUser {
   id: string;
@@ -262,7 +266,23 @@ export default function OwnerAdminDashboard() {
   const [aiQuestion, setAiQuestion] = useState("");
   const [aiAnswer, setAiAnswer] = useState<string | null>(null);
 
-  const adminEnabled = isAuthenticated && user?.role === "admin";
+  const adminIdentity =
+    isAuthenticated &&
+    user?.role === "admin";
+
+  const mfaStatusQuery =
+    useQuery<AdminMfaStatus>({
+      queryKey: [
+        "/api/security/admin-mfa/status",
+      ],
+      enabled: adminIdentity,
+      refetchOnWindowFocus: true,
+      staleTime: 5_000,
+    });
+
+  const adminEnabled =
+    adminIdentity &&
+    mfaStatusQuery.data?.verified === true;
 
   const overviewQuery = useQuery<AdminOverview>({ queryKey: ["/api/admin/overview"], enabled: adminEnabled });
   const usersQuery = useQuery<AdminUser[]>({ queryKey: ["/api/admin/users"], enabled: adminEnabled });
@@ -376,6 +396,47 @@ export default function OwnerAdminDashboard() {
           </Alert>
         </div>
       </div>
+    );
+  }
+
+  if (mfaStatusQuery.isLoading) {
+    return (
+      <div className="min-h-screen bg-muted/30">
+        <Header />
+        <div className="container mx-auto max-w-2xl px-4 py-16">
+          <div className="text-center text-muted-foreground">
+            Checking administrator MFA…
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (mfaStatusQuery.isError || !mfaStatusQuery.data) {
+    return (
+      <div className="min-h-screen bg-muted/30">
+        <Header />
+        <div className="container mx-auto max-w-2xl px-4 py-16">
+          <Alert variant="destructive">
+            <ShieldAlert className="h-4 w-4" />
+            <AlertTitle>Administrator MFA unavailable</AlertTitle>
+            <AlertDescription>
+              Control Room access is blocked because MFA status could not be verified.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </div>
+    );
+  }
+
+  if (!mfaStatusQuery.data.verified) {
+    return (
+      <AdminMfaGate
+        status={mfaStatusQuery.data}
+        onVerified={async () => {
+          await mfaStatusQuery.refetch();
+        }}
+      />
     );
   }
 

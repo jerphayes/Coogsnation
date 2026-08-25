@@ -18,12 +18,24 @@
 import "dotenv/config";
 
 import express, { type Request, Response, NextFunction } from "express";
+import helmet from "helmet";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import type { Server } from "http";
 import { assertDatabaseReady, checkDatabaseHealth } from "./databaseReadiness";
 
 const app = express();
+app.disable("x-powered-by");
+
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    referrerPolicy: {
+      policy: "strict-origin-when-cross-origin",
+    },
+  }),
+);
 let activeServer: Server | null = null;
 let shuttingDown = false;
 
@@ -63,8 +75,17 @@ process.on("uncaughtException", (error) => {
   console.error("[FATAL] Uncaught exception", error);
   shutdown("Uncaught exception", 1);
 });
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.use(
+  express.json({
+    limit: "1mb",
+  }),
+);
+app.use(
+  express.urlencoded({
+    extended: false,
+    limit: "1mb",
+  }),
+);
 
 app.get("/healthz", async (_req, res) => {
   if (shuttingDown) {

@@ -45,6 +45,10 @@ import { rateLimit } from "express-rate-limit";
 import { getAIService } from "./ai/service";
 import { AIServiceError } from "./ai/types";
 import { registerAdminDashboardRoutes } from "./adminDashboard";
+import {
+  registerAdminMfaRoutes,
+  requireAdminMfa,
+} from "./adminMfa";
 import { registerPublicAIRoutes } from "./publicAI";
 import { registerCommerceRoutes } from "./commerce/routes";
 import { registerVenueRoutes } from "./venue/routes";
@@ -225,6 +229,11 @@ const aiService = getAIService();
   // Owner-controlled administrator dashboard and read-only administrator AI.
   // Registered after the origin guard so every state-changing action receives
   // the same CSRF/origin protection as the rest of the authenticated API.
+  registerAdminMfaRoutes(app);
+
+  // All Control Room APIs require a verified privileged MFA session.
+  app.use("/api/admin", requireAdminMfa);
+
   registerAdminDashboardRoutes(app);
   registerPublicAIRoutes(app, { aiService, isAuthenticated, aiLimiter });
   registerCommerceRoutes(app);

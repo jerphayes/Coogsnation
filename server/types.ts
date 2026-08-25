@@ -11,6 +11,8 @@ declare global {
 declare module 'express-session' {
   interface SessionData {
     returnTo?: string;
+    sessionVersion?: number;
+    adminMfaVerifiedAt?: number;
   }
 }
 
