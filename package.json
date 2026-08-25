@@ -87,7 +87,7 @@
     "helmet": "8.1.0",
     "input-otp": "^1.4.2",
     "leaflet": "^1.9.4",
-    "lucide-react": "^0.453.0",
+    "lucide-react": "^1.33.0",
     "multer": "^2.0.2",
     "next-themes": "^0.4.6",
     "nodemailer": "^9.0.5",
