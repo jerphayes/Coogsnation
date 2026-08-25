@@ -46,6 +46,7 @@ import { lazy, Suspense } from "react";
 import EmailVerificationPending from "@/pages/EmailVerificationPending";
 import EmailVerification from "@/pages/EmailVerification";
 import PageScrollRecovery from "@/components/PageScrollRecovery";
+import AnalyticsTracker from "@/components/AnalyticsTracker";
 
 /* The immersive venue is code-split: Three.js and the Virtual Venue Engine
  * (~700 KB) download only when a member actually enters a venue. Every other
@@ -128,6 +129,7 @@ function App() {
           <div className="flex-1">
             <Toaster />
             <PageScrollRecovery />
+            <AnalyticsTracker />
             <Router />
           </div>
         </div>

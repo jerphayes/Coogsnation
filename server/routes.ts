@@ -5,7 +5,7 @@ import { Server as SocketIOServer } from "socket.io";
 import { registerLoungeNamespace } from "./lounge/rooms";
 import { storage } from "./storage";
 import { recordAuthEvent, clientIpOf, userAgentOf } from "./authAudit";
-import { setupAuth, isAuthenticated, requireAdmin, evaluateSessionState } from "./auth";
+import { setupAuth, isAuthenticated, requireAdmin, evaluateSessionState, isConfiguredOwner } from "./auth";
 import {
   insertForumTopicSchema,
   insertForumPostSchema,
@@ -49,6 +49,8 @@ import { registerPublicAIRoutes } from "./publicAI";
 import { registerCommerceRoutes } from "./commerce/routes";
 import { registerVenueRoutes } from "./venue/routes";
 import { registerMembershipRegistrationRoutes } from "./membershipRegistration";
+import { registerTrafficAnalyticsRoutes } from "./trafficAnalytics";
+import { registerMarketingTrafficPanelRoutes } from "./marketingTrafficPanel";
 import { registerSportsHttpRoutes, registerSportsSocketNamespace, startSportsFactsService } from "./sports/routes";
 import { seedSportsTickerDemo } from "./sports/devSeed";
 
@@ -227,6 +229,8 @@ const aiService = getAIService();
   registerCommerceRoutes(app);
   registerVenueRoutes(app, isAuthenticated);
   registerMembershipRegistrationRoutes(app);
+  registerTrafficAnalyticsRoutes(app);
+  registerMarketingTrafficPanelRoutes(app);
 
   // Optional social-login aliases. Core email/password authentication is always available.
   app.get("/auth/linkedin", (req, res) => {
@@ -1577,6 +1581,11 @@ const aiService = getAIService();
 
   app.delete('/api/users/profile', isAuthenticated, async (req: any, res) => {
     try {
+      if (isConfiguredOwner(req.user.id)) {
+        return res.status(403).json({
+          message: "Platform Owner membership is protected and cannot be deleted through the public membership flow.",
+        });
+      }
       await storage.deleteUserProfile(req.user.id);
       return res.json({
         message: "Membership deleted. Email and handle released for reuse.",

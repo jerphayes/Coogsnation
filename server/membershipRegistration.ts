@@ -16,6 +16,8 @@ import {
   verifyMembershipEmailToken,
 } from "./emailVerificationStore";
 
+import { recordMembershipAnalyticsConversion } from "./trafficAnalytics";
+
 import {
   recordAuthEvent,
   clientIpOf,
@@ -409,6 +411,12 @@ if (!email || !confirmEmail || email !== confirmEmail) {
             });
         }
 
+        await recordMembershipAnalyticsConversion(
+          req,
+          newUser.id,
+          "signup_completed",
+        );
+
         void recordAuthEvent({
           eventType:
             "registration",
@@ -508,6 +516,23 @@ if (!email || !confirmEmail || email !== confirmEmail) {
           await verifyMembershipEmailToken(token);
 
         if (result.status === "activated") {
+          const activatedUser = result.email
+            ? await storage.getUserByEmail(result.email)
+            : null;
+
+          if (activatedUser) {
+            await recordMembershipAnalyticsConversion(
+              req,
+              activatedUser.id,
+              "email_verified",
+            );
+            await recordMembershipAnalyticsConversion(
+              req,
+              activatedUser.id,
+              "member_activated",
+            );
+          }
+
           return res.json({
             status: "activated",
             message:

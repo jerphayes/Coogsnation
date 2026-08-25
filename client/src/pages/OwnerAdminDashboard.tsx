@@ -8,7 +8,6 @@ import {
   Database,
   KeyRound,
   LockKeyholeOpen,
-  RefreshCw,
   Search,
   Shield,
   ShieldAlert,
@@ -37,6 +36,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import MarketingTrafficPanel from "@/pages/MarketingTrafficPanel";
 
 interface AdminUser {
   id: string;
@@ -98,6 +98,55 @@ interface SystemStatus {
   uptimeSeconds: number;
   services: Record<string, any>;
   security: Record<string, any>;
+}
+
+
+interface MerlinControlStatus {
+  generatedAt: string;
+  routing: {
+    primaryProvider: string;
+    secondaryProvider: string;
+    currentRouterDefault: string;
+    automaticMediaRouting: boolean;
+    geminiEnabled: boolean;
+    publicAIEnabled: boolean;
+  };
+  models: {
+    primaryTextModel: string | null;
+    geminiModel: string | null;
+  };
+  budget: {
+    monthlyBudgetUsd: number;
+    estimatedMonthCostUsd: number;
+    remainingUsd: number | null;
+    percentUsed: number | null;
+  };
+  today: {
+    requests: number;
+    inputTokens: number;
+    outputTokens: number;
+    estimatedCostUsd: number;
+    failures: number;
+    toolCalls: number;
+  };
+  month: {
+    requests: number;
+    inputTokens: number;
+    outputTokens: number;
+    estimatedCostUsd: number;
+    failures: number;
+    toolCalls: number;
+  };
+  providers: Array<{
+    provider: string;
+    model: string;
+    requests: number;
+    inputTokens: number;
+    outputTokens: number;
+    estimatedCostUsd: number;
+    failures: number;
+    lastUsedAt: string | null;
+  }>;
 }
 
 interface AdminAIStatus {
@@ -164,10 +213,21 @@ function MetricCard({ title, value, note, icon: Icon }: { title: string; value: 
 }
 
 function ServiceRow({ label, value }: { label: string; value: any }) {
-  const okay = value === true || value === "operational" || value?.configured === true || value?.enabled === true;
+  const okay =
+    label === "sensitiveValuesExposed" ? value === false :
+    label === "toolsEnabled" ? value === false :
+    label === "provider" || label === "model" ? Boolean(value && value !== "not configured") :
+    label === "monthlyRequests" || label === "estimatedCostUsd" ? true :
+    value === true ||
+    value === "operational" ||
+    value?.configured === true ||
+    value?.enabled === true ||
+    value?.mode === "application-managed";
+
   const text = typeof value === "object" && value !== null
     ? Object.entries(value).map(([key, item]) => `${key}: ${String(item)}`).join(" · ")
     : String(value);
+
   return (
     <div className="flex flex-col gap-1 border-b py-3 last:border-0 sm:flex-row sm:items-center sm:justify-between">
       <span className="font-medium capitalize">{label.replace(/([A-Z])/g, " $1")}</span>
@@ -177,6 +237,12 @@ function ServiceRow({ label, value }: { label: string; value: any }) {
       </span>
     </div>
   );
+}
+
+function isArchivedAdminUser(candidate: AdminUser): boolean {
+  const email = (candidate.email || "").toLowerCase();
+  const handle = (candidate.handle || "").toLowerCase();
+  return email.endsWith("@coogsnation.invalid") || email.startsWith("deleted-") || handle.startsWith("deleted_");
 }
 
 export default function OwnerAdminDashboard() {
@@ -199,6 +265,10 @@ export default function OwnerAdminDashboard() {
   const accessQuery = useQuery<AdminAccess>({ queryKey: ["/api/admin/access"], enabled: adminEnabled });
   const systemQuery = useQuery<SystemStatus>({ queryKey: ["/api/admin/system-status"], enabled: adminEnabled });
   const aiStatusQuery = useQuery<AdminAIStatus>({ queryKey: ["/api/admin/ai/status"], enabled: adminEnabled });
+  const merlinControlQuery = useQuery<MerlinControlStatus>({
+    queryKey: ["/api/admin/merlin-control"],
+    enabled: adminEnabled,
+  });
   const detailQuery = useQuery<AdminUserDetail>({
     queryKey: [`/api/admin/users/${selectedUserId}`],
     enabled: adminEnabled && Boolean(selectedUserId),
@@ -224,6 +294,7 @@ export default function OwnerAdminDashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/access"] }),
       queryClient.invalidateQueries({ queryKey: ["/api/admin/system-status"] }),
       queryClient.invalidateQueries({ queryKey: ["/api/admin/ai/status"] }),
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/merlin-control"] }),
     ]);
     if (selectedUserId) {
       await queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${selectedUserId}`] });
@@ -318,9 +389,9 @@ export default function OwnerAdminDashboard() {
             </div>
             <p className="text-muted-foreground">Owner-controlled administration. Every sensitive action requires your password and creates an audit record.</p>
           </div>
-          <Button variant="outline" onClick={refreshAdminData}>
-            <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-          </Button>
+          <div className="text-xs text-muted-foreground">
+            Live monitoring panels refresh automatically.
+          </div>
         </div>
 
         {!access?.ownerConfigured && (
@@ -332,11 +403,13 @@ export default function OwnerAdminDashboard() {
         )}
 
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-5">
+          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-4 lg:grid-cols-7">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="marketing">Mkt / Acquisition / Traffic</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="audit">Audit</TabsTrigger>
             <TabsTrigger value="system">System</TabsTrigger>
+            <TabsTrigger value="merlin">Merlin</TabsTrigger>
             <TabsTrigger value="ai">Admin AI</TabsTrigger>
           </TabsList>
 
@@ -358,12 +431,12 @@ export default function OwnerAdminDashboard() {
                 </CardContent>
               </Card>
               <Card>
-                <CardHeader><CardTitle>Administrator access</CardTitle><CardDescription>{access?.isOwner ? "You are the configured owner." : "Full administrator access; owner-only role controls are locked."}</CardDescription></CardHeader>
+                <CardHeader><CardTitle>Administrator access</CardTitle><CardDescription>{access?.isOwner ? "Platform Owner — protected and highest authority." : "Full administrator access; owner-only role controls are locked."}</CardDescription></CardHeader>
                 <CardContent className="space-y-3">
                   {(access?.administrators || []).map((admin) => (
                     <div key={admin.id} className="flex items-center justify-between rounded-md border p-3">
                       <div><div className="font-medium">{displayName(admin)}</div><div className="text-xs text-muted-foreground">{admin.email}</div></div>
-                      <Badge>{admin.id === user?.id ? "Current" : "Admin"}</Badge>
+                      <Badge>{access?.isOwner && admin.id === user?.id ? "Platform Owner" : admin.id === user?.id ? "Current Admin" : "Admin"}</Badge>
                     </div>
                   ))}
                 </CardContent>
@@ -371,11 +444,15 @@ export default function OwnerAdminDashboard() {
             </div>
           </TabsContent>
 
+          <TabsContent value="marketing" className="space-y-6">
+            <MarketingTrafficPanel />
+          </TabsContent>
+
           <TabsContent value="users" className="space-y-4">
             <Card>
               <CardHeader>
                 <CardTitle>User administration</CardTitle>
-                <CardDescription>Search, inspect, suspend, restore, unlock, and—owner only—grant administrator access.</CardDescription>
+                <CardDescription>Manage active accounts. The Platform Owner is protected; deleted/system tombstones are inspect-only.</CardDescription>
                 <div className="flex flex-col gap-3 pt-3 sm:flex-row">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -400,20 +477,22 @@ export default function OwnerAdminDashboard() {
                     <TableBody>
                       {filteredUsers.map((candidate) => (
                         <TableRow key={candidate.id}>
-                          <TableCell><div className="font-medium">{displayName(candidate)}</div><div className="text-xs text-muted-foreground">{candidate.email || candidate.id}{candidate.handle ? ` · @${candidate.handle}` : ""}</div>{candidate.role === "admin" && <Badge className="mt-1">Administrator</Badge>}</TableCell>
+                          <TableCell><div className="font-medium">{displayName(candidate)}</div><div className="text-xs text-muted-foreground">{candidate.email || candidate.id}{candidate.handle ? ` · @${candidate.handle}` : ""}</div>{access?.isOwner && candidate.id === user?.id ? <Badge className="mt-1">Platform Owner · Protected</Badge> : isArchivedAdminUser(candidate) ? <Badge variant="secondary" className="mt-1">Archived</Badge> : candidate.role === "admin" && <Badge className="mt-1">Administrator</Badge>}</TableCell>
                           <TableCell>{statusBadge(candidate.accountStatus || "active")}{candidate.lockedUntil && new Date(candidate.lockedUntil) > new Date() && <Badge variant="destructive" className="ml-2">Locked</Badge>}</TableCell>
                           <TableCell>{candidate.emailVerifiedAt ? <span className="text-green-700">Verified</span> : <span className="text-muted-foreground">Unverified</span>}</TableCell>
                           <TableCell><div className="text-sm">{candidate.postCount ?? 0} posts · {candidate.threadCount ?? 0} threads</div><div className="text-xs text-muted-foreground">Last active: {formatDate(candidate.lastActiveAt)}</div></TableCell>
                           <TableCell>
                             <div className="flex flex-wrap justify-end gap-2">
                               <Button size="sm" variant="outline" onClick={() => setSelectedUserId(candidate.id)}>Inspect</Button>
-                              {candidate.accountStatus === "active" ? (
-                                <Button size="sm" variant="destructive" onClick={() => setAction({ type: "status", user: candidate, value: "suspended" })}>Suspend</Button>
-                              ) : (
-                                <Button size="sm" onClick={() => setAction({ type: "status", user: candidate, value: "active" })}>Restore</Button>
+                              {!(access?.isOwner && candidate.id === user?.id) && !isArchivedAdminUser(candidate) && (
+                                candidate.accountStatus === "active" ? (
+                                  <Button size="sm" variant="destructive" onClick={() => setAction({ type: "status", user: candidate, value: "suspended" })}>Suspend</Button>
+                                ) : (
+                                  <Button size="sm" onClick={() => setAction({ type: "status", user: candidate, value: "active" })}>Restore</Button>
+                                )
                               )}
                               {candidate.lockedUntil && new Date(candidate.lockedUntil) > new Date() && <Button size="sm" variant="outline" onClick={() => setAction({ type: "unlock", user: candidate })}><LockKeyholeOpen className="mr-1 h-4 w-4" />Unlock</Button>}
-                              {access?.isOwner && candidate.id !== user?.id && (
+                              {access?.isOwner && candidate.id !== user?.id && !isArchivedAdminUser(candidate) && (
                                 <Button size="sm" variant="outline" onClick={() => setAction({ type: "role", user: candidate, value: candidate.role === "admin" ? "member" : "admin" })}>{candidate.role === "admin" ? "Remove admin" : "Make admin"}</Button>
                               )}
                             </div>
@@ -450,13 +529,218 @@ export default function OwnerAdminDashboard() {
             <Card><CardHeader><CardTitle className="flex items-center gap-2"><Shield className="h-5 w-5" />Security controls</CardTitle><CardDescription>Version {systemQuery.data?.version || overview?.version || "unknown"} · {systemQuery.data?.environment || "unknown"}</CardDescription></CardHeader><CardContent>{Object.entries(systemQuery.data?.security || {}).map(([key, value]) => <ServiceRow key={key} label={key} value={value} />)}</CardContent></Card>
           </TabsContent>
 
+
+          <TabsContent value="merlin" className="space-y-6">
+            <div className="flex items-center gap-3">
+              <Bot className="h-7 w-7 text-purple-700" />
+              <div>
+                <h2 className="text-2xl font-bold">Merlin AI Control Board</h2>
+                <p className="text-sm text-muted-foreground">
+                  Provider routing, usage, cost, failures and tool utilization.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <MetricCard
+                title="Requests today"
+                value={merlinControlQuery.data?.today.requests ?? 0}
+                note={`${merlinControlQuery.data?.today.failures ?? 0} failures`}
+                icon={Activity}
+              />
+              <MetricCard
+                title="Tool calls today"
+                value={merlinControlQuery.data?.today.toolCalls ?? 0}
+                note="Live data handled without an AI model"
+                icon={Database}
+              />
+              <MetricCard
+                title="AI cost today"
+                value={`$${(merlinControlQuery.data?.today.estimatedCostUsd ?? 0).toFixed(4)}`}
+                note="Estimated provider cost"
+                icon={Bot}
+              />
+              <MetricCard
+                title="AI cost this month"
+                value={`$${(merlinControlQuery.data?.month.estimatedCostUsd ?? 0).toFixed(2)}`}
+                note={
+                  merlinControlQuery.data?.budget.monthlyBudgetUsd
+                    ? `Budget $${merlinControlQuery.data.budget.monthlyBudgetUsd.toFixed(2)}`
+                    : "No monthly ceiling configured"
+                }
+                icon={Activity}
+              />
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Merlin routing</CardTitle>
+                  <CardDescription>
+                    Users see Merlin. Providers remain infrastructure.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between border-b pb-3">
+                    <span className="font-medium">Primary AI</span>
+                    <Badge>{merlinControlQuery.data?.routing.primaryProvider ?? "Unknown"}</Badge>
+                  </div>
+
+                  <div className="flex items-center justify-between border-b pb-3">
+                    <span className="font-medium">Secondary AI</span>
+                    <Badge variant="secondary">
+                      {merlinControlQuery.data?.routing.secondaryProvider ?? "Unknown"}
+                    </Badge>
+                  </div>
+
+                  <div className="flex items-center justify-between border-b pb-3">
+                    <span className="font-medium">Gemini multimedia</span>
+                    <Badge
+                      variant={
+                        merlinControlQuery.data?.routing.geminiEnabled
+                          ? "default"
+                          : "destructive"
+                      }
+                    >
+                      {merlinControlQuery.data?.routing.geminiEnabled
+                        ? "Enabled"
+                        : "Disabled"}
+                    </Badge>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">Automatic media routing</span>
+                    <Badge variant="secondary">
+                      {merlinControlQuery.data?.routing.automaticMediaRouting
+                        ? "On"
+                        : "Off"}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Monthly meter</CardTitle>
+                  <CardDescription>
+                    Merlin usage against the configured AI budget.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <div className="flex justify-between">
+                    <span>Requests</span>
+                    <strong>{merlinControlQuery.data?.month.requests ?? 0}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Input tokens</span>
+                    <strong>{(merlinControlQuery.data?.month.inputTokens ?? 0).toLocaleString()}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Output tokens</span>
+                    <strong>{(merlinControlQuery.data?.month.outputTokens ?? 0).toLocaleString()}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Tool calls</span>
+                    <strong>{merlinControlQuery.data?.month.toolCalls ?? 0}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Failures</span>
+                    <strong>{merlinControlQuery.data?.month.failures ?? 0}</strong>
+                  </div>
+                  <div className="flex justify-between border-t pt-3">
+                    <span>Estimated cost</span>
+                    <strong>
+                      ${(merlinControlQuery.data?.month.estimatedCostUsd ?? 0).toFixed(4)}
+                    </strong>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Provider utilization</CardTitle>
+                <CardDescription>
+                  Month-to-date usage by provider and model.
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Provider</TableHead>
+                      <TableHead>Model</TableHead>
+                      <TableHead>Requests</TableHead>
+                      <TableHead>Input</TableHead>
+                      <TableHead>Output</TableHead>
+                      <TableHead>Failures</TableHead>
+                      <TableHead>Cost</TableHead>
+                    </TableRow>
+                  </TableHeader>
+
+                  <TableBody>
+                    {(merlinControlQuery.data?.providers || []).map((provider) => (
+                      <TableRow key={`${provider.provider}-${provider.model}`}>
+                        <TableCell className="font-medium">
+                          {provider.provider}
+                        </TableCell>
+                        <TableCell>{provider.model}</TableCell>
+                        <TableCell>{provider.requests}</TableCell>
+                        <TableCell>{provider.inputTokens.toLocaleString()}</TableCell>
+                        <TableCell>{provider.outputTokens.toLocaleString()}</TableCell>
+                        <TableCell>{provider.failures}</TableCell>
+                        <TableCell>${provider.estimatedCostUsd.toFixed(4)}</TableCell>
+                      </TableRow>
+                    ))}
+
+                    {!merlinControlQuery.data?.providers?.length && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-muted-foreground">
+                          No Merlin usage recorded this month.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            <Alert>
+              <Shield className="h-4 w-4" />
+              <AlertTitle>Provider-neutral architecture</AlertTitle>
+              <AlertDescription>
+                Merlin owns the user experience. Primary and secondary providers
+                are replaceable infrastructure and may change without changing
+                the Merlin brand.
+              </AlertDescription>
+            </Alert>
+          </TabsContent>
+
           <TabsContent value="ai" className="space-y-6">
             <Alert><Bot className="h-4 w-4" /><AlertTitle>Read-only administrator analyst</AlertTitle><AlertDescription>This AI receives a sanitized server-built snapshot. It has no tools and cannot suspend users, change roles, edit settings, send messages, or execute commands.</AlertDescription></Alert>
             <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
               <Card>
                 <CardHeader><CardTitle>Ask about platform operations</CardTitle><CardDescription>Useful for summaries, trends, risk review, and recommendations based on current dashboard data.</CardDescription></CardHeader>
                 <CardContent className="space-y-4">
-                  <Textarea rows={5} placeholder="Example: Summarize authentication risks from the last 24 hours and recommend what I should review." value={aiQuestion} onChange={(event) => setAiQuestion(event.target.value)} />
+                  <Textarea
+                    rows={5}
+                    placeholder="Example: Summarize authentication risks from the last 24 hours and recommend what I should review."
+                    value={aiQuestion}
+                    onChange={(event) => setAiQuestion(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (
+                        event.key === "Enter" &&
+                        !event.shiftKey &&
+                        aiQuestion.trim() &&
+                        !aiMutation.isPending &&
+                        aiStatusQuery.data?.enabled
+                      ) {
+                        event.preventDefault();
+                        aiMutation.mutate();
+                      }
+                    }}
+                  />
                   <Button disabled={!aiQuestion.trim() || aiMutation.isPending || !aiStatusQuery.data?.enabled} onClick={() => aiMutation.mutate()}>{aiMutation.isPending ? "Analyzing…" : "Analyze read-only snapshot"}</Button>
                   {aiAnswer && <div className="whitespace-pre-wrap rounded-md border bg-background p-4 text-sm leading-relaxed">{aiAnswer}</div>}
                 </CardContent>
