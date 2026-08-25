@@ -13,8 +13,8 @@ import {
   Users,
 } from "lucide-react";
 import {
-  Line,
-  LineChart,
+  Area,
+  AreaChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -44,11 +44,30 @@ interface Summary {
   visitorToMemberRate: number;
 }
 
-interface TrendPoint extends Summary {
-  monthNumber: number;
-  month: string;
-  initial: string;
+interface TrendPoint {
+  bucket: string;
+  label: string;
+  uniqueVisitors: number;
+  sessions: number;
+  pageviews: number;
   onlinePeak: number;
+  newVisitors: number;
+  returningVisitors: number;
+  guestSessions: number;
+  memberSessions: number;
+  signupStarted: number;
+  signupCompleted: number;
+  emailVerified: number;
+  activeMembers: number;
+  visitorToSignupRate: number;
+  signupToVerifiedRate: number;
+  visitorToMemberRate: number;
+}
+
+interface OperatingTrend {
+  daily: TrendPoint[];
+  weekly: TrendPoint[];
+  monthly: TrendPoint[];
 }
 
 interface AcquisitionRow {
@@ -86,7 +105,7 @@ interface MarketingTrafficData {
   currentYear: number;
   autoRefreshSeconds: number;
   summary: Summary;
-  yearTrend: TrendPoint[];
+  trend: OperatingTrend;
   acquisition: AcquisitionRow[];
   campaigns: CampaignRow[];
   landingPages: LandingRow[];
@@ -114,7 +133,28 @@ function UpdatedStamp({ generatedAt }: { generatedAt?: string }) {
   );
 }
 
-type TrendKey = keyof TrendPoint;
+type TrendKey = Exclude<keyof TrendPoint, "bucket" | "label">;
+
+function metricValue(point: TrendPoint, dataKey: TrendKey): number {
+  return Number(point[dataKey] ?? 0);
+}
+
+function formatMetric(value: number, percent: boolean): string {
+  return percent ? formatPercent(value) : formatNumber(value);
+}
+
+function formatDelta(current: number, previous: number | null): string {
+  if (
+    previous === null ||
+    !Number.isFinite(previous) ||
+    previous === 0
+  ) {
+    return "—";
+  }
+
+  const delta = ((current - previous) / Math.abs(previous)) * 100;
+  return `${delta >= 0 ? "+" : ""}${delta.toFixed(0)}%`;
+}
 
 function MetricTrendPane({
   title,
@@ -128,60 +168,163 @@ function MetricTrendPane({
   title: string;
   value: number;
   note: string;
-  trend: TrendPoint[];
+  trend: OperatingTrend;
   dataKey: TrendKey;
   percent?: boolean;
   icon: typeof Users;
 }) {
+  const weekly = trend.weekly.slice(-5);
+  const weeklyPadding = Math.max(0, 5 - weekly.length);
+  const weeklySlots: Array<TrendPoint | null> = [
+    ...Array.from({ length: weeklyPadding }, () => null),
+    ...weekly,
+  ];
+
+  const monthOffset = Math.max(0, trend.monthly.length - 3);
+  const months = trend.monthly.slice(monthOffset);
+
   return (
     <Card className="overflow-hidden">
       <CardContent className="p-4">
-        <div className="mb-1 flex items-center justify-between gap-3">
-          <div className="text-sm font-medium text-muted-foreground">{title}</div>
-          <Icon className="h-4 w-4 text-red-600" />
-        </div>
-
-        <div className="grid min-h-[102px] grid-cols-[minmax(84px,0.75fr)_minmax(145px,1.25fr)] items-center gap-3">
+        <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="text-3xl font-bold tracking-tight">
-              {percent ? formatPercent(value) : formatNumber(value)}
+            <div className="text-sm font-medium text-muted-foreground">
+              {title}
             </div>
-            <div className="mt-2 text-[11px] leading-snug text-muted-foreground">{note}</div>
+            <div className="mt-1 text-3xl font-bold tracking-tight">
+              {formatMetric(value, percent)}
+            </div>
+            <div className="mt-1 text-[11px] leading-snug text-muted-foreground">
+              {note}
+            </div>
           </div>
 
-          <div className="min-w-0">
-            <div className="h-[88px] w-full text-red-600">
+          <Icon className="mt-1 h-4 w-4 shrink-0 text-red-600" />
+        </div>
+
+        <div className="mt-4 border-t pt-3">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Weekly
+            </span>
+            <span className="text-[10px] text-muted-foreground">
+              W5 = current week
+            </span>
+          </div>
+
+          <div className="grid grid-cols-5 gap-1">
+            {weeklySlots.map((point, index) => {
+              const seriesIndex = index - weeklyPadding;
+              const previous =
+                seriesIndex > 0 ? weekly[seriesIndex - 1] : null;
+              const current = point ? metricValue(point, dataKey) : null;
+              const previousValue = previous
+                ? metricValue(previous, dataKey)
+                : null;
+
+              return (
+                <div
+                  key={`week-${index}`}
+                  className="min-w-0 rounded border bg-background px-1 py-2 text-center"
+                >
+                  <div className="text-[10px] font-semibold text-muted-foreground">
+                    W{index + 1}
+                  </div>
+                  <div className="mt-1 truncate text-xs font-bold">
+                    {current === null
+                      ? "—"
+                      : formatMetric(current, percent)}
+                  </div>
+                  <div className="mt-1 text-[10px] text-muted-foreground">
+                    {current === null
+                      ? "—"
+                      : formatDelta(current, previousValue)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="mt-3 border-t pt-3">
+          <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Monthly rollup
+          </div>
+
+          <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px]">
+            {months.length === 0 ? (
+              <span className="text-muted-foreground">
+                Insufficient monthly history
+              </span>
+            ) : (
+              months.map((point, index) => {
+                const sourceIndex = monthOffset + index;
+                const previous =
+                  sourceIndex > 0
+                    ? trend.monthly[sourceIndex - 1]
+                    : null;
+                const current = metricValue(point, dataKey);
+                const previousValue = previous
+                  ? metricValue(previous, dataKey)
+                  : null;
+
+                return (
+                  <span key={point.bucket} className="whitespace-nowrap">
+                    <span className="font-medium">{point.label}</span>{" "}
+                    {formatMetric(current, percent)}{" "}
+                    <span className="text-muted-foreground">
+                      {formatDelta(current, previousValue)}
+                    </span>
+                  </span>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        <div className="mt-3 border-t pt-3">
+          {trend.daily.length >= 2 ? (
+            <div className="h-[105px] w-full text-red-700">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={trend} margin={{ top: 7, right: 4, bottom: 0, left: 4 }}>
+                <AreaChart
+                  data={trend.daily}
+                  margin={{ top: 6, right: 4, bottom: 0, left: 4 }}
+                >
                   <XAxis
-                    dataKey="initial"
-                    interval={0}
+                    dataKey="label"
+                    interval="preserveStartEnd"
                     axisLine={false}
                     tickLine={false}
                     tick={{ fontSize: 9 }}
-                    height={17}
+                    minTickGap={24}
+                    height={18}
                   />
                   <Tooltip
                     separator=": "
-                    labelFormatter={(_label, payload) => payload?.[0]?.payload?.month || ""}
                     formatter={(raw: any) => [
-                      percent ? formatPercent(Number(raw)) : formatNumber(Number(raw)),
+                      formatMetric(Number(raw), percent),
                       title,
                     ]}
                   />
-                  <Line
+                  <Area
                     type="monotone"
                     dataKey={dataKey as string}
                     stroke="currentColor"
-                    strokeWidth={2.2}
+                    fill="currentColor"
+                    fillOpacity={0.18}
+                    strokeWidth={2}
                     dot={false}
                     activeDot={{ r: 3 }}
                     isAnimationActive={false}
                   />
-                </LineChart>
+                </AreaChart>
               </ResponsiveContainer>
             </div>
-          </div>
+          ) : (
+            <div className="flex min-h-[34px] items-center justify-center py-2 text-[11px] text-muted-foreground">
+              Trend begins after additional daily history is collected
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -249,14 +392,14 @@ export default function MarketingTrafficPanel() {
 
   const data = query.data;
   const s = data.summary;
-  const trend = data.yearTrend || [];
+  const trend = data.trend || { daily: [], weekly: [], monthly: [] };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold">Mkt, Acquisition, Traffic Analysis</h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-white/70">
             Marketing acquisition, traffic, attribution, campaign effectiveness and member conversion.
           </p>
         </div>
@@ -281,13 +424,13 @@ export default function MarketingTrafficPanel() {
         <div className="mb-3 flex items-end justify-between gap-4">
           <div>
             <h3 className="text-base font-semibold">Operating trends</h3>
-            <p className="text-xs text-muted-foreground">
-              Current value on the left; {data.currentYear} Jan–Dec trend inside each pane.
+            <p className="text-xs text-white/70">
+              Current value follows the selected range. W5 is the current week; weekly deltas compare with the prior week and the filled chart shows daily history.
             </p>
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <MetricTrendPane
             title="Unique Visitors"
             value={s.uniqueVisitors}
@@ -315,7 +458,7 @@ export default function MarketingTrafficPanel() {
           <MetricTrendPane
             title="Online Now"
             value={s.onlineNow}
-            note="Current 5-minute activity · chart = monthly peak"
+            note="Current 5-minute activity · chart = daily peak"
             trend={trend}
             dataKey="onlinePeak"
             icon={Radio}

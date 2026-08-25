@@ -6,6 +6,7 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LoungeChatOverlay } from "@/components/lounge/LoungeChatOverlay";
+import { RotatingLoungeBackground } from "@/components/lounge/RotatingLoungeBackground";
 import { useLoungeRoom } from "@/hooks/useLoungeRoom";
 import { useAuth } from "@/hooks/useAuth";
 import { forumCategoryPath } from "@/lib/forumNavigation";
@@ -79,7 +80,15 @@ export default function ForumTopicPage() {
       <Header />
 
       <main className="relative min-h-[calc(100vh-4rem)] overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-900 via-slate-950 to-black" />
+        <RotatingLoungeBackground
+          variant={
+            category?.slug === "football"
+              ? "football"
+              : category?.slug?.includes("basketball")
+                ? "basketball"
+                : "cougar"
+          }
+        />
 
         <div className="relative z-10 mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
           {topicLoading || !topic ? (
@@ -113,49 +122,6 @@ export default function ForumTopicPage() {
                   {topic.title}
                 </span>
               </nav>
-
-              <section className="mb-4 rounded-xl border border-white/10 bg-black/50 px-5 py-4 backdrop-blur-md">
-                <div className="flex flex-wrap items-center gap-3">
-                  <h1 className="text-xl font-semibold sm:text-2xl">
-                    {topic.title}
-                  </h1>
-
-                  {topic.isPinned && (
-                    <Badge variant="secondary">
-                      Pinned
-                    </Badge>
-                  )}
-
-                  {topic.isLocked && (
-                    <Badge
-                      variant="outline"
-                      className="border-amber-400/50 text-amber-200"
-                    >
-                      Locked
-                    </Badge>
-                  )}
-
-                  <span className="ml-auto text-xs text-white/50">
-                    {discussion.occupants.length} online
-                  </span>
-                </div>
-
-                <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-white/55">
-                  <span>
-                    {category?.name || "CoogsNation Discussion"}
-                  </span>
-
-                  <span>•</span>
-
-                  <span>
-                    {topic.replyCount ?? 0} replies
-                  </span>
-
-                  <span>•</span>
-
-                  <span>Live discussion</span>
-                </div>
-              </section>
 
               {!isAuthenticated && (
                 <section className="rounded-xl border border-amber-300/20 bg-black/50 p-5 text-center backdrop-blur-md">

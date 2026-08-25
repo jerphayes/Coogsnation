@@ -51,6 +51,7 @@ import { registerVenueRoutes } from "./venue/routes";
 import { registerMembershipRegistrationRoutes } from "./membershipRegistration";
 import { registerTrafficAnalyticsRoutes } from "./trafficAnalytics";
 import { registerMarketingTrafficPanelRoutes } from "./marketingTrafficPanel";
+import { registerBusinessControlPanelRoutes } from "./businessControlPanels";
 import { registerSportsHttpRoutes, registerSportsSocketNamespace, startSportsFactsService } from "./sports/routes";
 import { seedSportsTickerDemo } from "./sports/devSeed";
 
@@ -231,6 +232,7 @@ const aiService = getAIService();
   registerMembershipRegistrationRoutes(app);
   registerTrafficAnalyticsRoutes(app);
   registerMarketingTrafficPanelRoutes(app);
+  registerBusinessControlPanelRoutes(app);
 
   // Optional social-login aliases. Core email/password authentication is always available.
   app.get("/auth/linkedin", (req, res) => {

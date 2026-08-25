@@ -39,6 +39,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useLoungeRoom } from "@/hooks/useLoungeRoom";
 import { LoungeChatOverlay } from "@/components/lounge/LoungeChatOverlay";
+import { RotatingLoungeBackground } from "@/components/lounge/RotatingLoungeBackground";
 import { VENUE_API, type VenueUserContext } from "@shared/venue";
 import { getLoungeRoom } from "@shared/lounge";
 import type { VenueOption, VenueSession } from "@/venue-engine";
@@ -88,42 +89,9 @@ export default function CoogpawsChat() {
   // Active Coog Paws Lounge is transitioning to the 2D visual-environment design.
   const render3d = false;
 
-  // Clock-based A → B → C rotation. Every visitor sees the same room.
-  const loungeBackgrounds = [
-    "/coogpaws/lounge/rotation/A.png",
-    "/coogpaws/lounge/rotation/B.png",
-    "/coogpaws/lounge/rotation/C.png",
-  ];
-
-  const currentLoungeBackground = () =>
-    loungeBackgrounds[
-      Math.floor(Date.now() / 3_600_000) % loungeBackgrounds.length
-    ];
-
-  const [loungeBackground, setLoungeBackground] =
-    useState(currentLoungeBackground);
-
-  useEffect(() => {
-    const updateBackground = () =>
-      setLoungeBackground(currentLoungeBackground());
-
-    let intervalId: number | undefined;
-
-    const timeoutId = window.setTimeout(() => {
-      updateBackground();
-      intervalId = window.setInterval(
-        updateBackground,
-        3_600_000,
-      );
-    }, 3_600_000 - (Date.now() % 3_600_000) + 100);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-      if (intervalId !== undefined) {
-        window.clearInterval(intervalId);
-      }
-    };
-  }, []);
+  // The active 2D visual environment is shared with forum lounges.
+  // One implementation prevents the forum and Coog Paws visuals from
+  // drifting apart again.
 
   /* Chat runs independently of the renderer, and starts as soon as the member
    * is authenticated. A failed venue must never take the room down with it. */
@@ -309,18 +277,7 @@ export default function CoogpawsChat() {
         {/* Active 2D Lounge environment.
             The member + conversation are now the centerpiece.
             3D is preserved separately under client/src/legacy/coogpaws-3d/. */}
-        {!render3d && (
-          <div
-            className="absolute inset-0 bg-black bg-cover bg-center bg-no-repeat"
-            style={{
-              backgroundImage:
-                `linear-gradient(rgba(0,0,0,.15), rgba(0,0,0,.30)), url('${loungeBackground}')`,
-            }}
-            aria-label="Coog Paws Lounge"
-          >
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_25%,rgba(0,0,0,.18)_62%,rgba(0,0,0,.55)_100%)]" />
-          </div>
-        )}
+        {!render3d && <RotatingLoungeBackground variant="cougar" />}
 
         {venueError && render3d && (
           <div className="absolute inset-0 bg-black" />

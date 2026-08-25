@@ -37,6 +37,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import MarketingTrafficPanel from "@/pages/MarketingTrafficPanel";
+import {
+  MerchandiseSalesPanel,
+  AffiliatePartnersPanel,
+  GetEmControlPanel,
+} from "@/pages/BusinessControlPanels";
 
 interface AdminUser {
   id: string;
@@ -403,9 +408,12 @@ export default function OwnerAdminDashboard() {
         )}
 
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-4 lg:grid-cols-7">
+          <TabsList className="flex h-auto w-full flex-wrap items-center justify-between gap-x-3 gap-y-1">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="marketing">Mkt / Acquisition / Traffic</TabsTrigger>
+            <TabsTrigger value="merchandise">Merch / Sales</TabsTrigger>
+            <TabsTrigger value="affiliates">Affiliate / Partners</TabsTrigger>
+            <TabsTrigger value="getem">Get'em / Pick'em</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="audit">Audit</TabsTrigger>
             <TabsTrigger value="system">System</TabsTrigger>
@@ -446,6 +454,18 @@ export default function OwnerAdminDashboard() {
 
           <TabsContent value="marketing" className="space-y-6">
             <MarketingTrafficPanel />
+          </TabsContent>
+
+          <TabsContent value="merchandise" className="space-y-6">
+            <MerchandiseSalesPanel />
+          </TabsContent>
+
+          <TabsContent value="affiliates" className="space-y-6">
+            <AffiliatePartnersPanel />
+          </TabsContent>
+
+          <TabsContent value="getem" className="space-y-6">
+            <GetEmControlPanel />
           </TabsContent>
 
           <TabsContent value="users" className="space-y-4">

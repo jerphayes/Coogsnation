@@ -98,81 +98,127 @@ async function loadSummary(range: AnalysisRange) {
   };
 }
 
-async function loadYearTrend() {
-  const result = await pool.query(`
-    WITH months AS (
-      SELECT
-        gs AS month_local,
-        EXTRACT(MONTH FROM gs)::int AS month_number,
-        to_char(gs, 'Mon') AS month
-      FROM generate_series(
-        date_trunc('year', now() AT TIME ZONE '${BUSINESS_TIME_ZONE}'),
-        date_trunc('year', now() AT TIME ZONE '${BUSINESS_TIME_ZONE}') + interval '11 months',
-        interval '1 month'
-      ) AS gs
+type TrendGrain = "day" | "week" | "month";
+
+const TREND_CONFIG: Record<
+  TrendGrain,
+  { lookback: string; step: string; label: string }
+> = {
+  day: { lookback: "34 days", step: "1 day", label: "Mon DD" },
+  week: { lookback: "4 weeks", step: "1 week", label: "Mon DD" },
+  month: { lookback: "5 months", step: "1 month", label: "Mon YYYY" },
+};
+
+function buildTrendSql(grain: TrendGrain): string {
+  const config = TREND_CONFIG[grain];
+
+  return `
+    WITH data_start AS (
+      SELECT LEAST(
+        COALESCE((SELECT MIN(started_at) FROM ngf_analytics_sessions), now()),
+        COALESCE((SELECT MIN(occurred_at) FROM ngf_analytics_events), now()),
+        COALESCE((SELECT MIN(first_seen_at) FROM ngf_analytics_visitors), now())
+      ) AS first_at
     ),
-    mb AS (
+    params AS (
       SELECT
-        month_local,
-        month_number,
-        month,
-        month_local AT TIME ZONE '${BUSINESS_TIME_ZONE}' AS start_at,
-        (month_local + interval '1 month') AT TIME ZONE '${BUSINESS_TIME_ZONE}' AS end_at
-      FROM months
+        now() AT TIME ZONE '${BUSINESS_TIME_ZONE}' AS now_local,
+        first_at AT TIME ZONE '${BUSINESS_TIME_ZONE}' AS first_local
+      FROM data_start
+    ),
+    buckets AS (
+      SELECT
+        series.bucket_local,
+        series.bucket_local AT TIME ZONE '${BUSINESS_TIME_ZONE}' AS start_at,
+        (series.bucket_local + interval '${config.step}')
+          AT TIME ZONE '${BUSINESS_TIME_ZONE}' AS end_at
+      FROM params
+      CROSS JOIN LATERAL generate_series(
+        GREATEST(
+          date_trunc('${grain}', params.first_local),
+          date_trunc('${grain}', params.now_local) - interval '${config.lookback}'
+        ),
+        date_trunc('${grain}', params.now_local),
+        interval '${config.step}'
+      ) AS series(bucket_local)
     ),
     session_stats AS (
       SELECT
-        mb.month_number,
+        b.bucket_local,
         COUNT(DISTINCT s.visitor_id)::int AS unique_visitors,
         COUNT(s.session_id)::int AS sessions,
         COUNT(DISTINCT s.visitor_id) FILTER (
-          WHERE v.first_seen_at >= mb.start_at AND v.first_seen_at < mb.end_at
+          WHERE v.first_seen_at >= b.start_at
+            AND v.first_seen_at < b.end_at
         )::int AS new_visitors,
         COUNT(DISTINCT s.visitor_id) FILTER (
-          WHERE v.first_seen_at < mb.start_at
+          WHERE v.first_seen_at < b.start_at
         )::int AS returning_visitors,
-        COUNT(s.session_id) FILTER (WHERE s.user_id IS NULL)::int AS guest_sessions,
-        COUNT(s.session_id) FILTER (WHERE s.user_id IS NOT NULL)::int AS member_sessions
-      FROM mb
+        COUNT(s.session_id) FILTER (
+          WHERE s.user_id IS NULL
+        )::int AS guest_sessions,
+        COUNT(s.session_id) FILTER (
+          WHERE s.user_id IS NOT NULL
+        )::int AS member_sessions
+      FROM buckets b
       LEFT JOIN ngf_analytics_sessions s
-        ON s.started_at >= mb.start_at AND s.started_at < mb.end_at
+        ON s.started_at >= b.start_at
+       AND s.started_at < b.end_at
       LEFT JOIN ngf_analytics_visitors v
         ON v.visitor_id = s.visitor_id
-      GROUP BY mb.month_number
+      GROUP BY b.bucket_local
     ),
     event_stats AS (
       SELECT
-        mb.month_number,
-        COUNT(*) FILTER (WHERE e.event_type = 'pageview')::int AS pageviews,
-        COUNT(DISTINCT e.visitor_id) FILTER (WHERE e.event_type = 'signup_started')::int AS signup_started,
-        COUNT(DISTINCT e.visitor_id) FILTER (WHERE e.event_type = 'signup_completed')::int AS signup_completed,
-        COUNT(DISTINCT COALESCE(e.user_id, e.visitor_id)) FILTER (WHERE e.event_type = 'email_verified')::int AS email_verified,
-        COUNT(DISTINCT COALESCE(e.user_id, e.visitor_id)) FILTER (WHERE e.event_type = 'member_activated')::int AS active_members
-      FROM mb
+        b.bucket_local,
+        COUNT(*) FILTER (
+          WHERE e.event_type = 'pageview'
+        )::int AS pageviews,
+        COUNT(DISTINCT e.visitor_id) FILTER (
+          WHERE e.event_type = 'signup_started'
+        )::int AS signup_started,
+        COUNT(DISTINCT e.visitor_id) FILTER (
+          WHERE e.event_type = 'signup_completed'
+        )::int AS signup_completed,
+        COUNT(DISTINCT COALESCE(e.user_id, e.visitor_id)) FILTER (
+          WHERE e.event_type = 'email_verified'
+        )::int AS email_verified,
+        COUNT(DISTINCT COALESCE(e.user_id, e.visitor_id)) FILTER (
+          WHERE e.event_type = 'member_activated'
+        )::int AS active_members
+      FROM buckets b
       LEFT JOIN ngf_analytics_events e
-        ON e.occurred_at >= mb.start_at AND e.occurred_at < mb.end_at
-      GROUP BY mb.month_number
+        ON e.occurred_at >= b.start_at
+       AND e.occurred_at < b.end_at
+      GROUP BY b.bucket_local
     ),
     presence_buckets AS (
       SELECT
-        mb.month_number,
-        date_bin('5 minutes', e.occurred_at, timestamptz '2001-01-01 00:00:00+00') AS bucket,
+        b.bucket_local,
+        date_bin(
+          '5 minutes',
+          e.occurred_at,
+          timestamptz '2001-01-01 00:00:00+00'
+        ) AS presence_bucket,
         COUNT(DISTINCT e.session_id)::int AS concurrent_sessions
-      FROM mb
+      FROM buckets b
       JOIN ngf_analytics_events e
-        ON e.occurred_at >= mb.start_at AND e.occurred_at < mb.end_at
+        ON e.occurred_at >= b.start_at
+       AND e.occurred_at < b.end_at
       WHERE e.event_type IN ('pageview', 'heartbeat')
         AND e.session_id IS NOT NULL
-      GROUP BY mb.month_number, bucket
+      GROUP BY b.bucket_local, 2
     ),
     peak_presence AS (
-      SELECT month_number, COALESCE(MAX(concurrent_sessions), 0)::int AS online_peak
+      SELECT
+        bucket_local,
+        COALESCE(MAX(concurrent_sessions), 0)::int AS online_peak
       FROM presence_buckets
-      GROUP BY month_number
+      GROUP BY bucket_local
     )
     SELECT
-      mb.month_number,
-      mb.month,
+      to_char(b.bucket_local, 'YYYY-MM-DD') AS bucket,
+      to_char(b.bucket_local, '${config.label}') AS label,
       COALESCE(ss.unique_visitors, 0)::int AS unique_visitors,
       COALESCE(ss.sessions, 0)::int AS sessions,
       COALESCE(es.pageviews, 0)::int AS pageviews,
@@ -185,22 +231,26 @@ async function loadYearTrend() {
       COALESCE(es.signup_completed, 0)::int AS signup_completed,
       COALESCE(es.email_verified, 0)::int AS email_verified,
       COALESCE(es.active_members, 0)::int AS active_members
-    FROM mb
-    LEFT JOIN session_stats ss USING (month_number)
-    LEFT JOIN event_stats es USING (month_number)
-    LEFT JOIN peak_presence pp USING (month_number)
-    ORDER BY mb.month_number
-  `);
+    FROM buckets b
+    LEFT JOIN session_stats ss USING (bucket_local)
+    LEFT JOIN event_stats es USING (bucket_local)
+    LEFT JOIN peak_presence pp USING (bucket_local)
+    ORDER BY b.bucket_local
+  `;
+}
+
+async function loadTrendSeries(grain: TrendGrain) {
+  const result = await pool.query(buildTrendSql(grain));
 
   return result.rows.map((row: any) => {
     const uniqueVisitors = num(row.unique_visitors);
     const signupCompleted = num(row.signup_completed);
     const emailVerified = num(row.email_verified);
     const activeMembers = num(row.active_members);
+
     return {
-      monthNumber: num(row.month_number),
-      month: row.month,
-      initial: String(row.month || "").slice(0, 1),
+      bucket: String(row.bucket || ""),
+      label: String(row.label || ""),
       uniqueVisitors,
       sessions: num(row.sessions),
       pageviews: num(row.pageviews),
@@ -218,6 +268,20 @@ async function loadYearTrend() {
       visitorToMemberRate: pct(activeMembers, uniqueVisitors),
     };
   });
+}
+
+async function loadOperatingTrend() {
+  const [daily, weekly, monthly] = await Promise.all([
+    loadTrendSeries("day"),
+    loadTrendSeries("week"),
+    loadTrendSeries("month"),
+  ]);
+
+  return {
+    daily,
+    weekly,
+    monthly,
+  };
 }
 
 async function loadAcquisition(range: AnalysisRange) {
@@ -421,9 +485,9 @@ async function loadReferrers(range: AnalysisRange) {
 }
 
 async function buildPanelData(range: AnalysisRange) {
-  const [summary, yearTrend, acquisition, campaigns, landingPages, referrers] = await Promise.all([
+  const [summary, trend, acquisition, campaigns, landingPages, referrers] = await Promise.all([
     loadSummary(range),
-    loadYearTrend(),
+    loadOperatingTrend(),
     loadAcquisition(range),
     loadCampaigns(range),
     loadLandingPages(range),
@@ -437,7 +501,7 @@ async function buildPanelData(range: AnalysisRange) {
     currentYear: new Date().getFullYear(),
     autoRefreshSeconds: 30,
     summary,
-    yearTrend,
+    trend,
     acquisition,
     campaigns,
     landingPages,

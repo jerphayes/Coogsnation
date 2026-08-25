@@ -24,6 +24,11 @@ import {
 } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type {
   LoungeChatMessage,
@@ -49,7 +54,7 @@ const STATE_DOT: Record<LoungeConnectionState, string> = {
 type WindowMode = "normal" | "docked-left" | "docked-right" | "maximized" | "minimized";
 type WindowRect = { x: number; y: number; width: number; height: number };
 
-const WINDOW_STORAGE_KEY = "coogpaws-chat-window-v1";
+const WINDOW_STORAGE_KEY = "coogsnation-lounge-window-v2";
 const WINDOW_GUTTER = 18;
 const DESKTOP_BREAKPOINT = 768;
 
@@ -117,10 +122,10 @@ export function LoungeChatOverlay(props: LoungeChatOverlayProps) {
   const defaultRect = (bounds: { width: number; height: number }) =>
     fitRect(
       {
-        x: bounds.width * 0.05,
+        x: bounds.width * 0.025,
         y: bounds.height * 0.06,
-        width: bounds.width * 0.9,
-        height: bounds.height * 0.88,
+        width: bounds.width * 0.42,
+        height: bounds.height * 0.82,
       },
       bounds,
     );
@@ -664,15 +669,37 @@ export function LoungeChatOverlay(props: LoungeChatOverlayProps) {
             >
               —
             </button>
-            <button
-              type="button"
-              onClick={() => toggleMode("maximized")}
-              className={windowButtonClasses}
-              title={windowMode === "maximized" ? "Restore" : "Maximize"}
-              aria-label={windowMode === "maximized" ? "Restore chat" : "Maximize chat"}
-            >
-              {windowMode === "maximized" ? "❐" : "□"}
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => toggleMode("maximized")}
+                  className={windowButtonClasses}
+                  aria-label={
+                    windowMode === "maximized"
+                      ? "Restore chat"
+                      : "Increase chat screen size"
+                  }
+                >
+                  {windowMode === "maximized" ? "❐" : "□"}
+                </button>
+              </TooltipTrigger>
+
+              <TooltipContent
+                side="bottom"
+                className="max-w-[230px] text-center"
+              >
+                <div className="text-xs font-semibold">
+                  {windowMode === "maximized"
+                    ? "Click to restore screen size"
+                    : "Click to INCREASE SCREEN SIZE"}
+                </div>
+
+                <div className="mt-0.5 text-[10px] opacity-80">
+                  DRAG EDGES TO CUSTOMIZE
+                </div>
+              </TooltipContent>
+            </Tooltip>
             <button
               type="button"
               onClick={resetWindowLayout}
