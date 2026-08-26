@@ -41,6 +41,7 @@ import CoogpawsChat from "@/pages/CoogpawsChat";
 import Login from "@/pages/Login";
 import LoginEmail from "@/pages/LoginEmail";
 import MemberDashboard from "@/pages/MemberDashboard";
+import GetEmPickEm from "@/pages/GetEmPickEm";
 import ResetPassword from "@/pages/ResetPassword";
 import { lazy, Suspense } from "react";
 import EmailVerificationPending from "@/pages/EmailVerificationPending";
@@ -96,6 +97,7 @@ function Router() {
         <Route path="/verify-email" component={EmailVerification} />
       <Route path="/member-dashboard" component={MemberDashboard} />
       <Route path="/live-sports" component={LiveSports} />
+      <Route path="/get-em" component={GetEmPickEm} />
       <Route path="/venues/:venueId">
         {(params) => (
           <Suspense fallback={<div className="p-8 text-center text-sm">Loading venue…</div>}>

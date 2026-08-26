@@ -57,6 +57,7 @@ import { registerTrafficAnalyticsRoutes } from "./trafficAnalytics";
 import { registerMarketingTrafficPanelRoutes } from "./marketingTrafficPanel";
 import { registerBusinessControlPanelRoutes } from "./businessControlPanels";
 import { registerSportsHttpRoutes, registerSportsSocketNamespace, startSportsFactsService } from "./sports/routes";
+import { registerGetEmRoutes } from "./getem/routes";
 import { seedSportsTickerDemo } from "./sports/devSeed";
 
 // Helper function to update user statistics and check for achievements with enhanced error handling
@@ -176,6 +177,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   const sessionMiddleware = await setupAuth(app);
   registerSportsHttpRoutes(app);
+  registerGetEmRoutes(app);
 
 const aiService = getAIService();
 

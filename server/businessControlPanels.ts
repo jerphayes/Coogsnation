@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { pool } from "./db";
 import { requireAdmin } from "./auth";
 import { getCommerceService } from "./commerce/service";
+import { sportsFactsEngine } from "./sports/engine";
 
 const BUSINESS_TIME_ZONE = "America/Chicago";
 
@@ -309,6 +310,165 @@ function commerceCapabilities() {
   }
 }
 
+
+async function loadGetEmPanel() {
+  const requiredTables = [
+    "getem_contests",
+    "getem_contest_members",
+    "getem_games",
+    "getem_picks",
+    "getem_rank_history",
+  ];
+
+  const exists = await Promise.all(
+    requiredTables.map((table) => tableExists(table)),
+  );
+
+  if (!exists.every(Boolean)) {
+    return {
+      engineConnected: false,
+      contests: {
+        upcoming: null,
+        live: null,
+        closed: null,
+        awaitingResults: null,
+      },
+      participation: {
+        totalPlayers: null,
+        activePlayers: null,
+        returningPlayers: null,
+        picksSubmitted: null,
+        completionRate: null,
+        correctPickRate: null,
+      },
+      dataFeedStatus: "Get'em database tables unavailable",
+      auditStatus: "Engine unavailable",
+    };
+  }
+
+  const result = await pool.query(`
+    WITH
+    contest_stats AS (
+      SELECT
+        COUNT(*) FILTER (WHERE status = 'open')::int AS upcoming,
+        COUNT(*) FILTER (WHERE status = 'live')::int AS live,
+        COUNT(*) FILTER (WHERE status = 'closed')::int AS closed,
+        COUNT(*) FILTER (WHERE status = 'locked')::int AS awaiting_results
+      FROM getem_contests
+    ),
+
+    participation_stats AS (
+      SELECT
+        COUNT(DISTINCT m.user_id)::int AS total_players,
+        COUNT(DISTINCT m.user_id)
+          FILTER (
+            WHERE c.status IN ('open', 'locked', 'live')
+          )::int AS active_players
+      FROM getem_contest_members m
+      JOIN getem_contests c
+        ON c.id = m.contest_id
+    ),
+
+    returning_stats AS (
+      SELECT COUNT(*)::int AS returning_players
+      FROM (
+        SELECT user_id
+        FROM getem_contest_members
+        GROUP BY user_id
+        HAVING COUNT(DISTINCT contest_id) >= 2
+      ) returning
+    ),
+
+    pick_stats AS (
+      SELECT COUNT(*)::int AS picks_submitted
+      FROM getem_picks
+    ),
+
+    expected_picks AS (
+      SELECT
+        COALESCE(
+          SUM(member_count * game_count),
+          0
+        )::bigint AS expected_total
+      FROM (
+        SELECT
+          c.id,
+          (
+            SELECT COUNT(*)
+            FROM getem_contest_members m
+            WHERE m.contest_id = c.id
+          ) AS member_count,
+          (
+            SELECT COUNT(*)
+            FROM getem_games g
+            WHERE g.contest_id = c.id
+          ) AS game_count
+        FROM getem_contests c
+        WHERE c.status IN ('open', 'locked', 'live')
+      ) counts
+    )
+
+    SELECT
+      cs.upcoming,
+      cs.live,
+      cs.closed,
+      cs.awaiting_results,
+      ps.total_players,
+      ps.active_players,
+      rs.returning_players,
+      pk.picks_submitted,
+      ep.expected_total
+    FROM contest_stats cs
+    CROSS JOIN participation_stats ps
+    CROSS JOIN returning_stats rs
+    CROSS JOIN pick_stats pk
+    CROSS JOIN expected_picks ep
+  `);
+
+  const row = result.rows[0] || {};
+
+  const picksSubmitted = num(row.picks_submitted);
+  const expectedTotal = num(row.expected_total);
+
+  const completionRate =
+    expectedTotal > 0
+      ? Math.round((picksSubmitted / expectedTotal) * 1000) / 10
+      : null;
+
+  const sportsSnapshot = sportsFactsEngine.snapshot();
+  const sportsGameCount = sportsSnapshot.games.length;
+
+  return {
+    engineConnected: true,
+
+    contests: {
+      upcoming: num(row.upcoming),
+      live: num(row.live),
+      closed: num(row.closed),
+      awaitingResults: num(row.awaiting_results),
+    },
+
+    participation: {
+      totalPlayers: num(row.total_players),
+      activePlayers: num(row.active_players),
+      returningPlayers: num(row.returning_players),
+      picksSubmitted,
+      completionRate,
+
+      // Cannot calculate honestly until scored-result state exists.
+      correctPickRate: null,
+    },
+
+    dataFeedStatus:
+      sportsGameCount > 0
+        ? `Connected • ${sportsGameCount} games in NGF sports feed`
+        : "Connected • no games currently loaded",
+
+    auditStatus:
+      "Get'em database connected • scoring audit ledger pending",
+  };
+}
+
 export function registerBusinessControlPanelRoutes(app: Express): void {
   app.get(
     "/api/admin/business-control-panels",
@@ -319,6 +479,34 @@ export function registerBusinessControlPanelRoutes(app: Express): void {
           loadCommercePanel("all"),
           loadCommercePanel("affiliate"),
         ]);
+
+        let getem;
+
+        try {
+          getem = await loadGetEmPanel();
+        } catch (error) {
+          console.error("[CONTROL ROOM] Get'em metrics failed:", error);
+
+          getem = {
+            engineConnected: false,
+            contests: {
+              upcoming: null,
+              live: null,
+              closed: null,
+              awaitingResults: null,
+            },
+            participation: {
+              totalPlayers: null,
+              activePlayers: null,
+              returningPlayers: null,
+              picksSubmitted: null,
+              completionRate: null,
+              correctPickRate: null,
+            },
+            dataFeedStatus: "Get'em metrics temporarily unavailable",
+            auditStatus: "Get'em metrics error isolated from business panels",
+          };
+        }
 
         return res.json({
           generatedAt: new Date().toISOString(),
@@ -361,25 +549,7 @@ export function registerBusinessControlPanelRoutes(app: Express): void {
             },
           },
 
-          getem: {
-            engineConnected: false,
-            contests: {
-              upcoming: null,
-              live: null,
-              closed: null,
-              awaitingResults: null,
-            },
-            participation: {
-              totalPlayers: null,
-              activePlayers: null,
-              returningPlayers: null,
-              picksSubmitted: null,
-              completionRate: null,
-              correctPickRate: null,
-            },
-            dataFeedStatus: "Not connected",
-            auditStatus: "Waiting for Get'em engine",
-          },
+          getem,
         });
       } catch (error) {
         console.error("[CONTROL ROOM] Business panels query failed:", error);

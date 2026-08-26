@@ -8,7 +8,7 @@ import { queryClient } from "@/lib/queryClient";
 import { FORUM_NAVIGATION, forumCategoryPath } from "@/lib/forumNavigation";
 import { LiveScoreTicker } from "@/components/LiveScoreTicker";
 
-export function Header() {
+export function Header({ leadingBrand }: { leadingBrand?: ReactNode } = {}) {
   const { isAuthenticated, user } = useAuth();
   const { isGuestMode, enableGuestMode } = useGuest();
   const [, navigate] = useLocation();
@@ -97,6 +97,7 @@ export function Header() {
     <header className="relative z-50 border-b border-gray-700 bg-gray-900">
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-6">
+          {leadingBrand}
           <Link href="/" className="flex items-center" onClick={closeMenus}>
             <img src={logoImage} alt="CoogsNation Logo" className="h-12 w-12 object-contain" />
           </Link>
@@ -228,6 +229,8 @@ export function Header() {
               )}
             </div>
 
+            <DesktopLink href="/get-em" testId="link-getem">Pick'Em</DesktopLink>
+
           </nav>
         </div>
 
@@ -333,6 +336,7 @@ export function Header() {
             <MobileLink href="/events" onNavigate={closeMenus}>Events</MobileLink>
             <MobileLink href="/store" onNavigate={closeMenus}>Shopping</MobileLink>
             <MobileLink href="/forums?tab=community" onNavigate={closeMenus}>Community</MobileLink>
+            <MobileLink href="/get-em" onNavigate={closeMenus}>Pick'Em</MobileLink>
             <MobileLink href="/terms" onNavigate={closeMenus}>Terms</MobileLink>
 
             <div className="my-2 border-t border-gray-700" />

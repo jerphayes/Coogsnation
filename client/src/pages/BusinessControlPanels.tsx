@@ -710,8 +710,9 @@ export function GetEmControlPanel() {
           <div>
             <div className="font-semibold">Get’em engine status</div>
             <div className="text-xs text-muted-foreground">
-              The Control Room panel is installed. Contest/game tables and
-              operational routes have not yet been connected.
+              {getem.engineConnected
+                ? "NGF Get'em core tables, contest routes, participation metrics and sports-feed status are connected."
+                : "Get'em engine database tables are unavailable."}
             </div>
           </div>
           <Badge variant="secondary">
@@ -726,49 +727,53 @@ export function GetEmControlPanel() {
         <MetricTile
           title="Upcoming Contests"
           value={getem.contests.upcoming}
-          note="Available after contest engine connection"
+          note={getem.engineConnected
+            ? "Open contests accepting players"
+            : "Contest engine unavailable"}
           icon={Trophy}
         />
         <MetricTile
           title="Live Contests"
           value={getem.contests.live}
-          note="Available after contest engine connection"
+          note={getem.engineConnected
+            ? "Contests currently in live status"
+            : "Contest engine unavailable"}
           icon={Trophy}
         />
         <MetricTile
           title="Active Players"
           value={getem.participation.activePlayers}
-          note="Participation feed not connected"
+          note="Distinct players in active Get'em contests"
           icon={Users}
         />
         <MetricTile
           title="Picks Submitted"
           value={getem.participation.picksSubmitted}
-          note="Pick ledger not connected"
+          note="Real picks currently stored in the Get'em ledger"
           icon={ClipboardList}
         />
         <MetricTile
           title="Returning Players"
           value={getem.participation.returningPlayers}
-          note="Retention calculation pending"
+          note="Players entered in two or more contests"
           icon={Users}
         />
         <MetricTile
           title="Completion %"
           value={getem.participation.completionRate}
-          note="Submitted picks ÷ contest entrants"
+          note="Submitted picks ÷ scheduled pick opportunities"
           icon={Trophy}
         />
         <MetricTile
           title="Correct Pick %"
           value={getem.participation.correctPickRate}
-          note="Scoring feed not connected"
+          note="Activates when result scoring is wired"
           icon={Trophy}
         />
         <MetricTile
           title="Awaiting Results"
           value={getem.contests.awaitingResults}
-          note={getem.dataFeedStatus}
+          note="Locked contests awaiting final scoring"
           icon={ClipboardList}
         />
       </div>
@@ -777,23 +782,43 @@ export function GetEmControlPanel() {
         <CardHeader>
           <CardTitle>Contest Operations</CardTitle>
           <CardDescription>
-            These controls activate when the Get’em contest engine is
-            connected.
+            NGF Get'em Core is connected. READY controls are usable now;
+            scoring and game-management controls activate as those layers
+            are completed.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {GETEM_CONTROLS.map((label) => (
-              <div
-                key={label}
-                className="rounded-md border bg-background p-3"
-              >
-                <div className="font-medium">{label}</div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  Pending engine connection
+            {GETEM_CONTROLS.map((label) => {
+              const createReady = label === "Create contest";
+              const feedReady = label === "Data-feed status";
+
+              return (
+                <div
+                  key={label}
+                  className="rounded-md border bg-background p-3"
+                >
+                  <div className="font-medium">{label}</div>
+
+                  {createReady ? (
+                    <a
+                      href="/get-em"
+                      className="mt-2 inline-flex rounded bg-red-700 px-3 py-2 text-xs font-bold text-white hover:bg-red-600"
+                    >
+                      OPEN PICK'EM
+                    </a>
+                  ) : feedReady ? (
+                    <div className="mt-1 text-xs font-medium text-green-700">
+                      READY • {getem.dataFeedStatus}
+                    </div>
+                  ) : (
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      Engine connected • next operations pass
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </CardContent>
       </Card>
