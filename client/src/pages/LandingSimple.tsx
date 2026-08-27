@@ -363,6 +363,12 @@ export default function Landing() {
 
   const sportsItems: MenuItem[] = [
     {
+      label: "Pick 'Em",
+      href: "/get-em",
+      icon: "🏆",
+      description: "Make your picks and compete with fellow Coogs.",
+    },
+    {
       label: "Football News",
       href: "/news?category=football",
       icon: "🏈",
@@ -684,6 +690,68 @@ export default function Landing() {
           margin-top: 30px;
         }
 
+        .cn-pickem-cta {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 52px;
+          padding: 0 24px;
+          border: 2px solid #facc15;
+          border-radius: 8px;
+          background: #facc15;
+          color: #111827 !important;
+          font-weight: 900;
+          letter-spacing: .035em;
+          text-decoration: none !important;
+          text-transform: uppercase;
+          box-shadow:
+            0 0 0 4px rgba(250,204,21,.16),
+            0 12px 30px rgba(250,204,21,.24);
+        }
+
+        .cn-pickem-cta:visited,
+        .cn-pickem-cta:hover,
+        .cn-pickem-cta:active {
+          color: #111827 !important;
+        }
+
+        .cn-live-cta {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 52px;
+          padding: 0 24px;
+          border: 2px solid #B9D9EB;
+          border-radius: 8px;
+          background: #B9D9EB;
+          color: #111827 !important;
+          font-weight: 900;
+          letter-spacing: .035em;
+          text-decoration: none !important;
+          text-transform: uppercase;
+          box-shadow:
+            0 0 0 4px rgba(185,217,235,.16),
+            0 12px 30px rgba(185,217,235,.22);
+        }
+
+        .cn-live-cta:visited,
+        .cn-live-cta:hover,
+        .cn-live-cta:active {
+          color: #111827 !important;
+        }
+
+        .cn-live-cta:hover {
+          background: #d7edf7;
+          border-color: #d7edf7;
+          transform: translateY(-1px);
+        }
+
+        .cn-pickem-cta:hover {
+          background: #fde047;
+          border-color: #fde047;
+          transform: translateY(-1px);
+        }
+
         .cn-primary,
         .cn-secondary {
           display: inline-flex;
@@ -977,6 +1045,8 @@ export default function Landing() {
             width: 100%;
           }
 
+          .cn-pickem-cta,
+          .cn-live-cta,
           .cn-primary,
           .cn-secondary {
             width: 100%;
@@ -1214,6 +1284,20 @@ export default function Landing() {
           </p>
 
           <div className="cn-hero-actions">
+            <a
+              href="/get-em"
+              className="cn-pickem-cta"
+            >
+              🏆 PICK 'EM — PLAY NOW
+            </a>
+
+            <a
+              href="/live-sports"
+              className="cn-live-cta"
+            >
+              📻 LISTEN LIVE — GAMEDAY ACTION
+            </a>
+
             <a
               href="/forums"
               className="cn-primary"
