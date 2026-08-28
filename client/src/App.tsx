@@ -32,7 +32,7 @@ import LifeHappens from "@/pages/LifeHappens";
 import LifeSolutions from "@/pages/LifeSolutions";
 import Community from "@/pages/Community";
 import Members from "@/pages/Members";
-import CampusMap from "@/pages/CampusMap";
+import LegalPolicies from "@/pages/LegalPolicies";
 import ProfileCompletion from "@/pages/ProfileCompletion";
 import JoinGate from "@/pages/JoinGate";
 import JoinEmail from "@/pages/JoinEmail";
@@ -84,7 +84,7 @@ function Router() {
       <Route path="/life-solutions" component={LifeSolutions} />
       <Route path="/community" component={Community} />
       <Route path="/members" component={Members} />
-      <Route path="/terms" component={CampusMap} />
+      <Route path="/terms" component={LegalPolicies} />
       <Route path="/complete-profile" component={ProfileCompletion} />
       <Route path="/login" component={Login} />
       <Route path="/login/email" component={LoginEmail} />
