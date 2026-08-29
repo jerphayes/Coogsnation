@@ -1,0 +1,30 @@
+# Generated/runtime material
+training/checkpoints/
+!training/checkpoints/.gitkeep
+training/runs/
+!training/runs/.gitkeep
+artifacts/
+!artifacts/.gitkeep
+logs/
+!logs/.gitkeep
+data/raw/
+!data/raw/.gitkeep
+memory/embeddings/
+!memory/embeddings/.gitkeep
+
+# Model weights and training artifacts
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.gguf
+*.npz
+*.npy
+
+# Secrets
+.env
+.env.
+.pem
+*.key
