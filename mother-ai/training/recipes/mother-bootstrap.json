@@ -1,0 +1,12 @@
+{
+  "recipe_id": "mother-bootstrap-v1",
+  "model_family": "OLMo-3",
+  "scale": "7B",
+  "mode": "dry-run",
+  "olmo_root": "/home/coogsnation/NGF-OLMo-core",
+  "official_recipe_reference": "src/scripts/official/OLMo3/OLMo-3-1025-7B-pretrain-1.py",
+  "dataset_manifest": "mother-ai/data/datasets/mother-bootstrap.json",
+  "checkpoint_target": "mother-ai/training/checkpoints/",
+  "evaluation_gate": "mother-ai/evals/gates/mother-v1.json",
+  "execution_target": "GPU_WORKER_NOT_CONFIGURED"
+}

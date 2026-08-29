@@ -1,0 +1,16 @@
+{
+  "name": "NGF Mother AI",
+  "model_family": "OLMo-3",
+  "initial_scale": "7B",
+  "olmo_root": "/home/coogsnation/NGF-OLMo-core",
+  "strategy": [
+    "continued-pretraining",
+    "instruction-tuning",
+    "evaluation-gated-improvement"
+  ],
+  "training_execution": "external-gpu-worker",
+  "production_execution": "separate-inference-service",
+  "weights_in_git": false,
+  "checkpoints_in_git": false,
+  "status": "bootstrap"
+}

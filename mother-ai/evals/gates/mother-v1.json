@@ -1,0 +1,39 @@
+{
+  "gate_id": "mother-v1",
+  "required_before_promotion": true,
+  "checks": [
+    {
+      "name": "training_loss_valid",
+      "required": true
+    },
+    {
+      "name": "validation_loss_valid",
+      "required": true
+    },
+    {
+      "name": "knowledge_accuracy",
+      "required": true
+    },
+    {
+      "name": "provenance_compliance",
+      "required": true
+    },
+    {
+      "name": "instruction_following",
+      "required": true
+    },
+    {
+      "name": "regression_suite",
+      "required": true
+    },
+    {
+      "name": "security_and_safety",
+      "required": true
+    },
+    {
+      "name": "tool_execution_accuracy",
+      "required": true
+    }
+  ],
+  "promotion_rule": "all_required_checks_pass"
+}
