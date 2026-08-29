@@ -1,0 +1,1 @@
+{"dataset_id":"ngf-mother-bootstrap-v1","status":"empty","purpose":"Initial NGF Mother AI training corpus","sources":[],"requirements":{"provenance_required":true,"license_status_required":true,"source_timestamp_required":true,"confidence_required":true,"human_review_when_required":true},"splits":{"train":null,"validation":null,"test":null}}
