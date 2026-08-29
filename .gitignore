@@ -15,3 +15,10 @@ server/public/
 *.tar.gz
 *.zip
 vite.config.ts.*
+
+# NGF Mother AI metadata manifests
+!mother-ai/data/
+!mother-ai/data/datasets/
+!mother-ai/data/datasets/.json
+!mother-ai/data/provenance/
+!mother-ai/data/provenance/.json
