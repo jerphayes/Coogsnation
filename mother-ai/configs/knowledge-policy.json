@@ -1,0 +1,24 @@
+{
+  "policy_id": "ngf-knowledge-v1",
+  "minimum_training_confidence": 0.85,
+  "requirements": {
+    "source_url": true,
+    "source_title": true,
+    "retrieved_at": true,
+    "license_status": true,
+    "confidence": true,
+    "provenance_id": true
+  },
+  "license_states": [
+    "approved",
+    "restricted",
+    "unknown",
+    "rejected"
+  ],
+  "promotion_rules": {
+    "approved_license_required": true,
+    "minimum_sources_for_critical_fact": 2,
+    "human_review_required_if_conflicting": true,
+    "human_review_required_if_license_unknown": true
+  }
+}

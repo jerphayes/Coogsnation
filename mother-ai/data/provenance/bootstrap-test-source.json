@@ -1,0 +1,14 @@
+{
+  "provenance_id": "ngf-bootstrap-001",
+  "source_type": "internal",
+  "source_title": "NGF Mother AI bootstrap architecture",
+  "source_url": "internal://mother-ai/bootstrap",
+  "publisher": "NGF",
+  "retrieved_at": "2026-08-29T00:00:00Z",
+  "published_at": null,
+  "license_status": "approved",
+  "license_notes": "NGF-created internal material",
+  "content_hash": "bootstrap",
+  "research_agent": "bootstrap",
+  "notes": "Pipeline validation source"
+}

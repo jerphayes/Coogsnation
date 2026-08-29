@@ -1,0 +1,10 @@
+{
+  "dataset_id": "ngf-mother-knowledge-v1",
+  "status": "bootstrap",
+  "approved_fact_count": 0,
+  "rejected_fact_count": 0,
+  "pending_review_count": 0,
+  "provenance_records": [],
+  "training_exports": [],
+  "last_built": null
+}
