@@ -1,0 +1,68 @@
+name: iOS Regression
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ios-regression:
+    runs-on: macos-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout NGF
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Verify Apple toolchain
+        run: |
+          xcodebuild -version
+          xcrun simctl list devices available
+
+      - name: Install Appium
+        run: npm install -g appium@3.7.0
+
+      - name: Install XCUITest driver
+        run: appium driver install xcuitest
+
+      - name: Verify iOS regression stack
+        run: |
+          appium --version
+          appium driver list --installed
+
+      - name: Start Appium
+        run: |
+          appium --log appium-ios.log >/dev/null 2>&1 &
+          sleep 5
+          curl --fail http://127.0.0.1:4723/status
+
+      - name: Detect native iOS project
+        id: ios
+        shell: bash
+        run: |
+          if find . -type d \( -name "*.xcodeproj" -o -name "*.xcworkspace" \) -print -quit | grep -q .; then
+            echo "native=true" >> "$GITHUB_OUTPUT"
+            echo "Native iOS project detected."
+          else
+            echo "native=false" >> "$GITHUB_OUTPUT"
+            echo "No native iOS project yet. Infrastructure verification only."
+          fi
+
+      - name: Native iOS regression hook
+        if: steps.ios.outputs.native == 'true'
+        run: echo "Native iOS project detected - Appium/XCUITest hook ready."
+
+      - name: Infrastructure readiness
+        if: steps.ios.outputs.native != 'true'
+        run: echo "iOS regression infrastructure ready - native app pending."
+
+      - name: Upload iOS regression artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-regression-results
+          path: appium-ios.log
+          if-no-files-found: ignore
