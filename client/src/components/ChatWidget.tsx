@@ -57,7 +57,7 @@ export function ChatWidget() {
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [conversationId] = useState(() => `conv_${crypto.randomUUID()}`);
+  const [conversationId] = useState(() => `conv_${typeof crypto.randomUUID === "function" ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2)}`);
   const [providerPreference, setProviderPreference] = useState<ProviderPreference>('auto');
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [mediaFile, setMediaFile] = useState<File | null>(null);

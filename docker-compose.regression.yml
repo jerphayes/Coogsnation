@@ -1,0 +1,30 @@
+services:
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.55.0-noble
+    working_dir: /workspace
+    volumes:
+      - ./regression/playwright:/workspace
+      - ./regression/results:/results
+    networks:
+      - frontend
+    profiles:
+      - regression
+  appium:
+    image: ngf-appium:3.7.0
+    ports:
+      - 127.0.0.1:4723:4723
+    networks:
+      - frontend
+    profiles:
+      - regression
+  selenium:
+    image: selenium/standalone-chromium:latest
+    shm_size: 2gb
+    networks:
+      - frontend
+    profiles:
+      - reserve
+networks:
+  frontend:
+    external: true
+    name: app_frontend
