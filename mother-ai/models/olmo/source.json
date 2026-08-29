@@ -1,0 +1,10 @@
+{
+"name": "NGF Mother AI OLMo Foundation",
+"fork": "https://github.com/jerphayes/NGF-OLMo-core",
+"upstream": "https://github.com/allenai/OLMo-core",
+"local_path": "/home/coogsnation/NGF-OLMo-core",
+"branch": "main",
+"role": "trainable model foundation for NGF Mother AI",
+"weights_in_git": false,
+"checkpoints_in_git": false
+}
