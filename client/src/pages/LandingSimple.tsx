@@ -1367,11 +1367,11 @@ export default function Landing() {
           />
 
           <p className="cn-site-footer-production">
-            NGF Productions
+ © 2026 NGF LLC. All rights reserved.
           </p>
 
           <p className="cn-site-footer-pending">
-            Copyright Pending • © 2026
+ CoogsNation is an independent fan site owned and operated by NGF LLC and is not affiliated with, endorsed by, sponsored by, or officially connected with the University of Houston.
           </p>
         </div>
       </footer>
