@@ -125,7 +125,7 @@ export default function LegalPolicies() {
 
         <h1 className="text-3xl font-bold">Terms & Privacy</h1>
         <p className="mb-6 mt-1 text-muted-foreground">
-          NGF LLC · CoogsNation.com
+          NGF Productions LLC · CoogsNation.com
         </p>
 
         <Tabs defaultValue="terms" className="w-full">

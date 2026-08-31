@@ -58,7 +58,7 @@ export function Footer() {
 
         <div className="mt-8 flex flex-col items-center justify-between border-t border-gray-700 pt-8 md:flex-row">
           <p className="text-sm text-gray-400">
-            © 2026 NGF LLC. All rights reserved.<br />CoogsNation is an independent fan site owned and operated by NGF LLC and is not affiliated with, endorsed by, sponsored by, or officially connected with the University of Houston.
+            © 2026 NGF Productions LLC. All rights reserved.<br />CoogsNation is an independent fan site owned and operated by NGF Productions LLC and is not affiliated with, endorsed by, sponsored by, or officially connected with the University of Houston.
           </p>
           <p className="mt-2 text-sm text-gray-400 md:mt-0">Whose House? Coogs&apos; House! 🐾</p>
         </div>

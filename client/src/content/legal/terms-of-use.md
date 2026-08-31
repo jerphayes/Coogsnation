@@ -1,12 +1,12 @@
 # CoogsNation Terms of Use
 
-**Last Updated: August 28, 2026**
+**Last Updated: August 31, 2026**
 
 CoogsNation.com and related CoogsNation websites, applications,
 community features, commerce features, and services (collectively, the
-**"Service"**) are operated by **NGF LLC**, doing business through the
-CoogsNation and NGF Productions brands (**"NGF," "CoogsNation," "we,"
-"our," or "us"**). References to NGF include NGF LLC and, where
+**"Service"**) are operated by **NGF Productions LLC**, operating through the
+CoogsNation brand (**"NGF," "CoogsNation," "we,"
+"our," or "us"**). References to NGF include NGF Productions LLC and, where
 applicable, its affiliates, owners, members, managers, officers,
 employees, contractors, agents, licensors, service providers,
 successors, and assigns.
@@ -50,6 +50,12 @@ promptly report suspected unauthorized access, not impersonate another
 person, not evade a suspension, ban, block, or safety restriction, and
 not operate multiple accounts to manipulate polls, rankings, reactions,
 reputation, contests, or moderation.
+
+If you use a third-party identity or social provider to sign in,
+you authorize NGF to receive and use information that provider makes
+available for authentication, account linking, fraud prevention, and
+security. Social authentication is separate from optional advertising
+or marketing tracking.
 
 ## 3. Posting & Community Rules
 
@@ -362,6 +368,12 @@ and time of the selection, and subsequent changes to the selection. Such
 records are maintained for compliance, security, dispute resolution, and
 enforcement purposes and are subject to the Privacy Policy.
 
+Optional advertising, marketing, analytics,
+personalization, and affiliate-measurement technologies are subject to
+the Privacy Policy, the user's recorded Privacy Choices, and applicable
+law. Where affirmative consent is required, those optional technologies
+should remain inactive until that consent has been obtained.
+
 ## 22. Third-Party Services and Integrations
 
 The Service may link to, embed, interoperate with, or use third-party
@@ -384,7 +396,7 @@ terms and privacy practices may apply.
 
 ## 23. Independent Fan Community
 
-CoogsNation is an independent fan community operated by NGF LLC.
+CoogsNation is an independent fan community operated by NGF Productions LLC.
 
 Unless expressly stated otherwise, CoogsNation is not affiliated with,
 sponsored by, or endorsed by the University of Houston, NCAA, athletic
@@ -433,7 +445,7 @@ lawfully be excluded.
 
 ## 27. Limitation of Liability
 
-TO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW, NGF LLC AND ITS
+TO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW, NGF Productions LLC AND ITS
 AFFILIATES, OWNERS, MEMBERS, MANAGERS, OFFICERS, DIRECTORS, EMPLOYEES,
 CONTRACTORS, AGENTS, LICENSORS, SERVICE PROVIDERS, SUCCESSORS, AND
 ASSIGNS WILL NOT BE LIABLE FOR INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
@@ -455,7 +467,7 @@ be excluded or limited.
 ## 28. Indemnification; Defense; Hold Harmless
 
 To the fullest extent permitted by applicable law, you agree to
-**defend, indemnify, and hold harmless NGF LLC**, together with its
+**defend, indemnify, and hold harmless NGF Productions LLC**, together with its
 affiliates, owners, members, managers, officers, directors, employees,
 contractors, agents, licensors, service providers, successors, and
 assigns (collectively, the **"NGF Parties"**), from and against

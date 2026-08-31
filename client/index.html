@@ -5,145 +5,97 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
     <title>CoogsNation - University of Houston Fan Community</title>
     <meta name="description" content="Join the premier University of Houston fan community. Connect with fellow Cougar fans, discuss sports, share news, and show your UH pride at CoogsNation.com">
-<!-- ✅ Cookie Consent Styles (CoogsNation) -->
+<!-- NGF Privacy Choices v3 -->
     <style>
-      .cnc-wrap{position:fixed;inset:auto 0 0 0;z-index:99999;display:none}
-      .cnc-bar{margin:12px;padding:14px 16px;border-radius:12px;background:#111;color:#fff;
-               box-shadow:0 8px 30px rgba(0,0,0,.25);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-      .cnc-text{flex:1;min-width:240px;font:14px/1.45 system-ui,Segoe UI,Roboto,Inter,Arial}
-      .cnc-text a{color:#9dd1ff;text-decoration:underline}
-      .cnc-actions{display:flex;gap:8px;flex-wrap:wrap}
-      .cnc-btn{cursor:pointer;border:0;border-radius:10px;padding:10px 14px;font:600 14px/1 system-ui;
-               background:#2a2a2a;color:#fff}
-      .cnc-btn.primary{background:#0a7cff}
-      .cnc-btn.outline{background:transparent;box-shadow:inset 0 0 0 2px #3b3b3b}
-      .cnc-btn:hover{filter:brightness(1.05)}
-      /* Modal */
-      .cnc-modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;z-index:100000}
-      .cnc-modal{position:fixed;inset:50% auto auto 50%;transform:translate(-50%,-50%);
-                 width:min(560px,92vw);background:#111;color:#fff;border-radius:14px;padding:18px;
-                 box-shadow:0 20px 60px rgba(0,0,0,.35);display:none}
-      .cnc-modal h3{margin:0 0 8px 0;font:700 18px/1.2 system-ui}
-      .cnc-modal p{margin:0 0 12px 0;font:14px/1.45 system-ui;color:#d6d6d6}
-      .cnc-row{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #262626;
-               padding:12px 0}
-      .cnc-row:first-of-type{border-top:0}
-      .cnc-switch{position:relative;width:46px;height:28px;background:#2a2a2a;border-radius:999px;flex:0 0 auto}
-      .cnc-switch input{opacity:0;position:absolute;inset:0;margin:0;width:100%;height:100%;cursor:pointer}
-      .cnc-knob{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.18s}
-      .cnc-switch input:checked + .cnc-knob{left:21px;background:#cfe6ff}
-      .cnc-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
-      /* Footer link */
-      #cookie-prefs-link{display:block;text-align:center;margin:16px;font:13px system-ui;color:#888;cursor:pointer}
-      #cookie-prefs-link:hover{text-decoration:underline;color:#0a7cff}
-      @media (prefers-color-scheme:light){
-        .cnc-bar,.cnc-modal{background:#ffffff;color:#111;box-shadow:0 8px 30px rgba(0,0,0,.12)}
-        .cnc-text a{color:#0a7cff}
-        .cnc-btn.outline{box-shadow:inset 0 0 0 2px #e5e5e5;color:#111}
-        #cookie-prefs-link{color:#555}
-      }
+      .ngf-consent-wrap{position:fixed;inset:auto 0 0 0;z-index:99999;display:none;background:#fff;color:#111;border-top:1px solid #bbb;box-shadow:0 -8px 30px rgba(0,0,0,.14)}
+      .ngf-consent-bar{display:grid;grid-template-columns:1fr 1.15fr 170px;gap:24px;align-items:start;padding:26px 42px;font:14px/1.55 system-ui,Segoe UI,Roboto,Arial,sans-serif}
+      .ngf-consent-bar h2{margin:0 0 10px;font-size:18px;font-weight:900;letter-spacing:-.02em}
+      .ngf-consent-bar p{margin:0 0 8px;color:#555}.ngf-consent-bar a{color:#111;text-decoration:underline;font-weight:600}
+      .ngf-purpose{border-left:1px solid #ddd;padding-left:20px}.ngf-actions{display:flex;flex-direction:column;gap:12px}
+      .ngf-btn{border:1px solid #111;border-radius:6px;padding:12px 14px;font-weight:800;cursor:pointer;background:#fff;color:#111}.ngf-btn.dark{background:#111;color:#fff}.ngf-btn:hover{opacity:.88}
+      .ngf-modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100000;display:none}
+      .ngf-modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(650px,94vw);max-height:88vh;overflow:auto;background:#fff;color:#111;border-radius:10px;padding:24px;z-index:100001;display:none;box-shadow:0 24px 80px rgba(0,0,0,.35);font:14px/1.5 system-ui,Segoe UI,Roboto,Arial,sans-serif}
+      .ngf-modal h2{margin:0 0 6px}.ngf-modal-intro{color:#555;margin:0 0 18px}
+      .ngf-choice{display:flex;justify-content:space-between;gap:20px;align-items:center;border-top:1px solid #ddd;padding:15px 0}.ngf-choice strong{display:block;margin-bottom:3px}.ngf-choice small{color:#666}.ngf-always{font-weight:800;white-space:nowrap}
+      .ngf-switch{position:relative;width:48px;height:28px;flex:0 0 auto}.ngf-switch input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}.ngf-switch span{position:absolute;inset:0;background:#aaa;border-radius:99px;pointer-events:none}.ngf-switch span:after{content:"";position:absolute;width:22px;height:22px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.15s}.ngf-switch input:checked + span{background:#111}.ngf-switch input:checked + span:after{transform:translateX(20px)}
+      .ngf-modal-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:18px}
+      #ngf-privacy-link{display:block;text-align:center;margin:16px;font:13px system-ui;color:#666;cursor:pointer;text-decoration:underline}
+      @media(max-width:800px){.ngf-consent-bar{grid-template-columns:1fr;padding:20px}.ngf-purpose{border-left:0;border-top:1px solid #ddd;padding:14px 0 0}.ngf-actions{flex-direction:row;flex-wrap:wrap}.ngf-actions .ngf-btn{flex:1;min-width:130px}}
     </style>
-  </head>
+    <!-- Optional third-party vendors load only after NGF Privacy Choices authorization. -->
+</head>
   <body>
     <div id="root"></div>
     
-    <!-- ✅ Cookie Consent Banner (CoogsNation) -->
-    <div id="cnc" class="cnc-wrap" role="region" aria-label="Cookie consent">
-      <div class="cnc-bar" role="dialog" aria-live="polite">
-        <div class="cnc-text">
-          We use essential cookies to run this site and optional cookies to improve your experience (analytics).
-          See our <a href="/terms" target="_blank" rel="noopener">Privacy Policy</a>.
-        </div>
-        <div class="cnc-actions">
-          <button class="cnc-btn outline" id="cnc-pref">Preferences</button>
-          <button class="cnc-btn" id="cnc-reject">Reject non-essential</button>
-          <button class="cnc-btn primary" id="cnc-accept">Accept all</button>
+    <!-- CoogsNation.com Privacy Choices — operated by NGF Productions LLC -->
+    <div id="ngf-consent" class="ngf-consent-wrap" role="region" aria-label="Privacy choices">
+      <div class="ngf-consent-bar" role="dialog" aria-live="polite">
+        <section>
+          <h2>WE CARE ABOUT YOUR PRIVACY</h2>
+          <p>CoogsNation.com, operated by NGF Productions LLC, and our service providers use cookies and similar technologies to operate CoogsNation, protect accounts, remember preferences, measure site performance, and support advertising, affiliate, ticketing, travel, and other services.</p>
+          <p>Selecting <strong>Accept All</strong> allows optional technologies. Selecting <strong>Reject Optional</strong> disables optional technologies. You may review or change your choices at any time through Privacy Choices.</p>
+          <a href="/terms" target="_blank" rel="noopener">Terms &amp; Privacy</a>
+        </section>
+        <section class="ngf-purpose">
+          <h2>WE AND OUR SERVICE PROVIDERS PROCESS DATA TO:</h2>
+          <p>Store and access information on your device. Measure content and site performance. Understand how visitors use CoogsNation. Remember preferences and personalize features. Measure affiliate and advertising activity. Support ticketing, travel, merchandise, and other third-party integrations. Improve our services and maintain security.</p>
+          <p><strong>Optional technologies remain off until you affirmatively allow them.</strong></p>
+        </section>
+        <div class="ngf-actions">
+          <button class="ngf-btn dark" id="ngf-accept">ACCEPT ALL</button>
+          <button class="ngf-btn dark" id="ngf-reject">REJECT OPTIONAL</button>
+          <button class="ngf-btn" id="ngf-modify">MODIFY CHOICES</button>
         </div>
       </div>
     </div>
-
-    <div id="cnc-backdrop" class="cnc-modal-backdrop" aria-hidden="true"></div>
-    <div id="cnc-modal" class="cnc-modal" role="dialog" aria-modal="true" aria-labelledby="cnc-title">
-      <h3 id="cnc-title">Cookie Preferences</h3>
-      <p>Enable categories below. Essential cookies are always on to keep the site working.</p>
-      <div class="cnc-row" aria-live="polite">
-        <div>
-          <strong>Essential</strong><br><span style="font-size:13px;color:#9aa0a6">Required for core functionality.</span>
-        </div>
-        <div style="opacity:.5">Always on</div>
-      </div>
-      <div class="cnc-row">
-        <div>
-          <strong>Analytics</strong><br><span style="font-size:13px;color:#9aa0a6">Helps us improve CoogsNation.</span>
-        </div>
-        <label class="cnc-switch" aria-label="Toggle analytics cookies">
-          <input id="cnc-analytics" type="checkbox" />
-          <span class="cnc-knob"></span>
-        </label>
-      </div>
-      <div class="cnc-foot">
-        <button class="cnc-btn outline" id="cnc-cancel">Cancel</button>
-        <button class="cnc-btn" id="cnc-save">Save preferences</button>
-      </div>
+    <div id="ngf-backdrop" class="ngf-modal-backdrop" aria-hidden="true"></div>
+    <div id="ngf-modal" class="ngf-modal" role="dialog" aria-modal="true" aria-labelledby="ngf-modal-title">
+      <h2 id="ngf-modal-title">Privacy Choices</h2>
+      <p class="ngf-modal-intro">CoogsNation.com is operated by NGF Productions LLC. Choose which optional technologies CoogsNation may use. Necessary technologies are always active.</p>
+      <p class="ngf-modal-intro"><strong>Browser privacy signals:</strong> Where applicable, Global Privacy Control is honored for advertising and marketing tracking.</p>
+      <div class="ngf-choice"><div><strong>Necessary</strong><small>Security, authentication, sessions, fraud prevention and core site operation.</small></div><div class="ngf-always">ALWAYS ACTIVE</div></div>
+      <div class="ngf-choice"><div><strong>Analytics &amp; Performance</strong><small>Helps measure traffic, reliability and site performance.</small></div><label class="ngf-switch"><input id="ngf-analytics" type="checkbox"><span></span></label></div>
+      <div class="ngf-choice"><div><strong>Personalization</strong><small>Allows optional personalization and preference-based experiences.</small></div><label class="ngf-switch"><input id="ngf-personalization" type="checkbox"><span></span></label></div>
+      <div class="ngf-choice"><div><strong>Affiliate Measurement</strong><small>Allows measurement technologies used with ticketing, travel, merchandise and affiliate services.</small></div><label class="ngf-switch"><input id="ngf-affiliate" type="checkbox"><span></span></label></div>
+      <div class="ngf-choice"><div><strong>Advertising &amp; Marketing</strong><small>Allows optional advertising, campaign measurement and marketing technologies.</small></div><label class="ngf-switch"><input id="ngf-advertising" type="checkbox"><span></span></label></div>
+      <div class="ngf-modal-actions"><button class="ngf-btn" id="ngf-modal-reject">REJECT OPTIONAL</button><button class="ngf-btn dark" id="ngf-save">SAVE CHOICES</button></div>
+      <p style="margin:16px 0 0;color:#666;font-size:12px">Privacy questions: admin@ngf.llc</p>
     </div>
-
-    <!-- 🔗 Footer link to reopen preferences -->
-    <div id="cookie-prefs-link">Cookie Preferences</div>
-
+    <div id="ngf-privacy-link">Privacy Choices</div>
     <script type="module" src="/src/main.tsx"></script>
-    
-    <!-- ✅ Cookie Consent Script -->
     <script>
     (function(){
-      const KEY = "cn_cookie_prefs_v1";
-      const $ = (id)=>document.getElementById(id);
-      const cnc = $("cnc"), modal = $("cnc-modal"), back = $("cnc-backdrop");
-      const chkAnalytics = $("cnc-analytics");
-
-      function getPrefs(){
-        try{ return JSON.parse(localStorage.getItem(KEY)) || null; }catch(e){ return null; }
-      }
-      function setPrefs(p){
-        localStorage.setItem(KEY, JSON.stringify({...p, ts: Date.now()}));
-        apply(p);
-        window.dispatchEvent(new CustomEvent("cookie-consent-changed",{detail:p}));
-      }
-      function showBar(){ cnc.style.display = "block"; }
-      function hideBar(){ cnc.style.display = "none"; }
-      function openModal(){
-        modal.style.display="block"; back.style.display="block"; back.setAttribute("aria-hidden","false");
-      }
-      function closeModal(){
-        modal.style.display="none"; back.style.display="none"; back.setAttribute("aria-hidden","true");
-      }
-      function apply(prefs){
-        document.documentElement.setAttribute("data-consent", JSON.stringify(prefs));
-        if(prefs.analytics && !window.__gaLoaded){
-          console.log("Analytics cookies enabled - ready for analytics integration");
-          window.__gaLoaded=true;
-        }
-      }
-
-      // Button handlers
-      $("cnc-accept").onclick = ()=>{ setPrefs({essential:true,analytics:true}); hideBar(); };
-      $("cnc-reject").onclick = ()=>{ setPrefs({essential:true,analytics:false}); hideBar(); };
-      $("cnc-pref").onclick = ()=>{
-        const saved=getPrefs(); chkAnalytics.checked=!!(saved && saved.analytics); openModal();
+      const KEY="ngf_privacy_choices_v3",VERSION="2026-08-31-v3";
+      const ALL={necessary:true,analytics:true,personalization:true,affiliateMeasurement:true,advertisingMarketing:true};
+      const OFF={necessary:true,analytics:false,personalization:false,affiliateMeasurement:false,advertisingMarketing:false};
+      window.__ngfVendorLoaded=window.__ngfVendorLoaded||{};
+      const VENDORS={
+        travelpayouts:{category:"affiliateMeasurement",load:function(){if(window.__ngfVendorLoaded.travelpayouts)return;const s=document.createElement("script");s.async=true;s.setAttribute("data-cmp-ab","2");s.src="https://tp-em.com/NTY3MjM1.js?t=567235";document.head.appendChild(s);window.__ngfVendorLoaded.travelpayouts=true}},
+        ticketmaster:{category:"affiliateMeasurement",load:null},
+        stubhub:{category:"affiliateMeasurement",load:null},
+        meta:{category:"advertisingMarketing",load:null},
+        tiktok:{category:"advertisingMarketing",load:null},
+        googleAds:{category:"advertisingMarketing",load:null}
       };
-      $("cnc-save").onclick = ()=>{ setPrefs({essential:true,analytics:chkAnalytics.checked}); closeModal(); hideBar(); };
-      $("cnc-cancel").onclick = closeModal;
-      back.onclick = closeModal;
-
-      // Footer link always reopens modal
-      $("cookie-prefs-link").onclick = ()=>{
-        const saved=getPrefs(); chkAnalytics.checked=!!(saved && saved.analytics); openModal();
-      };
-
-      // Init
-      const saved=getPrefs();
-      if(saved){ apply(saved); } else { showBar(); }
+      const $=id=>document.getElementById(id),banner=$("ngf-consent"),modal=$("ngf-modal"),back=$("ngf-backdrop");
+      const c={analytics:$("ngf-analytics"),personalization:$("ngf-personalization"),affiliateMeasurement:$("ngf-affiliate"),advertisingMarketing:$("ngf-advertising")};
+      const gpc=()=>navigator.globalPrivacyControl===true;
+      function norm(x){return{necessary:true,analytics:!!x.analytics,personalization:!!x.personalization,affiliateMeasurement:!!x.affiliateMeasurement,advertisingMarketing:gpc()?false:!!x.advertisingMarketing}}
+      function get(){try{const r=JSON.parse(localStorage.getItem(KEY));return r&&r.version===VERSION?r:null}catch(e){return null}}
+      window.ngfPrivacyAllows=(category)=>{if(category==="necessary")return true;const r=get();return !!(r&&r.categories&&norm(r.categories)[category])};
+      function apply(x){x=norm(x);document.documentElement.setAttribute("data-ngf-consent",JSON.stringify(x));Object.values(VENDORS).forEach(v=>{if(x[v.category]&&typeof v.load==="function")v.load()})}
+      function close(){modal.style.display="none";back.style.display="none";back.setAttribute("aria-hidden","true")}
+      function open(){const r=get(),x=norm(r?r.categories:OFF);Object.keys(c).forEach(k=>c[k].checked=!!x[k]);c.advertisingMarketing.disabled=gpc();modal.style.display="block";back.style.display="block";back.setAttribute("aria-hidden","false")}
+      function save(x,source){const prev=get();x=norm(x);const r={version:VERSION,legalEntity:"NGF Productions LLC",service:"CoogsNation.com",categories:x,source,timestamp:new Date().toISOString()};localStorage.setItem(KEY,JSON.stringify(r));apply(x);window.dispatchEvent(new CustomEvent("ngf-privacy-consent-changed",{detail:r}));banner.style.display="none";close();if(prev&&prev.categories&&Object.keys(c).some(k=>prev.categories[k]&&!x[k]))setTimeout(()=>location.reload(),75)}
+      $("ngf-accept").onclick=()=>save(ALL,"accept-all");
+      $("ngf-reject").onclick=()=>save(OFF,"reject-optional");
+      $("ngf-modify").onclick=open;
+      $("ngf-modal-reject").onclick=()=>save(OFF,"reject-optional-modal");
+      $("ngf-save").onclick=()=>save({necessary:true,analytics:c.analytics.checked,personalization:c.personalization.checked,affiliateMeasurement:c.affiliateMeasurement.checked,advertisingMarketing:c.advertisingMarketing.checked},"modify-choices");
+      back.onclick=close;$("ngf-privacy-link").onclick=open;
+      const r=get();if(r)apply(r.categories);else banner.style.display="block";
     })();
     </script>
-    <!-- ✅ End Cookie Consent -->
+    <!-- End NGF Privacy Choices v3 -->
   </body>
 </html>

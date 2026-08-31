@@ -1,9 +1,9 @@
 # CoogsNation Privacy Policy
 
-**Last Updated: August 28, 2026**
+**Last Updated: August 31, 2026**
 
 CoogsNation.com and related CoogsNation applications and services
-(collectively, the **"Service"**) are operated by **NGF LLC** (**"NGF,"
+(collectively, the **"Service"**) are operated by **NGF Productions LLC** (**"NGF,"
 "CoogsNation," "we," "our," or "us"**).
 
 This Privacy Policy explains the categories of information we may
@@ -32,6 +32,23 @@ Depending on how you use the Service, we may collect:
 -   authentication and account-security information;
 -   age or age-category information where needed for eligibility,
     safety, or legal compliance.
+
+### Social Login and Connected Accounts
+
+If you choose to sign in through a third-party identity or social provider,
+NGF may receive information that provider makes available under your
+authorization, such as a provider account identifier, name or display
+name, email address, profile image, and authentication or account-linking
+information.
+
+NGF uses this information to authenticate or link your CoogsNation
+account, provide requested functionality, prevent fraud and abuse, and
+maintain account security. NGF does not receive your password for the
+third-party service merely because you use that provider to sign in.
+
+Third-party sign-in is separate from optional advertising or marketing
+tracking. Using a social-login provider does not by itself authorize
+optional advertising or marketing technologies.
 
 ### Profile and Community Information
 
@@ -261,6 +278,20 @@ The precise technologies and providers enabled in production may change
 as the Service evolves. NGF will maintain its published disclosures and
 consent controls to reflect material production practices.
 
+### Optional Tracking and Marketing Technologies
+
+When enabled under the applicable Privacy Choice, optional analytics,
+affiliate, advertising, or marketing technologies may transmit limited
+technical, referral, campaign, or event information to configured
+providers.
+
+NGF does not intend to transmit passwords, private member messages,
+full payment-card numbers, or sensitive youth information through
+advertising or marketing tags.
+
+Optional advertising and marketing integrations are intended to remain
+inactive until the applicable consent or permission has been obtained.
+
 ## 12. Privacy Choices, Consent, and Preference Records
 
 When the Service presents a privacy or cookie choice interface, users
@@ -295,6 +326,11 @@ Privacy Rights section below.
 NGF intends to configure newly added optional tracking or marketing
 technologies as blocked by default until they have been classified and
 placed under the appropriate consent or preference control.
+
+Where applicable law requires recognition of browser-based
+privacy preference signals, NGF will honor a recognized signal such as
+Global Privacy Control for applicable sale/sharing or targeted-advertising
+processing on that browser or device.
 
 ## 13. Targeted Advertising, Sale/Sharing, and Sensitive Data
 
@@ -354,7 +390,7 @@ NGF may take reasonable steps to authenticate a request before acting on
 it. A user will not be required to create a new account solely to submit
 a privacy request where applicable law prohibits that requirement.
 
-Privacy requests: **privacy@coogsnation.com**
+Privacy requests: **admin@ngf.llc**
 
 Where applicable law provides an appeal right for a denied privacy
 request, NGF will provide an appropriate appeal process and instructions
@@ -385,7 +421,7 @@ posted or otherwise communicated as required by applicable law.
 
 ## 21. Contact
 
-**privacy@coogsnation.com**
+**admin@ngf.llc**
 
-**NGF LLC**\
-Operator of CoogsNation.com; NGF Productions brand
+**NGF Productions LLC**\
+Operator of CoogsNation.com
