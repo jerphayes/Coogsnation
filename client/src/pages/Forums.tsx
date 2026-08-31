@@ -301,9 +301,13 @@ export default function Forums() {
     // than a discussion-board database category.
     const ticketPurchaseCount = 1;
 
+    // Radio Broadcast is a Sports utility card.
+    const radioBroadcastCount = 1;
+
     return (
       displayedSportsCount +
       ticketPurchaseCount +
+      radioBroadcastCount +
       displayedCommunityCount +
       waterCoolerCount +
       coogPawsCount
@@ -837,6 +841,7 @@ function CategoryGrid({
       })}
 
       <TicketPurchaseCard />
+      <RadioBroadcastCard />
     </div>
   );
 }
@@ -956,6 +961,93 @@ function TicketPurchaseCard() {
         </div>
 
       </div>
+    </details>
+  );
+}
+
+
+function RadioBroadcastCard() {
+  return (
+    <details className="group h-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
+
+      <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 bg-[#B9D9EB] px-5 py-4 text-slate-900 [&::-webkit-details-marker]:hidden">
+
+        <div className="flex items-center gap-3">
+          <span
+            className="text-2xl"
+            aria-hidden="true"
+          >
+            📻
+          </span>
+
+          <div>
+            <h2 className="text-lg font-bold">
+              Radio Broadcast
+            </h2>
+
+            <p className="mt-0.5 text-xs font-semibold text-slate-700">
+              Listen Live Gameday Action
+            </p>
+          </div>
+        </div>
+
+        <span
+          aria-hidden="true"
+          className="text-lg transition-transform duration-200 group-open:rotate-180"
+        >
+          ▼
+        </span>
+
+      </summary>
+
+      <div className="border-t border-gray-200">
+
+        <a
+          href="https://kprcradio.iheart.com/apps/"
+          target="_blank"
+          rel="noopener noreferrer"
+          data-testid="link-radio-iheart"
+          className="flex items-center justify-between border-b border-gray-200 bg-white px-5 py-4 transition hover:bg-sky-50"
+        >
+          <div>
+            <div className="font-bold text-gray-900">
+              KPRC 950 AM
+            </div>
+
+            <div className="mt-1 text-xs text-gray-500">
+              Listen Live on iHeartRadio
+            </div>
+          </div>
+
+          <span className="text-lg text-sky-700" aria-hidden="true">
+            ▶
+          </span>
+        </a>
+
+        <a
+          href="https://tunein.com/radio/KPRC-950-s34719/"
+          target="_blank"
+          rel="noopener noreferrer"
+          data-testid="link-radio-tunein"
+          className="flex items-center justify-between bg-gray-50 px-5 py-4 transition hover:bg-sky-50"
+        >
+          <div>
+            <div className="font-bold text-gray-900">
+              KPRC 950 AM
+            </div>
+
+            <div className="mt-1 text-xs text-gray-500">
+              Listen Live on TuneIn
+            </div>
+          </div>
+
+          <span className="text-lg text-sky-700" aria-hidden="true">
+            ▶
+          </span>
+        </a>
+
+      </div>
+
     </details>
   );
 }
