@@ -919,12 +919,55 @@ export default function Landing() {
           margin: 0 auto;
         }
 
+        .cn-site-footer-card {
+          display: block;
+          width: min(380px, 90vw);
+          margin: 0 auto 20px;
+          padding: 16px 18px;
+          border: 1px solid rgba(255,255,255,.22);
+          border-radius: 14px;
+          background: rgba(255,255,255,.05);
+          color: #ffffff !important;
+          text-decoration: none !important;
+          box-shadow: 0 8px 24px rgba(0,0,0,.22);
+          transition: transform .18s ease,
+                      border-color .18s ease,
+                      background .18s ease;
+        }
+
+        .cn-site-footer-card:hover {
+          transform: translateY(-2px);
+          border-color: #c8102e;
+          background: rgba(255,255,255,.09);
+        }
+
+        .cn-site-footer-card:active {
+          transform: translateY(0);
+        }
+
         .cn-site-footer-logo {
           display: block;
           width: min(260px, 74vw);
           height: auto;
           margin: 0 auto;
           object-fit: contain;
+        }
+
+        .cn-site-footer-company {
+          display: block;
+          margin-top: 12px;
+          color: #ffffff;
+          font-size: 17px;
+          font-weight: 900;
+          letter-spacing: .02em;
+        }
+
+        .cn-site-footer-more {
+          display: block;
+          margin-top: 7px;
+          color: #ff8a9d;
+          font-size: 14px;
+          font-weight: 800;
         }
 
         .cn-site-footer-production {
@@ -1360,18 +1403,34 @@ export default function Landing() {
 
       <footer className="cn-site-footer">
         <div className="cn-site-footer-inner">
-          <img
-            src="/ngf-productions-logo.webp"
-            alt="NGF Productions"
-            className="cn-site-footer-logo"
-          />
+          <a
+            href="https://ngf.llc"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="cn-site-footer-card"
+            aria-label="Learn more about NGF Productions LLC"
+          >
+            <img
+              src="/ngf-productions-logo.webp"
+              alt="NGF Productions LLC"
+              className="cn-site-footer-logo"
+            />
+
+            <span className="cn-site-footer-company">
+              NGF Productions LLC
+            </span>
+
+            <span className="cn-site-footer-more">
+              Learn more about NGF Productions LLC →
+            </span>
+          </a>
 
           <p className="cn-site-footer-production">
- © 2026 NGF LLC. All rights reserved.
+            © 2026 NGF Productions LLC. All rights reserved.
           </p>
 
           <p className="cn-site-footer-pending">
- CoogsNation is an independent fan site owned and operated by NGF LLC and is not affiliated with, endorsed by, sponsored by, or officially connected with the University of Houston.
+            CoogsNation is an independent fan site owned and operated by NGF Productions LLC and is not affiliated with, endorsed by, sponsored by, or officially connected with the University of Houston.
           </p>
         </div>
       </footer>
