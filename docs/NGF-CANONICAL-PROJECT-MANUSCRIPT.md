@@ -1,6 +1,6 @@
-# NGF / CoogsNation Canonical Project Manuscript
+# OUR PATH — NGF Productions LLC Strategic, Technology & Operating Manuscript
 
-**Purpose:** authoritative project operating memory, build history, module inventory, deployment handoff, and end-of-session continuity record for NGF Productions LLC / CoogsNation.
+**Purpose:** the living company strategy, technology plan, product architecture, build history, module inventory, operating memory, deployment handoff, lessons learned, and forward path for NGF Productions LLC and the NGF/CoogsNation platform.
 
 **Canonical path:** `docs/NGF-CANONICAL-PROJECT-MANUSCRIPT.md`
 **Repository:** `jerphayes/Coogsnation`
@@ -9,7 +9,338 @@
 **Production app port:** `127.0.0.1:5000`
 **Last canonical baseline before this manuscript:** commit `996577b` (`Clean build context and establish Mother data scaffold`)
 **Manuscript created:** 2026-08-31
-**Maintenance rule:** update this manuscript at the end of every meaningful work session, deployment, architecture decision, business-integration decision, or incident.
+**Strategic structure last updated:** 2026-08-31
+**Maintenance rule:** when the owner says **“update Our Path”**, update this manuscript with the latest verified past, present, and future state: strategic decisions, technology choices, product/module status, business plans, commits, tests, deployments, incidents, lessons, risks, and next actions.
+
+
+---
+
+# EXECUTIVE SUMMARY
+
+## Company Mission
+
+NGF Productions LLC is building a reusable, AI-assisted global sports-fandom platform whose first proof of concept is CoogsNation for University of Houston fans. The company is not building a collection of unrelated websites. It is building a common **NGF Core Engine** that can be deployed repeatedly with **Fan Entity Packs** containing the identity, culture, language, sports structure, data sources, commerce, rituals, moderation rules, and presentation needed for a specific school, club, team, national side, athlete, or fan community.
+
+The long-range objective is a global network of fan communities that can scale from universities to professional and international sports and eventually to individual athletes, while preserving local cultural authenticity.
+
+## Strategic Principle: Business Plan First, Technology Second
+
+Technology is selected to accomplish the business plan; technology is not the business plan.
+
+Every major technology decision in Our Path must answer:
+
+1. **Business objective** — what company outcome are we trying to create?
+2. **Required capability** — what must the platform be able to do?
+3. **Current technology choice** — what best accomplishes that capability now?
+4. **Architectural role** — where does it fit and what does it control?
+5. **Why selected** — why is it preferable to practical alternatives at this stage?
+6. **Limitations and risks** — what can break, constrain, or make it expensive?
+7. **Scale path** — how does the capability grow without rewriting the company?
+8. **Replacement trigger** — what evidence would justify changing the technology?
+9. **Business outcome** — how does the choice improve growth, retention, revenue, defensibility, or operating leverage?
+
+The architecture must preserve **capabilities** even when individual vendors, models, libraries, hosting providers, or tools are replaced.
+
+## The NGF Strategic Flywheel
+
+The operating thesis is:
+
+**Acquire fans → give them a live reason to return → deepen community identity → add contextual commerce → reward participation → learn from usage → improve the product → clone the proven engine into the next fan entity.**
+
+The most important engagement loop is centered on live sports:
+
+**Live scores/ticker + chat + radio/listen-live + pick’em/polls + virtual venues + community reaction.**
+
+This creates a synchronized game-day environment that is fundamentally more valuable than a static forum because fans have a reason to keep CoogsNation open during the event.
+
+Commerce then becomes contextual rather than intrusive:
+
+**tickets + merchandise + travel + classifieds/marketplace + rewards.**
+
+## Strategic Technology Thesis
+
+The current technology stack is deliberately modular:
+
+- **React/Vite** for a fast, mobile-first fan interface.
+- **Node/Express** for the application/API layer.
+- **PostgreSQL/Drizzle** for authoritative transactional state and explicit migrations.
+- **Socket.IO** for real-time fan interaction and live-event fan-out.
+- **Three.js** for immersive venue experiences without forcing the venue engine into the initial page bundle.
+- **Docker/Compose** for reproducible deployment at the current operating scale.
+- **Cloudflare** as the planned global edge, security, WAF, bot, caching, rate-limit, and DDoS layer before large-scale acquisition.
+- **Shopify** as the practical near-term commerce launcher.
+- **Medusa** as the strategic longer-term NGF-controlled marketplace/e-commerce foundation.
+- **Playwright and Appium** as Mother AI’s present browser/device testing instruments.
+- **GitHub + Git history + Our Path + Mother provenance** as the durable system of record.
+- **Mother AI** as the future orchestration, evaluation, testing, deployment, knowledge, and continuous-improvement layer.
+- **Specialized open models and child agents** beneath Mother rather than one monolithic AI dependency.
+
+The company should not prematurely introduce infrastructure simply because it is fashionable. New infrastructure is added when a measured bottleneck or strategic requirement justifies it.
+
+## Global AI / Localization Thesis
+
+Global expansion requires **localization, not translation**.
+
+A fan community in Thailand, Brazil, Japan, India, Germany, Nigeria, Mexico, or another market must reflect local language, sports terminology, supporter culture, humor, rituals, moderation expectations, commerce, media sources, and legal context. The English CoogsNation experience should never simply be machine-translated and called a local product.
+
+Mother AI therefore needs specialized multilingual children that can be evaluated and trained for specific markets.
+
+### Apertus strategic role
+
+**Strategic status: CANDIDATE MULTILINGUAL CHILD MODEL — not a hard dependency.**
+
+As of 2026-08-31, the Swiss AI Initiative’s current Apertus family is unusually aligned with NGF’s global strategy:
+
+- official Apertus model cards describe **1,811 natively supported languages**;
+- Apertus v1.5 is available in **8B and 70B** variants;
+- the v1.5 model cards describe **text, image, and audio input** with text output;
+- the v1.5 family supports context lengths up to **262,144 tokens**;
+- current official model cards identify the release as fully open and the Hugging Face release uses the **Apache-2.0** license;
+- smaller Apertus variants exist for constrained/edge hardware;
+- a Southeast-Asia-focused Apertus/SEA-LION adaptation demonstrates the model family’s usefulness as a base for regional post-training, including Thai and other SEA languages.
+
+**Strategic implication:** Mother can use Apertus or a superior future multilingual model as a controllable child for language generation, translation assistance, localization research, local-content adaptation, community support, and Fan Entity Pack creation.
+
+Mother must remain the authority that evaluates the child’s output. Apertus is replaceable; the **global-localization capability is permanent**.
+
+The replacement trigger is straightforward: if another controllable model offers materially better localization quality, cultural fluency, cost, inference efficiency, licensing, tool use, safety, or operational reliability, Mother should be able to replace the child without changing NGF Core or the business strategy.
+
+## Current Business Priorities
+
+The immediate commercialization sequence remains:
+
+1. enroll with preferred direct ticket/commerce partners, beginning with Ticketmaster/Impact and then StubHub/other selected partners;
+2. connect approved partner offerings into the fan experience;
+3. harden Cloudflare/security;
+4. run controlled traffic, latency, concurrency, and synchronized-event-spike tests;
+5. refine membership signup and social authentication;
+6. launch a coordinated membership-growth campaign;
+7. measure retention/conversion and feed verified learning back into Mother and Our Path.
+
+## Long-Term Defensibility
+
+NGF’s defensibility is intended to come from the **system**, not any single feature:
+
+- reusable NGF Core;
+- entity-specific cultural packs;
+- live-event engagement loops;
+- proprietary operating knowledge accumulated by Mother;
+- structured provenance and regression learning;
+- creator/community relationships;
+- direct commerce/affiliate relationships;
+- rewards and loyalty;
+- scalable fan-data and live-event architecture;
+- rapid localization and deployment into new fan entities.
+
+---
+
+# STRATEGIC DOCUMENT OUTLINE
+
+Our Path is organized to preserve **past, present, and future**. The executive/strategic sections define where the company is going and why. The detailed sections below preserve the technical and operating truth required to execute it.
+
+## A. Corporate Strategy and Business Architecture
+
+- Company identity and legal operating model.
+- NGF Core Engine + Fan Entity Pack strategy.
+- Initial university proof-of-concept and expansion sequence.
+- Global sports/team/athlete expansion thesis.
+- Competitive differentiation and defensibility.
+
+## B. Product and Engagement Strategy
+
+- Community/forums.
+- Live ticker and data collection.
+- Chat/lounges.
+- Radio/listen-live.
+- Pick’em/polls/predictions.
+- Virtual venues.
+- Rewards.
+- Creator participation.
+- Contextual commerce.
+
+## C. Strategic Technology Stack
+
+- Current production stack.
+- AI/Mother/child-model architecture.
+- Global localization stack.
+- Testing/CI/regression.
+- Security/Cloudflare.
+- Load/concurrency architecture.
+- Data/storage/migrations.
+- Commerce architecture.
+- Replacement and scale triggers.
+
+## D. Commercial and Growth Strategy
+
+- Ticketing and affiliate partnerships.
+- Shopify-to-Medusa commerce evolution.
+- Marketplace/classifieds.
+- Rewards and loyalty.
+- Social/creator acquisition.
+- School/entity rollout.
+- International localization and market entry.
+
+## E. Operating Model and Governance
+
+- Git/production rules.
+- Deployment gates.
+- Mother provenance.
+- Quality/testing requirements.
+- Incident lessons.
+- End-of-session handoff.
+- “Update Our Path” command and maintenance discipline.
+
+## F. Historical Record
+
+- Foundation builds.
+- Major integrated modules.
+- Security/authentication repairs.
+- Venue-engine integration.
+- Privacy/compliance evolution.
+- Important commits, regressions, and lessons.
+
+---
+
+# STRATEGIC CAPABILITY → TECHNOLOGY MAP
+
+| Business objective | Required capability | Current / preferred technology | Status | Scale / replacement trigger |
+|---|---|---|---|---|
+| Build one engine for many fan communities | Reusable modular web/application core | React/Vite + Node/Express + PostgreSQL/Drizzle | CURRENT | Replace components only when measured scale/maintainability requires it |
+| Real-time game-day retention | Low-latency fan interaction and event fan-out | Socket.IO + NGF ticker/data collector | CURRENT / EVOLVING | Add distributed adapter/cache when multi-instance scale requires it |
+| Immersive fandom | 3D venue/lounges without penalizing normal page load | Three.js lazy-loaded venue engine | INTEGRATED | Revisit renderer/runtime only if device/performance data demands it |
+| Global localization | Massively multilingual controllable AI child | Apertus family candidate under Mother | STRATEGIC CANDIDATE | Replace on superior quality/cost/licensing/cultural performance |
+| Southeast Asia localization | Regional multilingual/cultural adaptation | Evaluate Apertus/SEA-LION lineage and curated local data | RESEARCH / CANDIDATE | Promote only after Thai/SEA benchmark and human review |
+| AI orchestration | Plan/research/test/diagnose/fix/deploy/observe | Mother AI + specialized child agents/models | IN DEVELOPMENT | Expand authority only after proven regression/provenance record |
+| Browser/mobile QA | Repeatable regression execution | Playwright + Appium; Selenium reserve | CURRENT | Mother takes over orchestration before any tool is retired |
+| Production reproducibility | Controlled application packaging/deploy | Docker + Docker Compose | CURRENT | Add orchestration platform only when multiple-service/host scale justifies it |
+| Global edge/security | CDN, WAF, bot protection, DDoS, rate limiting | Cloudflare | PLANNED PRIORITY | Tune from measured traffic/attack patterns |
+| Near-term commerce | Launch quickly and learn merchandising | Shopify | SELECTED NEAR TERM | Keep while economics/velocity beat custom ownership |
+| Long-term marketplace control | Extensible owned marketplace/e-commerce | Medusa | STRATEGIC | Build modules/integrations as NGF volume justifies ownership |
+| Transactional truth | Durable member, commerce, venue, moderation data | PostgreSQL | CURRENT | Scale vertically/replicas/partitioning before adding needless databases |
+| Retrieval/AI knowledge | Searchable structured/vector knowledge near core data | Prefer PostgreSQL + pgvector first | PLANNED OPTION | Dedicated vector system only when measured retrieval scale requires it |
+| Distributed hot state | Multi-instance sockets/cache/rate-limit/queues | Redis-compatible layer when needed | SCALE TRIGGER | Introduce only when multi-instance/event-fanout requirements appear |
+| Media/object storage | Globally served uploads/assets | S3-compatible object storage / Cloudflare R2 candidate | SCALE TRIGGER | Move off local volumes before multi-host production |
+| Observability | Cross-service tracing/metrics/error diagnosis | Structured logs + health now; OpenTelemetry/metrics stack later | EVOLVING | Add when multi-service scale makes local logs insufficient |
+
+### Technology governance rule
+
+**Do not add a technology because it is impressive. Add it because it removes a demonstrated business or operating constraint.**
+
+---
+
+# GLOBAL FANSITE FACTORY — FORWARD ARCHITECTURE
+
+The long-term deployment equation is:
+
+**NGF Core Engine + Mother AI + specialized child models + Fan Entity Pack + local data/culture + verified commerce/content sources = deployable fan community.**
+
+A mature Fan Entity Pack should eventually contain structured definitions for:
+
+- entity identity and branding;
+- sports/league/team taxonomy;
+- languages and localization rules;
+- supporter terminology, traditions, rituals and humor;
+- news and official/independent data sources;
+- live-score/data-source configuration;
+- community categories and moderation norms;
+- venue definitions;
+- creator/influencer ecosystem;
+- local merchandise/ticket/travel partners;
+- rewards configuration;
+- legal/regulatory/local privacy requirements;
+- social acquisition channels;
+- engagement calendars and event windows;
+- approved AI prompts/agents/evaluation tests;
+- launch and regression checklist.
+
+Mother should be able to research and propose a Fan Entity Pack, but no pack becomes canonical merely because an AI generated it. It must pass source verification, cultural review, regression, security, legal/commercial checks as applicable, and provenance recording.
+
+---
+
+# GROWTH STRATEGY
+
+## Phase 1 — Prove the engine with University of Houston
+
+Objective: demonstrate that a focused fan community can attract members, create repeat game-day engagement, and generate contextual commerce without degrading the community.
+
+Key assets:
+
+- CoogsNation community;
+- ticker/data;
+- chat;
+- radio/listen-live;
+- ticketing;
+- privacy-safe marketing stack;
+- membership;
+- venue experiences;
+- later Pick’em and Rewards.
+
+## Phase 2 — Clone the proven engine into a materially larger adjacent university market
+
+Texas A&M remains the intended next major university target after UH. The technology should be cloned; the culture should not. The Fan Entity Pack must reflect the school’s own identity, rituals, traditions, content sources, and fan behavior.
+
+## Phase 3 — Build a repeatable university portfolio
+
+Once the entity-pack process, moderation, live-data, commerce and membership acquisition are repeatable, expand selectively to large universities where fan intensity, alumni population, social reach, and monetization opportunities justify deployment.
+
+## Phase 4 — Expand beyond universities
+
+Use the same core for:
+
+- professional clubs/teams;
+- national teams;
+- global football/soccer;
+- cricket;
+- rugby;
+- baseball;
+- basketball;
+- combat sports;
+- individual athletes and creators.
+
+## Phase 5 — Global localized network
+
+Mother plus multilingual children create a localization operating advantage. Each market is evaluated for language/cultural fit, sports rights/data availability, creator ecosystem, commerce partners, regulation and hosting/performance requirements.
+
+The goal is not hundreds of manually maintained websites. The goal is a **repeatable fan-community deployment system**.
+
+---
+
+# STRATEGIC METRICS
+
+Our Path should track metrics that reveal whether the strategy is actually working. Targets should be added only when deliberately selected; the initial metric families are:
+
+- membership growth and verified-member conversion;
+- daily/monthly active members;
+- game-day concurrent users;
+- session duration during live events;
+- week-over-week and season-over-season retention;
+- chat/community participation rate;
+- Pick’em/poll participation when launched;
+- ticker/radio/venue engagement;
+- creator referrals and attributed acquisition;
+- ticket/merchandise/travel affiliate conversion;
+- marketplace GMV when launched;
+- Rewards earn/burn and repeat-purchase behavior;
+- page/API/socket latency under normal and synchronized-spike load;
+- error/crash/session-failure rates;
+- moderation load and abuse/fraud rates;
+- infrastructure cost per active member;
+- localization quality and human-review acceptance by language/entity.
+
+---
+
+# OPERATING DOCTRINE
+
+1. **Business capability outranks vendor loyalty.**
+2. **Current technology choices are replaceable.**
+3. **The NGF Core contract and data/provenance boundaries should be harder to replace than any provider.**
+4. **Do not train Mother on unverified garbage.**
+5. **Do not give Mother authority faster than her regression/provenance record justifies.**
+6. **Do not build production from unexplained source state.**
+7. **Test synchronized event spikes, not just average traffic.**
+8. **Global localization requires cultural adaptation, not literal translation.**
+9. **Community value comes before monetization pressure; commerce must fit the fan journey.**
+10. **At the end of meaningful work, update Our Path.**
 
 ---
 
@@ -19,7 +350,7 @@ This file exists so no human or AI agent has to reconstruct the project from cha
 
 At the start of a new work thread, the first instruction should be:
 
-> Load `docs/NGF-CANONICAL-PROJECT-MANUSCRIPT.md` from branch `Chat-sandbox` and use it as the project handoff and operating memory.
+> Load **Our Path** (`docs/NGF-CANONICAL-PROJECT-MANUSCRIPT.md`) from branch `Chat-sandbox`, read the Executive Summary and latest Session Log, and use it as the strategic and operating handoff.
 
 This document is not a substitute for Git history, tests, database state, or the running application. It is the **index and handoff layer** that tells an operator where truth lives and what has been decided.
 
@@ -1050,6 +1381,50 @@ When a conversation/thread changes:
 **Exact next action**
 
 - begin Ticketmaster/Impact partner enrollment and document the resulting account/integration requirements here at session end.
+
+
+### 2026-08-31 — Our Path Restructured as Company Strategic Document
+
+**Objective**
+- elevate Our Path from a technical handoff into the living strategic manuscript of NGF Productions LLC;
+- preserve the project’s past, present, and future in one durable company record;
+- make technology selection explicitly subordinate to the business plan;
+- formalize the global multilingual/child-model strategy under Mother AI.
+
+**Decisions**
+- “Our Path” is the owner’s canonical name for this manuscript.
+- When the owner says “update Our Path,” the manuscript must be updated.
+- Our Path now begins with an Executive Summary, strategic outline, technology-to-business capability map, growth plan, global fansite-factory architecture, operating doctrine, and strategic metrics.
+- Technology choices are current implementation decisions, not permanent business dependencies.
+- Mother AI remains the orchestrator/evaluator; specialized children can be replaced without changing the NGF business architecture.
+- Apertus is recorded as a strategic multilingual child-model candidate, not a hard dependency.
+- Current official Apertus materials reviewed on 2026-08-31 describe 1,811 natively supported languages; this strengthens the original multilingual-fansite thesis and should be benchmarked rather than accepted blindly.
+- Localization is defined as language + culture + sports terminology + rituals + moderation + local commerce + regulation, not translation alone.
+
+**Strategic technology additions to the forward plan**
+- Apertus family evaluation under Mother for global language/localization work.
+- Evaluate regional Apertus-derived models such as SEA-LION for Southeast Asian/Thai use cases.
+- Prefer pgvector inside PostgreSQL as the first vector/retrieval extension before introducing a separate vector database.
+- Introduce Redis-compatible distributed state only when multi-instance Socket.IO, hot-event fan-out, distributed rate limiting, caching, or queues create a measured need.
+- Use S3-compatible object storage / Cloudflare R2 as a scale trigger before multi-host media storage.
+- Add OpenTelemetry/metrics infrastructure when multi-service operations make current logs/health checks insufficient.
+- Do not introduce Kubernetes or equivalent orchestration before actual service/host scale justifies the operational complexity.
+
+**Mother provenance / training lesson**
+- Mother must learn strategic technology selection as a mapping from business objective → required capability → current tool → evidence → limits → replacement trigger.
+- A child model is never canonical truth merely because it is powerful or multilingual.
+- Global Fan Entity Packs must be source-verified and culturally reviewed before promotion.
+
+**Open items**
+- benchmark Apertus/other multilingual candidates on priority languages and sports terminology before operational adoption;
+- define the first formal Fan Entity Pack schema;
+- build Mother’s deployment provenance gate;
+- continue Ticketmaster/Impact commercial enrollment and document integration requirements;
+- establish initial strategic KPI baselines as real traffic begins.
+
+**Exact next action**
+- resume Ticketmaster/Impact partner enrollment while preserving the new strategic structure in Our Path at the end of the work session.
+
 
 ---
 
