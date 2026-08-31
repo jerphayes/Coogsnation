@@ -9,3 +9,12 @@ uploads
 !.env.example
 *.zip
 *.log
+
+# Keep local/test/training artifacts out of production images
+**/__pycache__
+**/*.pyc
+**/*.bak*
+**/*~
+regression/playwright/test-results
+regression/results
+mother-ai/data

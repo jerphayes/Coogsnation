@@ -19,6 +19,14 @@ vite.config.ts.*
 # NGF Mother AI metadata manifests
 !mother-ai/data/
 !mother-ai/data/datasets/
-!mother-ai/data/datasets/.json
+!mother-ai/data/datasets/*.json
 !mother-ai/data/provenance/
-!mother-ai/data/provenance/.json
+!mother-ai/data/provenance/*.json
+
+# Generated/local development artifacts
+__pycache__/
+*.py[cod]
+*.bak*
+*~
+regression/playwright/test-results/
+regression/results/
