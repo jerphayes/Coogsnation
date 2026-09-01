@@ -2,8 +2,19 @@ import type { GamePhase, GameRef, ScoreObservation, TeamRef } from "../../../sha
 import type { SportsSourceAdapter } from "../collector";
 import { htmlToText } from "./publicScoreboard";
 
+const CBS_TEAM_CODE_ALIASES: Record<string, string> = {
+  HAW: "HAWAII",
+  STAN: "STNFRD",
+  NDSU: "NDST",
+  MEM: "MEMP",
+  NMSU: "NMEXST",
+  EMU: "EMICH",
+  SJSU: "SJST",
+};
+
 function cbsTeamCode(value: string): string {
-  return value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const normalized = value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return CBS_TEAM_CODE_ALIASES[normalized] ?? normalized;
 }
 
 export function buildCbsGameId(game: GameRef): string {

@@ -102,6 +102,16 @@ export class SportsFactsEngine extends EventEmitter {
     if (!reconciled) return null;
 
     const previous = this.current.get(observation.game.ngfGameId);
+
+    // Scores require independent consensus before we publish FINAL.
+    // A single bad parser/source must never put an incorrect final on the ticker.
+    const agreeingLineageCount =
+      reconciled.agreeingLineages?.length ?? reconciled.agreeingSources.length;
+
+    if (reconciled.phase === "final" && agreeingLineageCount < 2) {
+      return previous ?? null;
+    }
+
     this.current.set(observation.game.ngfGameId, reconciled);
 
     const materiallyChanged =
