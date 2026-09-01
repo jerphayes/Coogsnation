@@ -22,6 +22,8 @@ export interface GameRef {
 
 export interface ScoreObservation {
   sourceId: string;
+  /** Independent upstream data family. Mirrors sharing a lineage get one consensus vote. */
+  sourceLineage?: string;
   observedAt: string;
   game: GameRef;
   awayScore: number | null;
@@ -51,6 +53,9 @@ export interface ReconciledGame {
   confidence: number;
   agreeingSources: string[];
   conflictingSources: string[];
+  /** Diagnostic view of the independent upstream families behind the accepted score. */
+  agreeingLineages?: string[];
+  conflictingLineages?: string[];
 }
 
 export type UpsetSeverity = "top25" | "top10" | "top5" | "number1";

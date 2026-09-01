@@ -5,6 +5,8 @@ import { sportsFactsEngine } from "./engine";
 export interface SportsSourceAdapter {
   readonly sourceId: string;
   readonly label: string;
+  /** Shared upstream family for mirrors/republishers; defaults to sourceId. */
+  readonly lineageId?: string;
   fetchGame(game: GameRef): Promise<ScoreObservation | null>;
 }
 
@@ -99,7 +101,7 @@ export class ScheduleDrivenCollector {
 
   private async poll(watch: ScheduledGameWatch) {
     const results = await Promise.allSettled(this.adapters.map((adapter) => adapter.fetchGame(watch.game)));
-    const finalCounts = new Map<string, number>();
+    const finalLineages = new Map<string, Set<string>>();
 
     for (let index = 0; index < results.length; index++) {
       const adapter = this.adapters[index];
@@ -109,7 +111,10 @@ export class ScheduleDrivenCollector {
         continue;
       }
 
-      const observation = result.value;
+      const observation: ScoreObservation = {
+        ...result.value,
+        sourceLineage: result.value.sourceLineage ?? adapter.lineageId ?? result.value.sourceId,
+      };
       await this.hooks.onObservation?.(observation);
 
       // A page load is not a successful score collection. During live/halftime/final,
@@ -126,11 +131,14 @@ export class ScheduleDrivenCollector {
 
       if (observation.phase === "final" && hasCompleteScore(observation)) {
         const key = `${observation.awayScore}|${observation.homeScore}`;
-        finalCounts.set(key, (finalCounts.get(key) ?? 0) + 1);
+        const lineages = finalLineages.get(key) ?? new Set<string>();
+        lineages.add(observation.sourceLineage ?? observation.sourceId);
+        finalLineages.set(key, lineages);
       }
     }
 
-    watch.finalVerified = [...finalCounts.values()].some((count) => count >= 2);
+    // Two mirrors of the same upstream feed are one confirmation, not two.
+    watch.finalVerified = [...finalLineages.values()].some((lineages) => lineages.size >= 2);
 
     // Follow the reconciled canonical state, not whichever adapter happened to
     // be processed last. This prevents a slower source from regressing phase.

@@ -10,6 +10,10 @@ function scoreKey(observation: ScoreObservation): string {
   return `${observation.awayScore}|${observation.homeScore}`;
 }
 
+function lineageFor(observation: ScoreObservation): string {
+  return observation.sourceLineage || observation.sourceId;
+}
+
 function phaseProgress(observation: ScoreObservation): number {
   if (observation.phase === "final") return 1000;
   if (observation.phase === "cancelled" || observation.phase === "postponed") return 900;
@@ -47,6 +51,27 @@ function mostAdvancedObservation(observations: ScoreObservation[], health: Map<s
   })[0];
 }
 
+function bestObservationPerLineage(
+  observations: ScoreObservation[],
+  health: Map<string, SourceHealth>,
+  nowMs: number,
+): ScoreObservation[] {
+  const byLineage = new Map<string, ScoreObservation>();
+  for (const observation of observations) {
+    const lineage = lineageFor(observation);
+    const existing = byLineage.get(lineage);
+    if (!existing) {
+      byLineage.set(lineage, observation);
+      continue;
+    }
+    const observedDelta = Date.parse(observation.observedAt) - Date.parse(existing.observedAt);
+    if (observedDelta > 0 || (observedDelta === 0 && weightFor(observation, health, nowMs) > weightFor(existing, health, nowMs))) {
+      byLineage.set(lineage, observation);
+    }
+  }
+  return [...byLineage.values()];
+}
+
 export function reconcileGame(
   observations: ScoreObservation[],
   sourceHealth: SourceHealth[] = [],
@@ -61,51 +86,71 @@ export function reconcileGame(
   const nowMs = now.getTime();
   const health = new Map(sourceHealth.map((item) => [item.sourceId, item]));
   const scored = relevant.filter(hasCompleteScore);
+  const independentScored = bestObservationPerLineage(scored, health, nowMs);
 
-  // Score is reconciled independently from phase/period/clock. Sources can agree
-  // on 24-17 while legitimately showing clocks a few seconds apart.
-  const scoreGroups = new Map<string, { observations: ScoreObservation[]; weight: number; sources: string[] }>();
-  for (const observation of scored) {
+  // One upstream lineage gets one vote. Ten mirrors of the same feed cannot
+  // outvote two genuinely independent observations.
+  const scoreGroups = new Map<string, {
+    observations: ScoreObservation[];
+    weight: number;
+    lineages: string[];
+  }>();
+  for (const observation of independentScored) {
     const key = scoreKey(observation);
     const existing = scoreGroups.get(key);
     const weight = weightFor(observation, health, nowMs);
+    const lineage = lineageFor(observation);
     if (existing) {
       existing.observations.push(observation);
       existing.weight += weight;
-      if (!existing.sources.includes(observation.sourceId)) existing.sources.push(observation.sourceId);
+      if (!existing.lineages.includes(lineage)) existing.lineages.push(lineage);
     } else {
-      scoreGroups.set(key, { observations: [observation], weight, sources: [observation.sourceId] });
+      scoreGroups.set(key, { observations: [observation], weight, lineages: [lineage] });
     }
   }
 
   const rankedScores = [...scoreGroups.values()].sort((a, b) => {
     if (b.weight !== a.weight) return b.weight - a.weight;
+    if (b.lineages.length !== a.lineages.length) return b.lineages.length - a.lineages.length;
     const aFresh = Math.max(...a.observations.map((item) => Date.parse(item.observedAt)));
     const bFresh = Math.max(...b.observations.map((item) => Date.parse(item.observedAt)));
     return bFresh - aFresh;
   });
 
   const scoreWinner = rankedScores[0] ?? null;
-  const phaseCandidates = scoreWinner?.observations.length ? scoreWinner.observations : relevant;
-  const phaseWinner = mostAdvancedObservation(phaseCandidates, health, nowMs);
+  const winnerKey = scoreWinner ? scoreKey(scoreWinner.observations[0]) : null;
+  const winnerLineages = new Set(scoreWinner?.lineages ?? [lineageFor(relevant[0])]);
+
+  // Use every matching mirror from the winning lineages for freshness/clock,
+  // but only one representative per lineage affected the score vote above.
+  const phaseCandidates = winnerKey
+    ? scored.filter((item) => winnerLineages.has(lineageFor(item)) && scoreKey(item) === winnerKey)
+    : relevant;
+  const phaseWinner = mostAdvancedObservation(phaseCandidates.length ? phaseCandidates : relevant, health, nowMs);
 
   const periods = phaseCandidates.filter((item) => item.period != null);
   const selectedPeriod = periods.length ? Math.max(...periods.map((item) => item.period as number)) : phaseWinner.period ?? null;
   const clockCandidates = phaseCandidates.filter((item) => item.clock && (selectedPeriod == null || item.period === selectedPeriod));
   const clockWinner = clockCandidates.length ? freshestObservation(clockCandidates, health, nowMs) : null;
 
-  const agreeing = new Set(scoreWinner?.sources ?? [phaseWinner.sourceId]);
-  const conflicting = scored
-    .filter((item) => scoreWinner && !agreeing.has(item.sourceId))
+  const agreeingSources = scored
+    .filter((item) => winnerKey && winnerLineages.has(lineageFor(item)) && scoreKey(item) === winnerKey)
     .map((item) => item.sourceId);
+  const conflictingSources = scored
+    .filter((item) => winnerKey && !(winnerLineages.has(lineageFor(item)) && scoreKey(item) === winnerKey))
+    .map((item) => item.sourceId);
+  const conflictingLineages = independentScored
+    .filter((item) => winnerKey && !winnerLineages.has(lineageFor(item)))
+    .map(lineageFor);
 
   const totalScoreWeight = rankedScores.reduce((sum, group) => sum + group.weight, 0);
   const scoreConfidence = scoreWinner && totalScoreWeight > 0 ? scoreWinner.weight / totalScoreWeight : 0;
   const fallbackConfidence = weightFor(phaseWinner, health, nowMs);
   const confidence = scoreWinner ? scoreConfidence : fallbackConfidence;
 
-  // A lone source may publish FINAL early. Keep the state but deliberately cap confidence.
-  const finalPenalty = FINAL_PHASES.has(phaseWinner.phase) && agreeing.size === 1 ? 0.8 : 1;
+  // FINAL still requires independent corroboration. Multiple mirrors from one
+  // upstream family remain a single lineage for this penalty.
+  const finalPenalty = FINAL_PHASES.has(phaseWinner.phase) && winnerLineages.size === 1 ? 0.8 : 1;
 
   return {
     game: phaseWinner.game,
@@ -117,7 +162,9 @@ export function reconcileGame(
     statusText: phaseWinner.statusText,
     acceptedAt: now.toISOString(),
     confidence: Math.max(0, Math.min(1, confidence * finalPenalty)),
-    agreeingSources: [...agreeing],
-    conflictingSources: [...new Set(conflicting)],
+    agreeingSources: [...new Set(agreeingSources.length ? agreeingSources : [phaseWinner.sourceId])],
+    conflictingSources: [...new Set(conflictingSources)],
+    agreeingLineages: [...winnerLineages],
+    conflictingLineages: [...new Set(conflictingLineages)],
   };
 }

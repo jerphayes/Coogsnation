@@ -44,6 +44,23 @@ assert.equal(live.clock, "4:25");
 assert.deepEqual(new Set(live.agreeingSources), new Set(["ncaa","big12","cbs"]));
 assert.deepEqual(new Set(live.conflictingSources), new Set(["outlier"]));
 
+// Mirrors from one upstream lineage must not overwhelm genuinely independent agreement.
+const lineageConsensus = reconcileGame([
+  { sourceId:"cbs-web", sourceLineage:"cbs", observedAt:"2026-09-05T18:35:01Z", game, awayScore:31, homeScore:17, phase:"live", period:3, clock:"2:10" },
+  { sourceId:"cbs-hub", sourceLineage:"cbs", observedAt:"2026-09-05T18:35:02Z", game, awayScore:31, homeScore:17, phase:"live", period:3, clock:"2:09" },
+  { sourceId:"cbs-mirror", sourceLineage:"cbs", observedAt:"2026-09-05T18:35:03Z", game, awayScore:31, homeScore:17, phase:"live", period:3, clock:"2:08" },
+  { sourceId:"ncaa", sourceLineage:"ncaa", observedAt:"2026-09-05T18:35:03Z", game, awayScore:24, homeScore:17, phase:"live", period:3, clock:"2:08" },
+  { sourceId:"big12", sourceLineage:"big12", observedAt:"2026-09-05T18:35:03Z", game, awayScore:24, homeScore:17, phase:"live", period:3, clock:"2:08" },
+], [
+  { sourceId:"cbs-web", reliability:.8 }, { sourceId:"cbs-hub", reliability:.8 }, { sourceId:"cbs-mirror", reliability:.8 },
+  { sourceId:"ncaa", reliability:.9 }, { sourceId:"big12", reliability:.85 },
+], new Date("2026-09-05T18:35:04Z"));
+if (!lineageConsensus) throw new Error("lineage reconciliation failed");
+assert.equal(lineageConsensus.awayScore, 24);
+assert.equal(lineageConsensus.homeScore, 17);
+assert.deepEqual(new Set(lineageConsensus.agreeingLineages), new Set(["ncaa","big12"]));
+assert.deepEqual(new Set(lineageConsensus.conflictingLineages), new Set(["cbs"]));
+
 // A later poll from a slower source must not move a game backward from Q3 to halftime/Q2.
 const noRegression = reconcileGame([
   { sourceId:"fast", observedAt:"2026-09-05T18:31:00Z", game, awayScore:24, homeScore:17, phase:"live", period:3, clock:"3:58" },
