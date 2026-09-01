@@ -28,6 +28,7 @@ function normalizeName(value: string): string {
   return value
     .toLowerCase()
     .replace(/\bstate\b/g, "st")
+    .replace(/\bmichigan\b/g, "mich")
     .replace(/\buniversity\b/g, "")
     .replace(/[^a-z0-9]/g, "");
 }

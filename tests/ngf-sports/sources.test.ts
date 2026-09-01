@@ -46,16 +46,22 @@ const eligibleIds = catalog
   .filter((adapter) => adapter.canHandle?.(football) !== false)
   .map((adapter) => adapter.sourceId);
 
+assert.equal(eligibleIds.length, 5);
+
 assert(eligibleIds.includes("ncaa-football-public"));
-assert(eligibleIds.includes("conference-football-public"));
-assert(eligibleIds.includes("cbs-football-public"));
 assert(eligibleIds.includes("espn-football-public"));
+assert(eligibleIds.includes("yahoo-football-public"));
+assert(eligibleIds.includes("cbs-football-public"));
 assert(eligibleIds.includes("fox-football-public"));
-assert(eligibleIds.includes("official-away-school"));
-assert(eligibleIds.includes("official-home-school"));
+
+assert(!eligibleIds.includes("conference-football-public"));
+assert(!eligibleIds.includes("official-away-school"));
+assert(!eligibleIds.includes("official-home-school"));
+
 assert(!eligibleIds.includes("ncaa-basketball-public"));
-assert(!eligibleIds.includes("cbs-basketball-public"));
 assert(!eligibleIds.includes("espn-basketball-public"));
+assert(!eligibleIds.includes("yahoo-basketball-public"));
+assert(!eligibleIds.includes("cbs-basketball-public"));
 assert(!eligibleIds.includes("fox-basketball-public"));
 
 const awaySchool = new OfficialSchoolScoreboardAdapter("away", undefined, fakeFetch);

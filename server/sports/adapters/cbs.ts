@@ -17,8 +17,7 @@ function cbsTeamCode(value: string): string {
   return CBS_TEAM_CODE_ALIASES[normalized] ?? normalized;
 }
 
-export function buildCbsGameId(game: GameRef): string {
-  const date = new Date(game.scheduledStart);
+function buildCbsGameIdForDate(game: GameRef, date: Date): string {
   const y = date.getUTCFullYear();
   const m = String(date.getUTCMonth() + 1).padStart(2, "0");
   const d = String(date.getUTCDate()).padStart(2, "0");
@@ -26,9 +25,18 @@ export function buildCbsGameId(game: GameRef): string {
   return `${prefix}_${y}${m}${d}_${cbsTeamCode(game.away.abbreviation)}@${cbsTeamCode(game.home.abbreviation)}`;
 }
 
-function buildCbsGameUrl(game: GameRef): string {
+export function buildCbsGameId(game: GameRef): string {
+  return buildCbsGameIdForDate(game, new Date(game.scheduledStart));
+}
+
+function buildCbsGameUrls(game: GameRef): string[] {
   const sportPath = game.sport === "basketball" ? "college-basketball" : "college-football";
-  return `https://hubapi.cbssports.com/${sportPath}/gametracker/recap/${encodeURIComponent(buildCbsGameId(game))}/`;
+  const date = new Date(game.scheduledStart);
+  const previousDate = new Date(date.getTime() - 86_400_000);
+
+  return [...new Set([date, previousDate].map((candidate) =>
+    `https://hubapi.cbssports.com/${sportPath}/gametracker/recap/${encodeURIComponent(buildCbsGameIdForDate(game, candidate))}/`
+  ))];
 }
 
 function escapeRegex(value: string): string {
@@ -62,6 +70,22 @@ function standaloneNumbers(value: string): number[] {
     result.push(Number(match[0]));
   }
   return result;
+}
+
+function scoreBeforeTeamCode(value: string, team: TeamRef): number | null {
+  const codes = [...new Set([
+    cbsTeamCode(team.abbreviation),
+    team.abbreviation.toUpperCase().replace(/[^A-Z0-9]/g, ""),
+  ].filter(Boolean))];
+
+  for (const code of codes) {
+    const match = value.match(
+      new RegExp(`\\b(\\d{1,3})\\s+${escapeRegex(code)}\\b`, "i"),
+    );
+    if (match) return Number(match[1]);
+  }
+
+  return null;
 }
 
 function phaseFromCbs(text: string): GamePhase {
@@ -104,7 +128,19 @@ export function parseCbsGametrackerBody(
   const homeNumbers = standaloneNumbers(beforeHome);
 
   const awayScore = awayNumbers[0] ?? null;
-  const homeScore = homeNumbers.at(-1) ?? null;
+
+  // CBS renders ranked home teams like:
+  //   42 USC 14 USC Trojans 1-0
+  // The score is the number immediately before the team code;
+  // the later 14 is the ranking, not the score.
+  const homeScoreWindow = text.slice(
+    Math.max(awayIndex, homeIndex - 260),
+    Math.min(text.length, homeIndex + 80),
+  );
+  const homeScore =
+    scoreBeforeTeamCode(homeScoreWindow, game.home) ??
+    homeNumbers.at(-1) ??
+    null;
   const statusWindow = text.slice(awayIndex, Math.min(text.length, homeIndex + 100));
   const phase = phaseFromCbs(statusWindow);
 
@@ -138,16 +174,34 @@ class CbsScoreboardAdapter implements SportsSourceAdapter {
 
   async fetchGame(game: GameRef): Promise<ScoreObservation | null> {
     if (!this.canHandle(game)) return null;
-    const response = await this.fetchImpl(buildCbsGameUrl(game), {
-      headers: {
-        accept: "text/html,application/xhtml+xml",
-        "user-agent": "NGF-SportsFacts/1.0 (+public factual scoreboard collector)",
-      },
-      redirect: "follow",
-      signal: AbortSignal.timeout(12_000),
-    });
-    if (!response.ok) throw new Error(`${this.label} HTTP ${response.status}`);
-    return parseCbsGametrackerBody(this.sourceId, await response.text(), game);
+    let lastStatus: number | null = null;
+
+    for (const url of buildCbsGameUrls(game)) {
+      const response = await this.fetchImpl(url, {
+        headers: {
+          accept: "text/html,application/xhtml+xml",
+          "user-agent": "NGF-SportsFacts/1.0 (+public factual scoreboard collector)",
+        },
+        redirect: "follow",
+        signal: AbortSignal.timeout(12_000),
+      });
+
+      if (!response.ok) {
+        lastStatus = response.status;
+        continue;
+      }
+
+      const observation =
+        parseCbsGametrackerBody(this.sourceId, await response.text(), game);
+
+      if (observation) return observation;
+    }
+
+    if (lastStatus != null) {
+      throw new Error(`${this.label} HTTP ${lastStatus}`);
+    }
+
+    return null;
   }
 }
 
