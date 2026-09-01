@@ -118,17 +118,17 @@ export class ScheduleDrivenCollector {
         ...result.value,
         sourceLineage: result.value.sourceLineage ?? adapter.lineageId ?? result.value.sourceId,
       };
-      await this.hooks.onObservation?.(observation);
-
-      // A page load is not a successful score collection. During live/halftime/final,
-      // missing either score means the parser/data path failed and must not overwrite
-      // the canonical game state with null scores.
+      // Persist source health before persisting an observation. The observations
+      // table has a foreign key to ngf_sports_sources(source_id), so writing the
+      // observation first can abort the live poll before the engine ever ingests it.
       if (requiresScore(observation) && !hasCompleteScore(observation)) {
         await this.markFailure(adapter);
+        await this.hooks.onObservation?.(observation);
         continue;
       }
 
       await this.markSuccess(adapter);
+      await this.hooks.onObservation?.(observation);
       const current = sportsFactsEngine.ingest(observation);
       if (current) await this.hooks.onCurrent?.(current);
 

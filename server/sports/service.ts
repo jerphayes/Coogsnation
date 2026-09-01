@@ -138,7 +138,7 @@ export class SportsFactsService {
      * Only actively poll games near their play window.
      * The ticker can display future games without unnecessarily polling them.
      */
-    const activeGames = await this.store.loadUpcoming(4, 28);
+    const activeGames = await this.store.loadUpcoming(72, 28);
 
     for (const game of activeGames) {
       this.collector.watch(game);
