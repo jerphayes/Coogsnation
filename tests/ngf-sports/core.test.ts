@@ -25,6 +25,37 @@ if (!upset) throw new Error("upset not detected");
 assert.equal(upset.severity, "top5");
 assert.equal(upset.flashCount, 3);
 
+// Score consensus must ignore harmless clock skew between independent sources.
+const liveObservations: ScoreObservation[] = [
+  { sourceId:"ncaa", observedAt:"2026-09-05T18:30:03Z", game, awayScore:24, homeScore:17, phase:"live", period:3, clock:"4:31" },
+  { sourceId:"big12", observedAt:"2026-09-05T18:30:04Z", game, awayScore:24, homeScore:17, phase:"live", period:3, clock:"4:29" },
+  { sourceId:"cbs", observedAt:"2026-09-05T18:30:05Z", game, awayScore:24, homeScore:17, phase:"live", period:3, clock:"4:25" },
+  { sourceId:"outlier", observedAt:"2026-09-05T18:30:05Z", game, awayScore:21, homeScore:17, phase:"live", period:3, clock:"4:26" },
+];
+const live = reconcileGame(liveObservations, [
+  { sourceId:"ncaa", reliability:.95 }, { sourceId:"big12", reliability:.9 },
+  { sourceId:"cbs", reliability:.9 }, { sourceId:"outlier", reliability:.6 },
+], new Date("2026-09-05T18:30:06Z"));
+if (!live) throw new Error("live reconciliation failed");
+assert.equal(live.awayScore, 24);
+assert.equal(live.homeScore, 17);
+assert.equal(live.period, 3);
+assert.equal(live.clock, "4:25");
+assert.deepEqual(new Set(live.agreeingSources), new Set(["ncaa","big12","cbs"]));
+assert.deepEqual(new Set(live.conflictingSources), new Set(["outlier"]));
+
+// A later poll from a slower source must not move a game backward from Q3 to halftime/Q2.
+const noRegression = reconcileGame([
+  { sourceId:"fast", observedAt:"2026-09-05T18:31:00Z", game, awayScore:24, homeScore:17, phase:"live", period:3, clock:"3:58" },
+  { sourceId:"slow", observedAt:"2026-09-05T18:31:02Z", game, awayScore:24, homeScore:17, phase:"halftime", period:2, clock:null },
+], [
+  { sourceId:"fast", reliability:.9 }, { sourceId:"slow", reliability:.9 },
+], new Date("2026-09-05T18:31:03Z"));
+if (!noRegression) throw new Error("phase reconciliation failed");
+assert.equal(noRegression.phase, "live");
+assert.equal(noRegression.period, 3);
+assert.equal(noRegression.clock, "3:58");
+
 const active = nextPollDecision({ scheduledStart:"2026-09-05T17:00:00Z", phase:"live", now:new Date("2026-09-05T18:00:00Z") });
 assert.equal(active.intervalMs, 20_000);
 const done = nextPollDecision({ scheduledStart:"2026-09-05T17:00:00Z", phase:"final", finalVerified:true, now:new Date("2026-09-05T21:00:00Z") });

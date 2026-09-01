@@ -21,6 +21,14 @@ export interface ScheduledGameWatch {
   timer?: ReturnType<typeof setTimeout>;
 }
 
+function requiresScore(observation: ScoreObservation): boolean {
+  return observation.phase === "live" || observation.phase === "halftime" || observation.phase === "final";
+}
+
+function hasCompleteScore(observation: ScoreObservation): boolean {
+  return observation.awayScore != null && observation.homeScore != null;
+}
+
 export class ScheduleDrivenCollector {
   private readonly watches = new Map<string, ScheduledGameWatch>();
   private readonly health = new Map<string, SourceHealth>();
@@ -91,8 +99,7 @@ export class ScheduleDrivenCollector {
 
   private async poll(watch: ScheduledGameWatch) {
     const results = await Promise.allSettled(this.adapters.map((adapter) => adapter.fetchGame(watch.game)));
-    let finalConfirmations = 0;
-    let acceptedFinal: { away: number | null; home: number | null } | null = null;
+    const finalCounts = new Map<string, number>();
 
     for (let index = 0; index < results.length; index++) {
       const adapter = this.adapters[index];
@@ -101,18 +108,35 @@ export class ScheduleDrivenCollector {
         await this.markFailure(adapter);
         continue;
       }
+
+      const observation = result.value;
+      await this.hooks.onObservation?.(observation);
+
+      // A page load is not a successful score collection. During live/halftime/final,
+      // missing either score means the parser/data path failed and must not overwrite
+      // the canonical game state with null scores.
+      if (requiresScore(observation) && !hasCompleteScore(observation)) {
+        await this.markFailure(adapter);
+        continue;
+      }
+
       await this.markSuccess(adapter);
-      await this.hooks.onObservation?.(result.value);
-      const current = sportsFactsEngine.ingest(result.value);
+      const current = sportsFactsEngine.ingest(observation);
       if (current) await this.hooks.onCurrent?.(current);
-      watch.phase = result.value.phase;
-      if (result.value.phase === "final") {
-        if (!acceptedFinal) acceptedFinal = { away: result.value.awayScore, home: result.value.homeScore };
-        if (acceptedFinal.away === result.value.awayScore && acceptedFinal.home === result.value.homeScore) finalConfirmations += 1;
+
+      if (observation.phase === "final" && hasCompleteScore(observation)) {
+        const key = `${observation.awayScore}|${observation.homeScore}`;
+        finalCounts.set(key, (finalCounts.get(key) ?? 0) + 1);
       }
     }
 
-    watch.finalVerified = finalConfirmations >= 2;
+    watch.finalVerified = [...finalCounts.values()].some((count) => count >= 2);
+
+    // Follow the reconciled canonical state, not whichever adapter happened to
+    // be processed last. This prevents a slower source from regressing phase.
+    const current = sportsFactsEngine.getGame(watch.game.ngfGameId);
+    if (current) watch.phase = current.phase;
+
     if (watch.phase === "final" && watch.finalVerified) {
       this.stop(watch.game.ngfGameId);
       return;
