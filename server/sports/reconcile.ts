@@ -110,8 +110,9 @@ export function reconcileGame(
   }
 
   const rankedScores = [...scoreGroups.values()].sort((a, b) => {
-    if (b.weight !== a.weight) return b.weight - a.weight;
+    // Independent agreement is the primary truth signal.
     if (b.lineages.length !== a.lineages.length) return b.lineages.length - a.lineages.length;
+    if (b.weight !== a.weight) return b.weight - a.weight;
     const aFresh = Math.max(...a.observations.map((item) => Date.parse(item.observedAt)));
     const bFresh = Math.max(...b.observations.map((item) => Date.parse(item.observedAt)));
     return bFresh - aFresh;

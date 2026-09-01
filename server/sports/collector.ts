@@ -140,8 +140,9 @@ export class ScheduleDrivenCollector {
       }
     }
 
-    // Two mirrors of the same upstream feed are one confirmation, not two.
-    watch.finalVerified = [...finalLineages.values()].some((lineages) => lineages.size >= 2);
+    // Three independent upstream lineages are required for a verified final.
+    // Mirrors of the same feed remain one confirmation.
+    watch.finalVerified = [...finalLineages.values()].some((lineages) => lineages.size >= 3);
 
     // Follow the reconciled canonical state, not whichever adapter happened to
     // be processed last. This prevents a slower source from regressing phase.

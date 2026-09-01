@@ -103,13 +103,22 @@ export class SportsFactsEngine extends EventEmitter {
 
     const previous = this.current.get(observation.game.ngfGameId);
 
-    // Scores require independent consensus before we publish FINAL.
-    // A single bad parser/source must never put an incorrect final on the ticker.
+    // KISS publication rule:
+    // live/halftime/final scores need three independent upstream lineages.
+    // Massey is the preferred primary candidate, with two corroborators.
     const agreeingLineageCount =
       reconciled.agreeingLineages?.length ?? reconciled.agreeingSources.length;
 
-    if (reconciled.phase === "final" && agreeingLineageCount < 2) {
-      return previous ?? null;
+    const requiresVerifiedScore =
+      reconciled.phase === "live" ||
+      reconciled.phase === "halftime" ||
+      reconciled.phase === "final";
+
+    if (requiresVerifiedScore && agreeingLineageCount < 3) {
+      // Hold the existing canonical state in memory, but return null so
+      // callers do not persist an unaccepted/scheduled state over a
+      // previously verified score.
+      return null;
     }
 
     this.current.set(observation.game.ngfGameId, reconciled);
@@ -139,6 +148,16 @@ export class SportsFactsEngine extends EventEmitter {
     }
 
     return reconciled;
+  }
+
+  restoreCurrent(games: ReconciledGame[]) {
+    for (const game of games) {
+      this.current.set(game.game.ngfGameId, game);
+    }
+
+    if (games.length > 0) {
+      this.emit("ticker:update", this.snapshot());
+    }
   }
 
   getGame(gameId: string): ReconciledGame | null {

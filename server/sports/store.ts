@@ -63,6 +63,60 @@ export class SportsStore {
        game.statusText || null, game.confidence, game.agreeingSources, game.conflictingSources]);
   }
 
+  async loadCurrent(hoursPast = 96): Promise<ReconciledGame[]> {
+    if (!await this.isAvailable()) return [];
+
+    const result = await this.pool.query(`
+      select
+        g.ngf_game_id,g.sport,g.season,g.scheduled_start,
+        a.ngf_team_id away_id,a.name away_name,a.abbreviation away_abbr,
+        a.division away_div,a.conference away_conf,
+        h.ngf_team_id home_id,h.name home_name,h.abbreviation home_abbr,
+        h.division home_div,h.conference home_conf,
+        c.accepted_at,c.away_score,c.home_score,c.phase,c.period,c.clock,
+        c.status_text,c.confidence,c.agreeing_sources,c.conflicting_sources
+      from ngf_sports_current c
+      join ngf_sports_games g on g.ngf_game_id=c.ngf_game_id
+      join ngf_sports_teams a on a.ngf_team_id=g.away_team_id
+      join ngf_sports_teams h on h.ngf_team_id=g.home_team_id
+      where g.scheduled_start >= now() - ($1 || ' hours')::interval
+      order by g.scheduled_start asc
+    `, [hoursPast]);
+
+    return result.rows.map((r) => ({
+      game: {
+        ngfGameId: r.ngf_game_id,
+        sport: r.sport,
+        season: r.season,
+        scheduledStart: new Date(r.scheduled_start).toISOString(),
+        away: {
+          ngfTeamId: r.away_id,
+          name: r.away_name,
+          abbreviation: r.away_abbr,
+          division: r.away_div,
+          conference: r.away_conf || undefined,
+        },
+        home: {
+          ngfTeamId: r.home_id,
+          name: r.home_name,
+          abbreviation: r.home_abbr,
+          division: r.home_div,
+          conference: r.home_conf || undefined,
+        },
+      },
+      awayScore: r.away_score,
+      homeScore: r.home_score,
+      phase: r.phase,
+      period: r.period,
+      clock: r.clock,
+      statusText: r.status_text,
+      acceptedAt: new Date(r.accepted_at).toISOString(),
+      confidence: Number(r.confidence || 0),
+      agreeingSources: r.agreeing_sources || [],
+      conflictingSources: r.conflicting_sources || [],
+    }));
+  }
+
   async loadUpcoming(hoursPast = 6, hoursFuture = 30): Promise<GameRef[]> {
     if (!await this.isAvailable()) return [];
     const result = await this.pool.query(`

@@ -1,5 +1,5 @@
 export type Sport = "football" | "basketball" | "baseball";
-export type Division = "fbs" | "fcs" | "d1";
+export type Division = "fbs" | "fcs" | "d1" | "d2" | "d3";
 export type GamePhase = "scheduled" | "pregame" | "live" | "halftime" | "final" | "postponed" | "cancelled";
 
 export interface TeamRef {

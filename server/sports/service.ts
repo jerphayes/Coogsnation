@@ -41,6 +41,15 @@ export class SportsFactsService {
 
     this.started = true;
 
+    // Restore persistent canonical scores before schedule discovery.
+    // setScheduledSlate() will then preserve live/final states.
+    try {
+      const restored = await this.store.loadCurrent(96);
+      sportsFactsEngine.restoreCurrent(restored);
+    } catch (error) {
+      console.error("[SPORTS] Current-state restore failed", error);
+    }
+
     await this.refreshSchedule().catch((error) =>
       console.error("[SPORTS] Initial schedule refresh failed", error),
     );

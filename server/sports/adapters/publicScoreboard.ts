@@ -25,7 +25,11 @@ export function htmlToText(html: string): string {
 }
 
 function normalizeName(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return value
+    .toLowerCase()
+    .replace(/\bstate\b/g, "st")
+    .replace(/\buniversity\b/g, "")
+    .replace(/[^a-z0-9]/g, "");
 }
 
 function phaseFromText(text: string): GamePhase {
@@ -87,7 +91,17 @@ function teamMatches(value: unknown, team: TeamRef): boolean {
 }
 
 function structuredStatus(record: JsonRecord): string {
-  return [record.status, record.state, record.phase, record.statusText, record.gameStatus]
+  return [
+    record.status,
+    record.state,
+    record.phase,
+    record.statusText,
+    record.gameStatus,
+    record.gameState,
+    record.statusCodeDisplay,
+    record.currentPeriod,
+    record.finalMessage,
+  ]
     .filter((value) => value != null)
     .map((value) => typeof value === "string" ? value : JSON.stringify(value))
     .join(" ");
@@ -104,7 +118,7 @@ function structuredPeriod(record: JsonRecord): number | null {
 }
 
 function structuredClock(record: JsonRecord): string | null {
-  for (const key of ["clock", "displayClock", "timeRemaining"]) {
+  for (const key of ["clock", "displayClock", "timeRemaining", "contestClock"]) {
     if (typeof record[key] === "string") {
       const clock = clockFromText(record[key] as string);
       if (clock) return clock;
@@ -132,6 +146,27 @@ function structuredPair(record: JsonRecord, game: GameRef): [number, number] | n
     const awayScore = scoreFromEntity(away);
     const homeScore = scoreFromEntity(home);
     if (awayScore != null && homeScore != null) return [awayScore, homeScore];
+  }
+
+  // NCAA scoreboard Contest objects use a teams[] array with isHome.
+  const teams = Array.isArray(record.teams) ? record.teams : null;
+  if (teams) {
+    const home = teams.find((item) => asRecord(item)?.isHome === true);
+    const away = teams.find((item) => asRecord(item)?.isHome === false);
+
+    if (
+      away &&
+      home &&
+      teamMatches(away, game.away) &&
+      teamMatches(home, game.home)
+    ) {
+      const awayScore = scoreFromEntity(away);
+      const homeScore = scoreFromEntity(home);
+
+      if (awayScore != null && homeScore != null) {
+        return [awayScore, homeScore];
+      }
+    }
   }
 
   const competitors = Array.isArray(record.competitors) ? record.competitors : null;
