@@ -1,3 +1,4 @@
+import type { SportsSourceAdapter } from "./collector";
 import { createNcaaBasketballScoreboardAdapter, createNcaaFootballScoreboardAdapter } from "./adapters/ncaa";
 import { ConferenceScoreboardAdapter } from "./adapters/conference";
 import { createCbsBasketballScoreboardAdapter, createCbsFootballScoreboardAdapter } from "./adapters/cbs";
@@ -5,7 +6,7 @@ import { createEspnBasketballScoreboardAdapter, createEspnFootballScoreboardAdap
 import { createFoxBasketballScoreboardAdapter, createFoxFootballScoreboardAdapter } from "./adapters/fox";
 import { OfficialSchoolScoreboardAdapter } from "./adapters/school";
 
-export function createDefaultSportsSources(fetchImpl: typeof fetch = fetch) {
+export function createDefaultSportsSources(fetchImpl: typeof fetch = fetch): SportsSourceAdapter[] {
   return [
     createNcaaFootballScoreboardAdapter(fetchImpl),
     createNcaaBasketballScoreboardAdapter(fetchImpl),
