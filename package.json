@@ -28,7 +28,8 @@
     "venue:check": "npm run venue:conformance && npm run venue:smoke && npm run venue:basketball && npm run venue:integration && npm run venue:bridge",
     "venue:bridge": "node scripts/venue-engine/bridge-check.mjs",
     "codespace:start": "bash scripts/codespace-start.sh",
-    "sports:check": "node scripts/ngf-sports/check.mjs"
+    "sports:check": "node scripts/ngf-sports/check.mjs",
+    "sports:smoke": "npm exec tsx -- scripts/ngf-sports/live-source-smoke.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

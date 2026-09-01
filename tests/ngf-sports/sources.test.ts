@@ -49,11 +49,13 @@ const eligibleIds = catalog
 assert(eligibleIds.includes("ncaa-football-public"));
 assert(eligibleIds.includes("conference-football-public"));
 assert(eligibleIds.includes("cbs-football-public"));
+assert(eligibleIds.includes("espn-football-public"));
 assert(eligibleIds.includes("fox-football-public"));
 assert(eligibleIds.includes("official-away-school"));
 assert(eligibleIds.includes("official-home-school"));
 assert(!eligibleIds.includes("ncaa-basketball-public"));
 assert(!eligibleIds.includes("cbs-basketball-public"));
+assert(!eligibleIds.includes("espn-basketball-public"));
 assert(!eligibleIds.includes("fox-basketball-public"));
 
 const awaySchool = new OfficialSchoolScoreboardAdapter("away", undefined, fakeFetch);
