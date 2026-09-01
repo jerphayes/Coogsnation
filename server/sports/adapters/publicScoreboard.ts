@@ -215,8 +215,12 @@ export class PublicScoreboardAdapter implements SportsSourceAdapter {
     private readonly supportsGame: (game: GameRef) => boolean = () => true,
   ) {}
 
+  canHandle(game: GameRef): boolean {
+    return this.supportsGame(game);
+  }
+
   async fetchGame(game: GameRef): Promise<ScoreObservation | null> {
-    if (!this.supportsGame(game)) return null;
+    if (!this.canHandle(game)) return null;
     const response = await this.fetchImpl(this.urlForGame(game), {
       headers: {
         "accept": "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",

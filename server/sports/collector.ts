@@ -7,6 +7,8 @@ export interface SportsSourceAdapter {
   readonly label: string;
   /** Shared upstream family for mirrors/republishers; defaults to sourceId. */
   readonly lineageId?: string;
+  /** Return false when this adapter intentionally does not cover the game. */
+  canHandle?(game: GameRef): boolean;
   fetchGame(game: GameRef): Promise<ScoreObservation | null>;
 }
 
@@ -100,11 +102,12 @@ export class ScheduleDrivenCollector {
   }
 
   private async poll(watch: ScheduledGameWatch) {
-    const results = await Promise.allSettled(this.adapters.map((adapter) => adapter.fetchGame(watch.game)));
+    const eligibleAdapters = this.adapters.filter((adapter) => adapter.canHandle?.(watch.game) !== false);
+    const results = await Promise.allSettled(eligibleAdapters.map((adapter) => adapter.fetchGame(watch.game)));
     const finalLineages = new Map<string, Set<string>>();
 
     for (let index = 0; index < results.length; index++) {
-      const adapter = this.adapters[index];
+      const adapter = eligibleAdapters[index];
       const result = results[index];
       if (result.status !== "fulfilled" || !result.value) {
         await this.markFailure(adapter);
