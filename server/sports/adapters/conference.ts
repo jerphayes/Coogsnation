@@ -126,6 +126,7 @@ function conferencePage(
 }
 
 export class ConferenceScoreboardAdapter extends PublicScoreboardAdapter {
+  readonly lineageId = "conference";
   constructor(
     sport: ConferenceSport = "football",
     resolver: ConferencePageResolver =

@@ -1,4 +1,5 @@
 import type { GamePhase, ReconciledGame, ScoreObservation, SourceHealth } from "../../shared/ngfSportsTypes";
+import { hierarchyPosition } from "./sourceHierarchy";
 
 const FINAL_PHASES = new Set<GamePhase>(["final", "cancelled", "postponed"]);
 
@@ -33,11 +34,47 @@ function weightFor(observation: ScoreObservation, health: Map<string, SourceHeal
   return reliability * freshness;
 }
 
-function freshestObservation(observations: ScoreObservation[], health: Map<string, SourceHealth>, nowMs: number): ScoreObservation {
+function reliabilityFor(
+  observation: ScoreObservation,
+  health: Map<string, SourceHealth>,
+): number {
+  return Math.max(
+    0.1,
+    Math.min(
+      1,
+      health.get(observation.sourceId)?.reliability ?? 0.7,
+    ),
+  );
+}
+
+function bestClockObservation(
+  observations: ScoreObservation[],
+  health: Map<string, SourceHealth>,
+): ScoreObservation {
   return [...observations].sort((a, b) => {
-    const observedDelta = Date.parse(b.observedAt) - Date.parse(a.observedAt);
-    if (observedDelta !== 0) return observedDelta;
-    return weightFor(b, health, nowMs) - weightFor(a, health, nowMs);
+    // Highest source-health confidence first.
+    const reliabilityDelta =
+      reliabilityFor(b, health) -
+      reliabilityFor(a, health);
+
+    if (reliabilityDelta !== 0) {
+      return reliabilityDelta;
+    }
+
+    // Equal confidence: authority hierarchy breaks the tie.
+    const hierarchyDelta =
+      hierarchyPosition(a.sourceLineage ?? a.sourceId) -
+      hierarchyPosition(b.sourceLineage ?? b.sourceId);
+
+    if (hierarchyDelta !== 0) {
+      return hierarchyDelta;
+    }
+
+    // Same confidence + same hierarchy: freshest wins.
+    return (
+      Date.parse(b.observedAt) -
+      Date.parse(a.observedAt)
+    );
   })[0];
 }
 
@@ -132,7 +169,9 @@ export function reconcileGame(
   const periods = phaseCandidates.filter((item) => item.period != null);
   const selectedPeriod = periods.length ? Math.max(...periods.map((item) => item.period as number)) : phaseWinner.period ?? null;
   const clockCandidates = phaseCandidates.filter((item) => item.clock && (selectedPeriod == null || item.period === selectedPeriod));
-  const clockWinner = clockCandidates.length ? freshestObservation(clockCandidates, health, nowMs) : null;
+  const clockWinner = clockCandidates.length
+    ? bestClockObservation(clockCandidates, health)
+    : null;
 
   const agreeingSources = scored
     .filter((item) => winnerKey && winnerLineages.has(lineageFor(item)) && scoreKey(item) === winnerKey)

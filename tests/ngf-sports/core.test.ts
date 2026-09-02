@@ -1,5 +1,6 @@
 import { strict as assert } from "node:assert";
 import { reconcileGame } from "../../server/sports/reconcile";
+import { gameDayRolloverHasPassed } from "../../server/sports/engine";
 import { detectUpset } from "../../server/sports/upset";
 import { nextPollDecision } from "../../server/sports/scheduler";
 import { discoverGamesFromPublicPage } from "../../server/sports/discovery";
@@ -40,7 +41,7 @@ if (!live) throw new Error("live reconciliation failed");
 assert.equal(live.awayScore, 24);
 assert.equal(live.homeScore, 17);
 assert.equal(live.period, 3);
-assert.equal(live.clock, "4:25");
+assert.equal(live.clock, "4:31");
 assert.deepEqual(new Set(live.agreeingSources), new Set(["ncaa","big12","cbs"]));
 assert.deepEqual(new Set(live.conflictingSources), new Set(["outlier"]));
 
@@ -72,6 +73,34 @@ if (!noRegression) throw new Error("phase reconciliation failed");
 assert.equal(noRegression.phase, "live");
 assert.equal(noRegression.period, 3);
 assert.equal(noRegression.clock, "3:58");
+
+// Universal rollover:
+// Sep 5 00:00 America/Chicago = 05:00Z during CDT.
+const beforeRollover =
+  gameDayRolloverHasPassed(
+    game,
+    new Date(
+      "2026-09-05T05:00:00Z",
+    ),
+  );
+
+assert.equal(
+  beforeRollover,
+  false,
+);
+
+const afterRollover =
+  gameDayRolloverHasPassed(
+    game,
+    new Date(
+      "2026-09-05T05:01:00Z",
+    ),
+  );
+
+assert.equal(
+  afterRollover,
+  true,
+);
 
 const active = nextPollDecision({ scheduledStart:"2026-09-05T17:00:00Z", phase:"live", now:new Date("2026-09-05T18:00:00Z") });
 assert.equal(active.intervalMs, 20_000);

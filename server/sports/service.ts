@@ -44,7 +44,7 @@ export class SportsFactsService {
     // Restore persistent canonical scores before schedule discovery.
     // setScheduledSlate() will then preserve live/final states.
     try {
-      const restored = await this.store.loadCurrent(96);
+      const restored = await this.store.loadCurrent(24 * 60);
       sportsFactsEngine.restoreCurrent(restored);
     } catch (error) {
       console.error("[SPORTS] Current-state restore failed", error);
@@ -87,9 +87,13 @@ export class SportsFactsService {
 
     /*
      * Always-on ticker:
-     * Search progressively farther ahead until the next real NCAA football
-     * slate is found. Weekly NCAA URLs mean a seven-day step avoids hammering
-     * the same scoreboard repeatedly.
+     *
+     * Search the full 35-day horizon.
+     *
+     * We deliberately do NOT stop at the first non-empty week because a
+     * particular school may have a bye while other schools play.
+     *
+     * The display engine selects each team's actual next matchup.
      */
     for (let dayOffset = 0; dayOffset <= 35; dayOffset += 7) {
       const date = new Date(now.getTime() + dayOffset * DAY);
@@ -117,12 +121,10 @@ export class SportsFactsService {
       }
 
       /*
-       * Stop at the first week containing games.
-       * Those become the permanent PRE/0-0 ticker slate.
+       * Do not break here.
+       * A team-specific next game can be several weeks away because of byes.
        */
-      if (gamesFoundThisWeek > 0) {
-        break;
-      }
+      void gamesFoundThisWeek;
     }
 
     /*

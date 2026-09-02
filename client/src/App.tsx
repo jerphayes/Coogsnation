@@ -37,6 +37,8 @@ import ProfileCompletion from "@/pages/ProfileCompletion";
 import JoinGate from "@/pages/JoinGate";
 import JoinEmail from "@/pages/JoinEmail";
 import LiveSports from "@/pages/LiveSports";
+import Intramurals from "@/pages/Intramurals";
+import IntramuralTeam from "@/pages/IntramuralTeam";
 import CoogpawsChat from "@/pages/CoogpawsChat";
 import Login from "@/pages/Login";
 import LoginEmail from "@/pages/LoginEmail";
@@ -97,6 +99,16 @@ function Router() {
         <Route path="/verify-email" component={EmailVerification} />
       <Route path="/member-dashboard" component={MemberDashboard} />
       <Route path="/live-sports" component={LiveSports} />
+
+      <Route path="/intramurals" component={Intramurals} />
+
+      <Route path="/intramurals/teams/:teamId">
+        {(params) => (
+          <IntramuralTeam
+            teamId={params.teamId}
+          />
+        )}
+      </Route>
       <Route path="/get-em" component={GetEmPickEm} />
       <Route path="/venues/:venueId">
         {(params) => (

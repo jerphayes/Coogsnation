@@ -301,7 +301,7 @@ export default function Landing() {
     },
     {
       label: "Intramural Sports",
-      href: forumHref("other-sports-men"),
+      href: "/intramurals",
       icon: "🏆",
       description: "Activities and announcements on and off campus.",
     },

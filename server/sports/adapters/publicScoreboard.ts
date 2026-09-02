@@ -27,6 +27,30 @@ export function htmlToText(html: string): string {
 function normalizeName(value: string): string {
   return value
     .toLowerCase()
+
+    // Eastern Michigan / Eastern Mich. / E. Michigan / EMU
+    .replace(/\beastern\s+mich(?:igan)?\.?\b/g, "emich")
+    .replace(/\be\.?\s*mich(?:igan)?\.?\b/g, "emich")
+    .replace(/\bemu\b/g, "emich")
+
+    // San Jose State / San José State / San Jose St. / SJSU
+    .replace(/\bsan\s+jos[eé]\s+state\b/g, "sjsu")
+    .replace(/\bsan\s+jos[eé]\s+st\.?\b/g, "sjsu")
+
+    // North Dakota State
+    .replace(/\bnorth\s+dakota\s+state\b/g, "ndsu")
+    .replace(/\bnorth\s+dakota\s+st\.?\b/g, "ndsu")
+    .replace(/\bn\.?\s*dakota\s+st\.?\b/g, "ndsu")
+
+    // Sacramento State
+    .replace(/\bsacramento\s+state\b/g, "sacst")
+    .replace(/\bsac\s+state\b/g, "sacst")
+    .replace(/\bsac\s+st\.?\b/g, "sacst")
+
+    // Jacksonville State
+    .replace(/\bjacksonville\s+state\b/g, "jaxst")
+    .replace(/\bjacksonville\s+st\.?\b/g, "jaxst")
+
     .replace(/\bstate\b/g, "st")
     .replace(/\bmichigan\b/g, "mich")
     .replace(/\buniversity\b/g, "")

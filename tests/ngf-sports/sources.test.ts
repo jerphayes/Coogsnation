@@ -46,15 +46,18 @@ const eligibleIds = catalog
   .filter((adapter) => adapter.canHandle?.(football) !== false)
   .map((adapter) => adapter.sourceId);
 
-assert.equal(eligibleIds.length, 5);
+assert.equal(eligibleIds.length, 9);
 
 assert(eligibleIds.includes("ncaa-football-public"));
+assert(eligibleIds.includes("conference-football-public"));
 assert(eligibleIds.includes("espn-football-public"));
-assert(eligibleIds.includes("yahoo-football-public"));
 assert(eligibleIds.includes("cbs-football-public"));
 assert(eligibleIds.includes("fox-football-public"));
+assert(eligibleIds.includes("nbc-football-public"));
+assert(eligibleIds.includes("usatoday-football-public"));
+assert(eligibleIds.includes("yahoo-football-public"));
+assert(eligibleIds.includes("massey-football-public"));
 
-assert(!eligibleIds.includes("conference-football-public"));
 assert(!eligibleIds.includes("official-away-school"));
 assert(!eligibleIds.includes("official-home-school"));
 

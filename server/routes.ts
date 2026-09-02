@@ -57,6 +57,7 @@ import { registerTrafficAnalyticsRoutes } from "./trafficAnalytics";
 import { registerMarketingTrafficPanelRoutes } from "./marketingTrafficPanel";
 import { registerBusinessControlPanelRoutes } from "./businessControlPanels";
 import { registerSportsHttpRoutes, registerSportsSocketNamespace, startSportsFactsService } from "./sports/routes";
+import { registerIntramuralRoutes } from "./intramurals/routes";
 import { registerGetEmRoutes } from "./getem/routes";
 import { seedSportsTickerDemo } from "./sports/devSeed";
 
@@ -177,6 +178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   const sessionMiddleware = await setupAuth(app);
   registerSportsHttpRoutes(app);
+  registerIntramuralRoutes(app);
   registerGetEmRoutes(app);
 
 const aiService = getAIService();

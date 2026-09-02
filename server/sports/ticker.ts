@@ -13,14 +13,99 @@ export interface TickerItem {
   upsetSeverity?: UpsetSeverity | null;
 }
 
-function statusFor(game: ReconciledGame): string {
-  if (game.phase === "final") return "FINAL";
-  if (game.phase === "halftime") return "HALF";
-  if (game.phase === "postponed") return "PPD";
-  if (game.phase === "cancelled") return "CANCELLED";
-  if (game.phase === "scheduled" || game.phase === "pregame") return game.statusText || "UPCOMING";
-  const period = game.period ? `Q${game.period}` : game.statusText || "LIVE";
-  return game.clock ? `${period} ${game.clock}` : period;
+function defaultPeriodLabel(
+  game: ReconciledGame,
+): string {
+
+  if (game.periodLabel) {
+    return game.periodLabel;
+  }
+
+  const period =
+    game.period;
+
+  if (!period) {
+    return (
+      game.stateDetail ||
+      game.statusText ||
+      "LIVE"
+    );
+  }
+
+  switch (game.game.sport) {
+    case "football":
+      return `Q${period}`;
+
+    case "basketball":
+      if (
+        game.game.competitionGender === "women"
+      ) {
+        return `Q${period}`;
+      }
+
+      return period <= 2
+        ? `${period}H`
+        : `OT${period - 2}`;
+
+    case "baseball":
+    case "softball":
+      return (
+        game.stateDetail ||
+        `INN ${period}`
+      );
+
+    case "hockey":
+      return period <= 3
+        ? `P${period}`
+        : "OT";
+
+    case "volleyball":
+      return `SET ${period}`;
+
+    default:
+      return (
+        game.stateDetail ||
+        `P${period}`
+      );
+  }
+}
+
+function statusFor(
+  game: ReconciledGame,
+): string {
+
+  if (game.phase === "final") {
+    return "FINAL";
+  }
+
+  if (game.phase === "halftime") {
+    return "HALF";
+  }
+
+  if (game.phase === "postponed") {
+    return "PPD";
+  }
+
+  if (game.phase === "cancelled") {
+    return "CANCELLED";
+  }
+
+  if (
+    game.phase === "scheduled" ||
+    game.phase === "pregame"
+  ) {
+    return (
+      game.statusText ||
+      "UPCOMING"
+    );
+  }
+
+  const label =
+    defaultPeriodLabel(game);
+
+  return game.clock
+    ? `${label} ${game.clock}`
+    : label;
 }
 
 function rankedLabel(rank: number | null | undefined, abbreviation: string): string {

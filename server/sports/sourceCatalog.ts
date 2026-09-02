@@ -1,4 +1,6 @@
-import type { SportsSourceAdapter } from "./collector";
+import type {
+  SportsSourceAdapter,
+} from "./collector";
 
 import {
   createNcaaBasketballScoreboardAdapter,
@@ -25,40 +27,64 @@ import {
   createFoxFootballScoreboardAdapter,
 } from "./adapters/fox";
 
+import {
+  ConferenceScoreboardAdapter,
+} from "./adapters/conference";
+
+import {
+  createMasseyBasketballScoreboardAdapter,
+  createMasseyFootballScoreboardAdapter,
+  createNbcBasketballScoreboardAdapter,
+  createNbcFootballScoreboardAdapter,
+  createUsaTodayBasketballScoreboardAdapter,
+  createUsaTodayFootballScoreboardAdapter,
+} from "./adapters/nationalScoreboards";
+
 /**
- * NGF primary score quorum.
+ * IMPORTANT:
  *
- * Exactly five independent publishing lineages are active per sport:
+ * The collector executes all eligible adapters concurrently.
  *
- *   NCAA
- *   ESPN
- *   Yahoo
- *   CBS
- *   FOX
- *
- * The SportsFactsEngine requires any THREE matching independent
- * lineages before publishing live, halftime or final scores.
- *
- * Conference and official-school adapters remain available in the
- * codebase but are intentionally outside the primary five-source
- * quorum for now.
+ * Three matching independent lineages are enough to publish.
+ * The other observations are still stored and analyzed.
  */
 export function createDefaultSportsSources(
   fetchImpl: typeof fetch = fetch,
 ): SportsSourceAdapter[] {
+
   return [
-    // FOOTBALL -- five primary votes
+    // FOOTBALL
     createNcaaFootballScoreboardAdapter(fetchImpl),
+
+    new ConferenceScoreboardAdapter(
+      "football",
+      undefined,
+      fetchImpl,
+    ),
+
     createEspnFootballScoreboardAdapter(fetchImpl),
-    createYahooFootballScoreboardAdapter(fetchImpl),
     createCbsFootballScoreboardAdapter(fetchImpl),
     createFoxFootballScoreboardAdapter(fetchImpl),
+    createNbcFootballScoreboardAdapter(fetchImpl),
+    createUsaTodayFootballScoreboardAdapter(fetchImpl),
+    createYahooFootballScoreboardAdapter(fetchImpl),
+    createMasseyFootballScoreboardAdapter(fetchImpl),
 
-    // MEN'S BASKETBALL -- same five-source architecture
+    // MEN'S BASKETBALL
     createNcaaBasketballScoreboardAdapter(fetchImpl),
+
+    new ConferenceScoreboardAdapter(
+      "basketball",
+      undefined,
+      fetchImpl,
+    ),
+
     createEspnBasketballScoreboardAdapter(fetchImpl),
-    createYahooBasketballScoreboardAdapter(fetchImpl),
     createCbsBasketballScoreboardAdapter(fetchImpl),
     createFoxBasketballScoreboardAdapter(fetchImpl),
+    createNbcBasketballScoreboardAdapter(fetchImpl),
+    createUsaTodayBasketballScoreboardAdapter(fetchImpl),
+    createYahooBasketballScoreboardAdapter(fetchImpl),
+    createMasseyBasketballScoreboardAdapter(fetchImpl),
   ];
 }
