@@ -101,6 +101,13 @@ export default function ResetPassword() {
                 <p role="status" className="rounded-md bg-green-50 p-3 text-sm text-green-800">
                   {message}
                 </p>
+                <div
+                  className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm font-semibold text-amber-900"
+                  data-testid="password-manager-update-warning"
+                >
+                  Important: Write down your new password and update your password manager, just in case it does not save or update automatically.
+                </div>
+
                 <Link href="/login/email">
                   <Button className="w-full bg-uh-red hover:bg-red-700">Return to login</Button>
                 </Link>
@@ -127,9 +134,11 @@ export default function ResetPassword() {
                     id="reset-identifier"
                     value={identifier}
                     onChange={(event) => setIdentifier(event.target.value)}
+                    name="username"
                     autoComplete="username"
                     required
-                    disabled={step !== "request"}
+                    readOnly={step !== "request"}
+                    className={step !== "request" ? "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400" : ""}
                   />
                 </div>
 
@@ -166,6 +175,7 @@ export default function ResetPassword() {
                           type={showNewPassword ? "text" : "password"}
                           value={newPassword}
                           onChange={(event) => setNewPassword(event.target.value)}
+                          name="new-password"
                           autoComplete="new-password"
                           className="pr-12"
                           required
@@ -190,6 +200,7 @@ export default function ResetPassword() {
                           type={showConfirmPassword ? "text" : "password"}
                           value={confirmPassword}
                           onChange={(event) => setConfirmPassword(event.target.value)}
+                          name="confirm-password"
                           autoComplete="new-password"
                           className="pr-12"
                           required

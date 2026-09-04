@@ -127,6 +127,31 @@ export default function MemberDashboard() {
   const userId =
     member?.id;
 
+  /*
+   * Recovered useful legacy-profile statistics.
+   * Source remains the established member stats endpoint.
+   */
+  const {
+    data: memberStats,
+  } = useQuery<any>({
+    queryKey: [
+      "/api/users/stats",
+      userId,
+    ],
+    enabled: Boolean(userId),
+  });
+
+  const achievementBadgeCount =
+    memberStats
+      ? [
+          Number(memberStats.postsCount || 0) >= 100,
+          Number(memberStats.likesReceived || 0) >= 500,
+          Number(memberStats.yearsActive || 0) >= 3,
+          Number(memberStats.helpfulAnswers || 0) >= 50,
+          Boolean(memberStats.forumModerator),
+        ].filter(Boolean).length
+      : 0;
+
   const {
     data: userPosts = [],
     isLoading: postsLoading,
@@ -362,6 +387,60 @@ export default function MemberDashboard() {
             account and community
             information in one place.
           </p>
+        </div>
+
+        {/* MEMBER COMMUNITY STATS — recovered from useful legacy profile UI */}
+        <div
+          className="mb-7 grid grid-cols-2 gap-4 lg:grid-cols-4"
+          data-testid="member-community-stats"
+        >
+          <Card>
+            <CardContent className="p-5 text-center">
+              <div className="mb-2 text-3xl" aria-hidden="true">💬</div>
+              <div className="text-3xl font-black text-red-700">
+                {Number(memberStats?.postsCount || 0)}
+              </div>
+              <div className="mt-1 font-bold text-red-700">
+                Forum Posts
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-5 text-center">
+              <div className="mb-2 text-3xl" aria-hidden="true">♥</div>
+              <div className="text-3xl font-black text-red-700">
+                {Number(memberStats?.likesReceived || 0)}
+              </div>
+              <div className="mt-1 font-bold text-red-700">
+                Likes Received
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-5 text-center">
+              <div className="mb-2 text-3xl" aria-hidden="true">🏆</div>
+              <div className="text-3xl font-black text-red-700">
+                {achievementBadgeCount}
+              </div>
+              <div className="mt-1 font-bold text-red-700">
+                Achievement Badges
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-5 text-center">
+              <div className="mb-2 text-3xl" aria-hidden="true">★</div>
+              <div className="text-3xl font-black text-red-700">
+                {Number(memberStats?.reputationScore || 0)}
+              </div>
+              <div className="mt-1 font-bold text-red-700">
+                Reputation Score
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="grid items-start gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">

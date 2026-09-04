@@ -125,7 +125,7 @@ export function Header({ leadingBrand }: { leadingBrand?: ReactNode } = {}) {
               {forumsOpen && (
                 <div
                   id="desktop-forums-menu"
-                  className="absolute left-0 top-full mt-2 min-w-[230px] overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg"
+                  className="absolute left-0 top-full z-[60] mt-2 min-w-[230px] overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg"
                 >
                   <HeaderMenuLink href="/forums" onNavigate={closeMenus}>
                     Forums Home
@@ -156,7 +156,7 @@ export function Header({ leadingBrand }: { leadingBrand?: ReactNode } = {}) {
               {membersOpen && (
                 <div
                   id="desktop-members-menu"
-                  className="absolute left-0 top-full mt-2 min-w-[220px] overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg"
+                  className="absolute left-0 top-full z-[60] mt-2 min-w-[220px] overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg"
                 >
                   <HeaderMenuLink href="/members" onNavigate={closeMenus}>Member Directory</HeaderMenuLink>
                   <HeaderMenuLink href="/messages" onNavigate={closeMenus}>Messages</HeaderMenuLink>
@@ -186,7 +186,7 @@ export function Header({ leadingBrand }: { leadingBrand?: ReactNode } = {}) {
               {shoppingOpen && (
                 <div
                   id="desktop-shopping-menu"
-                  className="absolute left-0 top-full mt-2 min-w-[230px] overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg"
+                  className="absolute left-0 top-full z-[60] mt-2 min-w-[230px] overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg"
                 >
                   <HeaderMenuLink href="/store" onNavigate={closeMenus}>Store Home</HeaderMenuLink>
                   <HeaderMenuLink href="/store/wear-your-pride" onNavigate={closeMenus}>Wear Your Pride</HeaderMenuLink>
@@ -226,7 +226,7 @@ export function Header({ leadingBrand }: { leadingBrand?: ReactNode } = {}) {
               {communityOpen && (
                 <div
                   id="desktop-community-menu"
-                  className="absolute left-0 top-full mt-2 min-w-[220px] overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg"
+                  className="absolute left-0 top-full z-[60] mt-2 min-w-[220px] overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg"
                 >
                   <HeaderMenuLink href="/forums?tab=community" onNavigate={closeMenus}>
                     Community Home
@@ -282,7 +282,7 @@ export function Header({ leadingBrand }: { leadingBrand?: ReactNode } = {}) {
                   Login <span aria-hidden="true">▼</span>
                 </button>
                 {loginOpen && (
-                  <div id="desktop-login-menu" className="absolute right-0 top-full mt-2 min-w-[220px] overflow-hidden rounded-md border bg-white shadow-lg">
+                  <div id="desktop-login-menu" className="absolute right-0 top-full z-[60] mt-2 min-w-[220px] overflow-hidden rounded-md border bg-white shadow-lg">
                     <HeaderMenuLink href="/login" onNavigate={closeMenus} testId="link-login-site">🔑 Login to Site</HeaderMenuLink>
                     <HeaderMenuLink href="/login/email" onNavigate={closeMenus} testId="link-login-email">Login with Email</HeaderMenuLink>
                   </div>
@@ -300,7 +300,7 @@ export function Header({ leadingBrand }: { leadingBrand?: ReactNode } = {}) {
                   Join <span aria-hidden="true">▼</span>
                 </button>
                 {joinOpen && (
-                  <div id="desktop-join-menu" className="absolute right-0 top-full mt-2 min-w-[180px] overflow-hidden rounded-md border bg-white shadow-lg">
+                  <div id="desktop-join-menu" className="absolute right-0 top-full z-[60] mt-2 min-w-[180px] overflow-hidden rounded-md border bg-white shadow-lg">
                     <HeaderMenuLink href="/join" onNavigate={closeMenus} testId="link-signup">Sign Up</HeaderMenuLink>
                   </div>
                 )}

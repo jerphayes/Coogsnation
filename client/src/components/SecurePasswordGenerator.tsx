@@ -206,6 +206,13 @@ export default function SecurePasswordGenerator({
             aria-label="Generated password"
           />
 
+          <div
+            className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm font-semibold text-amber-900"
+            data-testid="generated-password-save-warning"
+          >
+            Write down or save this password now. Update your password manager, just in case it does not save automatically.
+          </div>
+
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"

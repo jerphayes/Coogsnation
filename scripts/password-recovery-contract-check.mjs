@@ -54,6 +54,16 @@ mustNot(
   "Password reset requested for locked account:",
 );
 
+must(
+  "client/src/components/SecurePasswordGenerator.tsx",
+  "generated-password-save-warning",
+);
+
+must(
+  "client/src/pages/ResetPassword.tsx",
+  "password-manager-update-warning",
+);
+
 console.log(
   "PASS: password recovery contract",
 );
