@@ -39,7 +39,7 @@
     "passport-session-race:check": "node scripts/passport-session-race-check.mjs"
   },
   "dependencies": {
-    "@hookform/resolvers": "^3.10.0",
+    "@hookform/resolvers": "^5.9.1",
     "@jridgewell/trace-mapping": "^0.3.25",
     "@popperjs/core": "^2.11.8",
     "@radix-ui/react-accordion": "^1.2.4",
