@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+
+Disallow: /admin
+Disallow: /admin-full
+Disallow: /admin/news
+Disallow: /dashboard
+Disallow: /member-dashboard
+Disallow: /profile
+Disallow: /messages
+Disallow: /event-management
+Disallow: /login
+Disallow: /reset-password
+Disallow: /join
+Disallow: /signup
+Disallow: /complete-profile
+Disallow: /verify-email
+
+Sitemap: https://coogsnation.com/sitemap.xml

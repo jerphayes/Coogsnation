@@ -87,6 +87,18 @@ app.use(
   }),
 );
 
+// COOGSNATION_CANONICAL_HOST_REDIRECT
+app.use((req, res, next) => {
+  if (req.hostname.toLowerCase() === "www.coogsnation.com") {
+    return res.redirect(
+      301,
+      `https://coogsnation.com${req.originalUrl}`,
+    );
+  }
+
+  next();
+});
+
 app.get("/healthz", async (_req, res) => {
   if (shuttingDown) {
     return res.status(503).json({ status: "shutting_down", database: "unknown" });

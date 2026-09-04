@@ -52,6 +52,7 @@ import EmailVerificationPending from "@/pages/EmailVerificationPending";
 import EmailVerification from "@/pages/EmailVerification";
 import PageScrollRecovery from "@/components/PageScrollRecovery";
 import AnalyticsTracker from "@/components/AnalyticsTracker";
+import SeoHead from "@/components/SeoHead";
 
 /* The immersive venue is code-split: Three.js and the Virtual Venue Engine
  * (~700 KB) download only when a member actually enters a venue. Every other
@@ -183,6 +184,7 @@ function App() {
             <Toaster />
             <PageScrollRecovery />
             <AnalyticsTracker />
+            <SeoHead />
             <Router />
           </div>
         </div>

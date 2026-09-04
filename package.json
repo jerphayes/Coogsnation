@@ -9,7 +9,7 @@
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc --noEmit",
     "check:server": "tsc --noEmit --project tsconfig.server.json",
-    "validate": "npm run check && npm run ui:check && npm run security:check && npm run build",
+    "validate": "npm run check && npm run ui:check && npm run security:check && node scripts/seo-contract-check.mjs && npm run build",
     "db:generate": "drizzle-kit generate",
     "db:bootstrap": "drizzle-kit push",
     "db:migrate": "node dist/migrate.js",
