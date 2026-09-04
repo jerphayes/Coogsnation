@@ -331,7 +331,7 @@ export default function Forums() {
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <section className="mb-10 text-center">
           <h1 className="text-4xl font-bold text-uh-black">CoogsNation Forums</h1>
-          <p className="mt-3 text-lg text-gray-600">The familiar standard board for topics, replies, and community conversation.</p>
+          <p className="mt-3 text-lg text-gray-600">Topics, replies, and community conversation for CoogsNation.</p>
           <div className="mx-auto mt-6 max-w-2xl">
             <label htmlFor="forum-category-filter" className="sr-only">Filter forum categories</label>
             <Input

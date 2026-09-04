@@ -23,7 +23,7 @@ export function Footer() {
           </div>
 
           <FooterSection title="Community">
-            <FooterLink href="/forums">Standard Board</FooterLink>
+            <FooterLink href="/forums">Forums</FooterLink>
             <FooterLink href="/coogpaws-chat">Coog Paws Lounge</FooterLink>
             <FooterLink href={forumCategoryPath(FORUM_NAVIGATION.waterCooler.slug)}>Water Cooler</FooterLink>
             <FooterLink href="/members">Members</FooterLink>

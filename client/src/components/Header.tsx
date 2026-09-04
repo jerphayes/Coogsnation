@@ -335,7 +335,7 @@ export function Header({ leadingBrand }: { leadingBrand?: ReactNode } = {}) {
       {mobileOpen && (
         <nav id="mobile-navigation" className="border-t border-gray-700 bg-gray-900 px-4 py-4 md:hidden" aria-label="Mobile navigation">
           <div className="grid gap-1">
-            <MobileLink href="/forums" onNavigate={closeMenus}>Standard Board</MobileLink>
+            <MobileLink href="/forums" onNavigate={closeMenus}>Forums</MobileLink>
             <MobileLink href="/coogpaws-chat" onNavigate={closeMenus}>Coog Paws Lounge</MobileLink>
             <MobileLink href={forumCategoryPath(FORUM_NAVIGATION.waterCooler.slug)} onNavigate={closeMenus}>Water Cooler Talk</MobileLink>
             <MobileLink href="/members" onNavigate={closeMenus}>Members</MobileLink>
