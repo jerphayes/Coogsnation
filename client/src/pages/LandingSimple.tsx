@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import bannerImage from "@assets/file_00000000881861f9be677e55822b57a5_1757784057972.png";
-import logoImage from "@assets/webiste master logo_1761671161849.jpg";
 import { useAuth } from "@/hooks/useAuth";
-import { LiveScoreTicker } from "@/components/LiveScoreTicker";
+import { Header } from "@/components/Header";
 import { forumCategoryPath, isVisibleForumCategory } from "@/lib/forumNavigation";
 
 type MenuItem = {
@@ -11,90 +10,6 @@ type MenuItem = {
   href: string;
   icon?: string;
 };
-
-type DropdownProps = {
-  id: string;
-  label: string;
-  href?: string;
-  items: MenuItem[];
-  openMenu: string | null;
-  setOpenMenu: (value: string | null) => void;
-  align?: "left" | "right";
-};
-
-function Dropdown({
-  id,
-  label,
-  href,
-  items,
-  openMenu,
-  setOpenMenu,
-  align = "left",
-}: DropdownProps) {
-  const open = openMenu === id;
-
-  return (
-    <div
-      className="cn-dropdown-wrap"
-      onMouseEnter={() => setOpenMenu(id)}
-      onMouseLeave={() => setOpenMenu(null)}
-    >
-      {href ? (
-        <>
-          <a href={href} className="cn-nav-link">{label}</a>
-          <button
-            type="button"
-            className="cn-nav-dropdown-button"
-            aria-expanded={open}
-            aria-haspopup="menu"
-            aria-label={`Open ${label} menu`}
-            onClick={() => setOpenMenu(open ? null : id)}
-          >
-            ▼
-          </button>
-        </>
-      ) : (
-        <button
-          type="button"
-          className="cn-nav-dropdown-button"
-          aria-expanded={open}
-          aria-haspopup="menu"
-          onClick={() => setOpenMenu(open ? null : id)}
-        >
-          {label} ▼
-        </button>
-      )}
-
-      <div
-        className={`cn-dropdown ${open ? "is-open" : ""} ${
-          align === "right" ? "align-right" : ""
-        }`}
-        role="menu"
-      >
-        {items.map((item) => (
-          <a
-            key={`${id}-${item.label}`}
-            href={item.href}
-            className="cn-dropdown-item"
-            role="menuitem"
-          >
-            <span className="cn-menu-icon">
-              {item.icon || "•"}
-            </span>
-
-            <span>
-              <strong>{item.label}</strong>
-
-              {item.description && (
-                <small>{item.description}</small>
-              )}
-            </span>
-          </a>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 type FeatureCardProps = {
   id: string;
@@ -171,7 +86,7 @@ function FeatureCard({
 }
 
 export default function Landing() {
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   const [openMenu, setOpenMenu] =
     useState<string | null>(null);
@@ -423,44 +338,6 @@ export default function Landing() {
       icon: "📅",
     },
   ];
-
-  const loginItems: MenuItem[] = [
-    {
-      label: "Login with Email",
-      href: "/login/email?redirect=/dashboard",
-      icon: "🔑",
-    },
-    {
-      label: "Other Login Options",
-      href: "/login/other?redirect=/dashboard",
-      icon: "👤",
-    },
-  ];
-
-  const joinItems: MenuItem[] = [
-    {
-      label: "Join CoogsNation",
-      href: "/join",
-      icon: "🐾",
-      description: "Become part of the Coogs community.",
-    },
-    {
-      label: "Create Account",
-      href: "/signup",
-      icon: "✍️",
-    },
-  ];
-
-  async function logout() {
-    try {
-      await fetch("/api/logout", {
-        method: "POST",
-        credentials: "same-origin",
-      });
-    } finally {
-      window.location.href = "/";
-    }
-  }
 
   return (
     <div className="cn-home">
@@ -1094,194 +971,7 @@ export default function Landing() {
         }
       `}</style>
 
-      <nav className="cn-nav">
-        <a
-          href="/"
-          className="cn-logo-link"
-          aria-label="CoogsNation Home"
-        >
-          <img
-            src={logoImage}
-            alt="CoogsNation"
-            className="cn-logo"
-          />
-        </a>
-
-        <Dropdown
-          id="top-forums"
-          href="/forums"
-          label="Forums"
-          items={forumItems}
-          openMenu={openMenu}
-          setOpenMenu={setOpenMenu}
-        />
-
-        <Dropdown
-          id="top-members"
-          href="/members"
-          label="Members"
-          items={[
-            {
-              label: "Member Directory",
-              href: "/members",
-              icon: "👥",
-            },
-            {
-              label: "Messages",
-              href: "/messages",
-              icon: "💬",
-            },
-            {
-              label: "Events",
-              href: "/events",
-              icon: "📅",
-            },
-            ...(isAuthenticated
-              ? [
-                  {
-                    label: "My Profile",
-                    href: "/profile",
-                    icon: "👤",
-                  },
-                  {
-                    label: "Dashboard",
-                    href: "/dashboard",
-                    icon: "🏠",
-                  },
-                ]
-              : []),
-          ]}
-          openMenu={openMenu}
-          setOpenMenu={setOpenMenu}
-        />
-
-        <Dropdown
-          id="top-shopping"
-          href="/store"
-          label="Shopping"
-          items={[
-            {
-              label: "Store Home",
-              href: "/store",
-              icon: "🛍️",
-            },
-            {
-              label: "Wear Your Pride",
-              href: "/store/wear-your-pride",
-              icon: "👕",
-            },
-            {
-              label: "Everyday Alumni",
-              href: "/store/everyday-alumni",
-              icon: "🎓",
-            },
-            {
-              label: "Keepsakes & Gifts",
-              href: "/store/keepsakes-gifts",
-              icon: "🎁",
-            },
-            {
-              label: "Limited Editions",
-              href: "/store/limited-editions",
-              icon: "⭐",
-            },
-            {
-              label: "Legacy Jewelry",
-              href: "/store/legacy-jewelry",
-              icon: "💎",
-            },
-            {
-              label: "CoogsNation Originals",
-              href: "/store/coogsnation-originals",
-              icon: "🐾",
-            },
-            {
-              label: "Store Concierge",
-              href: "/store/concierge",
-              icon: "🤝",
-            },
-            {
-              label: "Cart",
-              href: "/cart",
-              icon: "🛒",
-            },
-          ]}
-          openMenu={openMenu}
-          setOpenMenu={setOpenMenu}
-        />
-
-        <Dropdown
-          id="top-community"
-          href="/forums?tab=community"
-          label="Community"
-          items={communityItems}
-          openMenu={openMenu}
-          setOpenMenu={setOpenMenu}
-        />
-
-        <div className="cn-nav-spacer" />
-
-        {isAuthenticated ? (
-          <>
-            <a
-              href="/dashboard"
-              className="cn-nav-link"
-            >
-              Dashboard
-            </a>
-
-            <a
-              href="/dashboard?tab=overview"
-              className="cn-nav-link"
-            >
-              {(user as any)?.handle || "Profile"}
-            </a>
-
-            <button
-              type="button"
-              className="cn-nav-action"
-              onClick={logout}
-            >
-              Logout
-            </button>
-          </>
-        ) : (
-          <>
-            <a
-              href="/forums"
-              className="cn-nav-link cn-guest-link"
-            >
-              Guest
-            </a>
-
-
-
-            <Dropdown
-              id="top-login"
-              label="Login"
-              items={loginItems}
-              openMenu={openMenu}
-              setOpenMenu={setOpenMenu}
-              align="right"
-            />
-
-            <Dropdown
-              id="top-join"
-              label="Join"
-              items={joinItems}
-              openMenu={openMenu}
-              setOpenMenu={setOpenMenu}
-              align="right"
-            />
-          </>
-        )}
-
-        <a href="/terms" className="cn-nav-link">
-          Terms
-        </a>
-      </nav>
-
-      <LiveScoreTicker />
+      <Header />
 
       <section className="cn-hero">
         <div
