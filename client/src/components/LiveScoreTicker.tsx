@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { io } from "socket.io-client";
 
 type TickerItem = {
@@ -37,6 +37,8 @@ const RAINBOW = [
   ["#d97706", "#dc2626"],
 ];
 
+const TICKER_PIXELS_PER_SECOND = 50;
+
 function score(value: number | null) {
   return value == null ? "–" : String(value);
 }
@@ -71,6 +73,7 @@ export function LiveScoreTicker() {
     games: [],
   });
   const [latestUpset, setLatestUpset] = useState<UpsetAlert | null>(null);
+  const trackRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -105,6 +108,36 @@ export function LiveScoreTicker() {
     () => (snapshot.games.length ? [...snapshot.games, ...snapshot.games] : []),
     [snapshot.games],
   );
+
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track || !snapshot.games.length) return;
+
+    const applyReadableSpeed = () => {
+      const loopDistance = track.scrollWidth / 2;
+      const durationSeconds = Math.max(
+        1,
+        loopDistance / TICKER_PIXELS_PER_SECOND,
+      );
+
+      track.style.animationDuration = `${durationSeconds}s`;
+    };
+
+    applyReadableSpeed();
+
+    const observer =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(applyReadableSpeed)
+        : null;
+
+    observer?.observe(track);
+    window.addEventListener("resize", applyReadableSpeed);
+
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", applyReadableSpeed);
+    };
+  }, [snapshot.games.length]);
 
   if (!snapshot.games.length) return null;
 
@@ -151,7 +184,7 @@ export function LiveScoreTicker() {
           display:flex;
           width:max-content;
           align-items:stretch;
-          animation:ngfScoreScroll 40s linear infinite
+          animation:ngfScoreScroll 70s linear infinite
         }
         .ngf-score-game{
           display:flex;
@@ -248,7 +281,10 @@ export function LiveScoreTicker() {
       </div>
 
       <div className="ngf-score-window">
-        <div className="ngf-score-track">
+                <div
+          ref={trackRef}
+          className="ngf-score-track"
+        >
           {loopGames.map((game, index) => {
             const colors = RAINBOW[index % RAINBOW.length];
             const isUpsetGame =

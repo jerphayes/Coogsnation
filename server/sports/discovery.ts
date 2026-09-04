@@ -44,24 +44,66 @@ function parseTeamish(value: unknown, division: Division): TeamRef | null {
   if (typeof value === "string" && value.trim()) return team(value, division);
   const obj = asObject(value);
   if (!obj) return null;
-  const name = textValue(obj, ["name", "shortName", "school", "displayName", "teamName", "team"]);
+  const name = textValue(obj, [
+    "name",
+    "nameShort",
+    "shortName",
+    "school",
+    "displayName",
+    "teamName",
+    "team",
+  ]);
   if (!name) return null;
-  const result = team(name, division, numberValue(obj, ["rank", "ranking", "currentRank"]));
-  result.abbreviation = textValue(obj, ["abbreviation", "abbr", "shortName"]) || result.abbreviation;
-  result.conference = textValue(obj, ["conference", "conferenceName"]) || undefined;
+  const result = team(
+    name,
+    division,
+    numberValue(obj, ["rank", "ranking", "currentRank", "teamRank"]),
+  );
+  result.abbreviation =
+    textValue(obj, ["abbreviation", "abbr", "name6Char", "shortName"]) ||
+    result.abbreviation;
+  result.conference =
+    textValue(obj, ["conference", "conferenceName", "conferenceSeo"]) ||
+    undefined;
   return result;
 }
 
 function dateValue(obj: Record<string, any>, fallback: string): string {
-  const raw = textValue(obj, ["startDate", "startTime", "date", "gameDate", "scheduledStart", "start_date"]);
+  const epoch = numberValue(obj, ["startTimeEpoch"]);
+  if (epoch != null) {
+    const parsed = new Date(epoch * 1000);
+    if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
+  }
+
+  const raw = textValue(obj, [
+    "startDate",
+    "startTime",
+    "date",
+    "gameDate",
+    "scheduledStart",
+    "start_date",
+  ]);
   if (!raw) return fallback;
   const parsed = new Date(raw);
   return Number.isNaN(parsed.getTime()) ? fallback : parsed.toISOString();
 }
 
 function gameFromObject(obj: Record<string, any>, division: Division, fallbackDate: string): DiscoveredGame | null {
-  const home = parseTeamish(obj.home ?? obj.homeTeam ?? obj.home_team ?? obj.team2, division);
-  const away = parseTeamish(obj.away ?? obj.awayTeam ?? obj.away_team ?? obj.team1, division);
+  const contestTeams = Array.isArray(obj.teams)
+    ? obj.teams.map(asObject).filter(Boolean)
+    : [];
+
+  const contestHome = contestTeams.find((entry) => entry?.isHome === true);
+  const contestAway = contestTeams.find((entry) => entry?.isHome === false);
+
+  const home = parseTeamish(
+    contestHome ?? obj.home ?? obj.homeTeam ?? obj.home_team ?? obj.team2,
+    division,
+  );
+  const away = parseTeamish(
+    contestAway ?? obj.away ?? obj.awayTeam ?? obj.away_team ?? obj.team1,
+    division,
+  );
   if (!home || !away || home.ngfTeamId === away.ngfTeamId) return null;
   const sourceGameId = textValue(obj, ["gameId", "id", "eventId", "contestId"]);
   const scheduledStart = dateValue(obj, fallbackDate);
