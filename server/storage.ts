@@ -1094,6 +1094,29 @@ export class DatabaseStorage implements IStorage {
     const deletedHandle = `deleted_${key}`;
 
     await db.transaction(async (tx) => {
+
+      // MEMBERSHIP_DELETE_MFA_CLEANUP_V1
+      // Authentication secrets do not survive membership deletion.
+      await tx.execute(sql`
+        DELETE FROM member_mfa_recovery_codes
+        WHERE user_id = ${userId}
+      `);
+
+      await tx.execute(sql`
+        DELETE FROM member_mfa_credentials
+        WHERE user_id = ${userId}
+      `);
+
+      await tx.execute(sql`
+        DELETE FROM admin_mfa_recovery_codes
+        WHERE user_id = ${userId}
+      `);
+
+      await tx.execute(sql`
+        DELETE FROM admin_mfa_credentials
+        WHERE user_id = ${userId}
+      `);
+
       await tx
         .delete(userIdentities)
         .where(eq(userIdentities.userId, userId));

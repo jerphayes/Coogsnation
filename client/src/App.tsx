@@ -1,4 +1,5 @@
-import { Switch, Route } from "wouter";
+import IntramuralParticipationAgreement from "@/pages/IntramuralParticipationAgreement";
+import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -12,7 +13,6 @@ import Forums from "@/pages/Forums";
 import News from "@/pages/News";
 import Store from "@/pages/Store";
 import Cart from "@/pages/Cart";
-import Profile from "@/pages/Profile";
 import WearYourPride from "@/pages/WearYourPride";
 import EverydayAlumni from "@/pages/EverydayAlumni";
 import KeepsakesGifts from "@/pages/KeepsakesGifts";
@@ -38,7 +38,9 @@ import JoinGate from "@/pages/JoinGate";
 import JoinEmail from "@/pages/JoinEmail";
 import LiveSports from "@/pages/LiveSports";
 import Intramurals from "@/pages/Intramurals";
+import IntramuralLive from "@/pages/IntramuralLive";
 import IntramuralTeam from "@/pages/IntramuralTeam";
+import IntramuralDemo from "./pages/IntramuralDemo";
 import CoogpawsChat from "@/pages/CoogpawsChat";
 import Login from "@/pages/Login";
 import LoginEmail from "@/pages/LoginEmail";
@@ -74,10 +76,13 @@ function Router() {
       <Route path="/store/coogsnation-originals" component={CoogsNationOriginals} />
       <Route path="/store/concierge" component={StoreConcierge} />
       <Route path="/cart" component={Cart} />
-      <Route path="/profile" component={Profile} />
+      <Route path="/profile" component={MemberDashboard} />
+      <Route path="/profile/edit" component={ProfileCompletion} />
       <Route path="/events" component={Events} />
       <Route path="/admin/news" component={NewsAdmin} />
-      <Route path="/profile/advanced" component={AdvancedProfile} />
+      <Route path="/profile/advanced">
+        <Redirect to="/profile" />
+      </Route>
       <Route path="/messages" component={Messages} />
       <Route path="/event-management" component={EventManagement} />
       <Route path="/admin" component={OwnerAdminDashboard} />
@@ -97,9 +102,13 @@ function Router() {
       <Route path="/join" component={JoinGate} />
         <Route path="/verify-email-pending" component={EmailVerificationPending} />
         <Route path="/verify-email" component={EmailVerification} />
-      <Route path="/member-dashboard" component={MemberDashboard} />
+      <Route path="/member-dashboard">
+        <Redirect to="/dashboard" />
+      </Route>
       <Route path="/live-sports" component={LiveSports} />
 
+      <Route path="/intramurals/live" component={IntramuralLive} />
+      <Route path="/intramurals/agreement" component={IntramuralParticipationAgreement} />
       <Route path="/intramurals" component={Intramurals} />
 
       <Route path="/intramurals/teams/:teamId">
@@ -109,6 +118,9 @@ function Router() {
           />
         )}
       </Route>
+              <Route path="/intramurals/demo">
+                <IntramuralDemo />
+              </Route>
       <Route path="/get-em" component={GetEmPickEm} />
       <Route path="/venues/:venueId">
         {(params) => (
@@ -139,7 +151,34 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <div className="min-h-screen flex flex-col">
+        <div
+          className="min-h-screen flex flex-col"
+          onKeyDown={(event) => {
+            if (
+              event.key !== "Backspace" &&
+              event.key !== "Delete"
+            ) {
+              return;
+            }
+
+            const target =
+              event.target as HTMLElement | null;
+
+            const editable =
+              target?.closest(
+                'input, textarea, [contenteditable="true"], [role="textbox"]',
+              );
+
+            if (editable) {
+              /*
+               * Preserve normal browser editing and
+               * stop global application shortcuts from
+               * seeing Backspace/Delete.
+               */
+              event.stopPropagation();
+            }
+          }}
+        >
           <div className="flex-1">
             <Toaster />
             <PageScrollRecovery />

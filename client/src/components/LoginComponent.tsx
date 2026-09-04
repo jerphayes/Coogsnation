@@ -1,4 +1,5 @@
 import { useState } from "react";
+import MemberMfaLoginChallenge from "@/components/MemberMfaLoginChallenge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,24 @@ const localLoginSchema = z.object({
 type LocalLoginFormData = z.infer<typeof localLoginSchema>;
 type AuthProviders = { local: boolean; facebook: boolean; linkedin: boolean };
 
+function safeLoginReturnTo(): string {
+  const value =
+    new URLSearchParams(
+      window.location.search,
+    ).get("returnTo") ||
+    "/dashboard";
+
+  if (
+    !value.startsWith("/") ||
+    value.startsWith("//")
+  ) {
+    return "/dashboard";
+  }
+
+  return value;
+}
+
+
 interface LoginComponentProps {
   onSuccess?: () => void;
   showTitle?: boolean;
@@ -30,6 +49,8 @@ interface LoginComponentProps {
 
 export default function LoginComponent({ onSuccess, showTitle = true, compact = false }: LoginComponentProps) {
   const [showPassword, setShowPassword] = useState(false);
+  const [mfaRequired, setMfaRequired] = useState(false);
+  const [loginWarning, setLoginWarning] = useState("");
   const { toast } = useToast();
   const { data: providers } = useQuery<AuthProviders>({ queryKey: ["/api/auth/providers"] });
 
@@ -39,23 +60,140 @@ export default function LoginComponent({ onSuccess, showTitle = true, compact = 
   });
 
   const localLoginMutation = useMutation({
-    mutationFn: async (data: LocalLoginFormData) => apiRequest("POST", "/api/auth/login-local", data),
-    onSuccess: () => {
-      toast({ title: "Login Successful", description: "Welcome back to CoogsNation!" });
+    mutationFn: async (data: LocalLoginFormData) => {
+      const response = await apiRequest(
+        "POST",
+        "/api/auth/login-local",
+        data,
+      );
+
+      return response.json();
+    },
+    onSuccess: (data: any) => {
+      setLoginWarning("");
+      if (data?.mfaRequired) {
+        setMfaRequired(true);
+
+        toast({
+          title: "Two-Factor Authentication",
+          description:
+            "Enter your authenticator or recovery code to finish signing in.",
+        });
+
+        return;
+      }
+
+      toast({
+        title: "Login Successful",
+        description: "Welcome back to CoogsNation!",
+      });
+
       if (onSuccess) onSuccess();
-      else window.location.href = "/dashboard";
+      else window.location.href =
+        safeLoginReturnTo();
     },
     onError: (error: Error) => {
+      const errorText =
+        error.message || "";
+
+      let serverMessage =
+        errorText;
+
+      const jsonStart =
+        errorText.indexOf("{");
+
+      if (jsonStart >= 0) {
+        try {
+          const parsed =
+            JSON.parse(
+              errorText.slice(
+                jsonStart,
+              ),
+            );
+
+          if (
+            typeof parsed?.message ===
+            "string"
+          ) {
+            serverMessage =
+              parsed.message;
+          }
+        } catch {
+          // Keep the original error text.
+        }
+      }
+
+      if (
+        errorText.startsWith(
+          "423:",
+        )
+      ) {
+        setLoginWarning("");
+
+        const identifier =
+          form
+            .getValues("handle")
+            .trim();
+
+        toast({
+          title:
+            "Account Temporarily Locked",
+          description:
+            "Three unsuccessful sign-in attempts were detected. Account recovery is available now.",
+          variant:
+            "destructive",
+        });
+
+        window.location.href =
+          "/reset-password?identifier=" +
+          encodeURIComponent(
+            identifier,
+          ) +
+          "&locked=1";
+
+        return;
+      }
+
+      if (
+        serverMessage.includes(
+          "attempts remaining",
+        )
+      ) {
+        setLoginWarning(
+          serverMessage,
+        );
+
+        toast({
+          title:
+            "Security Warning",
+          description:
+            serverMessage,
+          variant:
+            "destructive",
+        });
+
+        return;
+      }
+
+      setLoginWarning("");
+
       toast({
-        title: "Login Failed",
-        description: error.message || "Please check your credentials and try again.",
-        variant: "destructive",
+        title:
+          "Login Failed",
+        description:
+          serverMessage ||
+          "Please check your credentials and try again.",
+        variant:
+          "destructive",
       });
     },
   });
 
   const handleOAuthLogin = (provider: "facebook" | "linkedin") => {
-    const returnTo = encodeURIComponent("/dashboard");
+    const returnTo =
+      encodeURIComponent(
+        safeLoginReturnTo(),
+      );
     window.location.href = `/api/auth/${provider}?returnTo=${returnTo}`;
   };
 
@@ -75,6 +213,32 @@ export default function LoginComponent({ onSuccess, showTitle = true, compact = 
       </CardHeader>
 
       <CardContent className="space-y-4">
+        {loginWarning && (
+          <div
+            role="alert"
+            className="rounded-md border-2 border-amber-400 bg-amber-50 p-3 text-sm font-bold text-amber-950"
+            data-testid="login-attempt-warning"
+          >
+            {loginWarning}
+          </div>
+        )}
+        {mfaRequired && (
+          <MemberMfaLoginChallenge
+            onSuccess={() => {
+              toast({
+                title: "Login Successful",
+                description: "Welcome back to CoogsNation!",
+              });
+
+              if (onSuccess) {
+                onSuccess();
+              } else {
+                window.location.href =
+                  safeLoginReturnTo();
+              }
+            }}
+          />
+        )}
         <Form {...form}>
           <form onSubmit={form.handleSubmit((data) => localLoginMutation.mutate(data))} className="space-y-4">
             <FormField
@@ -130,7 +294,7 @@ export default function LoginComponent({ onSuccess, showTitle = true, compact = 
             <Button
               type="submit"
               className="w-full bg-uh-red hover:bg-uh-red/90 text-white font-medium h-12"
-              disabled={localLoginMutation.isPending}
+              disabled={localLoginMutation.isPending || mfaRequired}
               data-testid="button-submit-local-login"
             >
               {localLoginMutation.isPending ? "Signing in..." : "Sign In"}
@@ -179,7 +343,17 @@ export default function LoginComponent({ onSuccess, showTitle = true, compact = 
           </a>
           <p className="text-sm text-gray-700">
             New to CoogsNation?{" "}
-            <a href="/signup" className="text-uh-red hover:underline font-medium">Create an account</a>
+            <a
+              href={
+                `/signup?returnTo=` +
+                encodeURIComponent(
+                  safeLoginReturnTo(),
+                )
+              }
+              className="text-uh-red hover:underline font-medium"
+            >
+              Create an account
+            </a>
           </p>
           <Button
             type="button"

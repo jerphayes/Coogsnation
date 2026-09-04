@@ -1,3 +1,4 @@
+import MemberAvatar from "@/components/MemberAvatar";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Header } from "@/components/Header";
@@ -14,6 +15,7 @@ import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDistance } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import UniversalParticipationGate from "@/components/UniversalParticipationGate";
 
 interface Message {
   id: number;
@@ -124,10 +126,28 @@ export default function Messages() {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
-        <div className="max-w-4xl mx-auto px-4 py-16 text-center">
-          <h1 className="text-2xl font-bold text-uh-black mb-4">Please Log In</h1>
-          <p className="text-gray-600">You need to be logged in to access messages.</p>
+
+        <UniversalParticipationGate
+          open
+          onOpenChange={(open) => {
+            if (!open) {
+              window.location.href = "/";
+            }
+          }}
+          returnTo={`${window.location.pathname}${window.location.search}`}
+          description="CoogsNation messaging is a member participation feature. Join or sign in to access messages."
+        />
+
+        <div className="mx-auto max-w-4xl px-4 py-16 text-center">
+          <h1 className="mb-4 text-2xl font-bold text-uh-black">
+            Membership Required
+          </h1>
+
+          <p className="text-gray-600">
+            Join or sign in to access CoogsNation messaging.
+          </p>
         </div>
+
         <Footer />
       </div>
     );

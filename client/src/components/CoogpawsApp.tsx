@@ -1,3 +1,4 @@
+import MemberAvatar from "@/components/MemberAvatar";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +18,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { formatDistance } from "date-fns";
 import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
+import UniversalParticipationGate from "@/components/UniversalParticipationGate";
 
 // Coogpaws database tables intentionally remain outside shared/schema.ts.
 // Keep the client form/API contract local so Drizzle will not try to manage
@@ -188,20 +190,34 @@ export default function CoogpawsApp() {
 
   if (!isAuthenticated) {
     return (
-      <Card>
-        <CardContent className="p-12 text-center">
-          <div className="mb-4">
-            <i className="fas fa-heart text-4xl text-uh-red"></i>
-          </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-2">Join Coogpaws</h3>
-          <p className="text-gray-600 mb-6">
-            Connect with fellow Coogs! Sign in to start meeting amazing people in the UH community.
-          </p>
-          <a href="/login" className="bg-uh-red text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors">
-            Sign In to Continue
-          </a>
-        </CardContent>
-      </Card>
+      <div className="relative">
+        <UniversalParticipationGate
+          open
+          onOpenChange={(open) => {
+            if (!open) {
+              window.location.href = "/";
+            }
+          }}
+          returnTo={`${window.location.pathname}${window.location.search}`}
+          description="CoogPaws participation requires a CoogsNation membership. Join or sign in to continue."
+        />
+
+        <Card>
+          <CardContent className="p-12 text-center">
+            <div className="mb-4">
+              <i className="fas fa-heart text-4xl text-uh-red"></i>
+            </div>
+
+            <h3 className="mb-2 text-xl font-bold text-gray-900">
+              CoogPaws Membership Required
+            </h3>
+
+            <p className="text-gray-600">
+              Join or sign in to participate.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 

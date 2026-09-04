@@ -198,6 +198,13 @@ export function Header({ leadingBrand }: { leadingBrand?: ReactNode } = {}) {
               )}
             </div>
 
+            <DesktopLink
+              href="/forums?tab=community#coogs-marketplace"
+              testId="link-coogs-marketplace"
+            >
+              Coog&apos;s Marketplace
+            </DesktopLink>
+
             <div className="relative flex items-center gap-1">
               <DesktopLink href="/forums?tab=community" testId="link-community">Community</DesktopLink>
               <button
@@ -335,6 +342,12 @@ export function Header({ leadingBrand }: { leadingBrand?: ReactNode } = {}) {
             <MobileLink href="/messages" onNavigate={closeMenus}>Messages</MobileLink>
             <MobileLink href="/events" onNavigate={closeMenus}>Events</MobileLink>
             <MobileLink href="/store" onNavigate={closeMenus}>Shopping</MobileLink>
+            <MobileLink
+              href="/forums?tab=community#coogs-marketplace"
+              onNavigate={closeMenus}
+            >
+              Coog&apos;s Marketplace
+            </MobileLink>
             <MobileLink href="/forums?tab=community" onNavigate={closeMenus}>Community</MobileLink>
             <MobileLink href="/get-em" onNavigate={closeMenus}>Pick'Em</MobileLink>
             <MobileLink href="/terms" onNavigate={closeMenus}>Terms</MobileLink>

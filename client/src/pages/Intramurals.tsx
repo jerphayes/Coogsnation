@@ -9,6 +9,8 @@ import {
 } from "wouter";
 
 import { useAuth } from "@/hooks/useAuth";
+import { Header } from "@/components/Header";
+import UniversalParticipationGate from "@/components/UniversalParticipationGate";
 
 type Team = {
   team_id:string;
@@ -43,6 +45,24 @@ type Game = {
   home_secondary_color:string;
 };
 
+type ActivitySuggestion = {
+  suggestion_id:string;
+  submitted_by:string;
+  name:string;
+  proposed_slug:string;
+  kind:"sport" | "activity";
+  description?:string | null;
+  status:string;
+  submitter_name?:string | null;
+  affiliation?:string | null;
+};
+
+type ParticipationAction =
+  | "team"
+  | "game"
+  | "score"
+  | "suggest";
+
 type Pending = {
   submission_id:string;
   game_id:string;
@@ -52,7 +72,7 @@ type Pending = {
   home_score:number;
 };
 
-const SPORTS = [
+const DEFAULT_SPORTS = [
   ["all","All Sports"],
   ["flag-football","Flag Football"],
   ["basketball","Basketball"],
@@ -60,6 +80,7 @@ const SPORTS = [
   ["volleyball","Volleyball"],
   ["softball","Softball"],
   ["baseball","Baseball"],
+  ["cricket","Cricket"],
   ["hockey","Hockey"],
   ["lacrosse","Lacrosse"],
   ["rugby","Rugby"],
@@ -100,7 +121,17 @@ async function requestJson(
 }
 
 export default function Intramurals() {
-  const { isAuthenticated } =
+
+  /* PAGE ENTRY: SCROLL TO HEADER */
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "auto",
+    });
+  }, []);
+
+  const { user, isAuthenticated } =
     useAuth();
 
   const [teams,setTeams] =
@@ -112,6 +143,24 @@ export default function Intramurals() {
   const [pending,setPending] =
     useState<Pending[]>([]);
 
+  const [sportOptions,setSportOptions] =
+    useState<Array<[string,string]>>(
+      () =>
+        DEFAULT_SPORTS.map(
+          ([value,label]) => [
+            value,
+            label,
+          ],
+        ),
+    );
+
+  const [
+    activitySuggestions,
+    setActivitySuggestions,
+  ] =
+    useState<ActivitySuggestion[]>([]);
+
+
   const [sport,setSport] =
     useState("all");
 
@@ -120,11 +169,25 @@ export default function Intramurals() {
       null |
       "team" |
       "game" |
-      "score"
+      "score" |
+      "suggest"
     >(null);
+
+  const [joinPrompt,setJoinPrompt] =
+    useState<ParticipationAction | null>(
+      null,
+    );
 
   const [message,setMessage] =
     useState("");
+
+  const [suggestForm,setSuggestForm] =
+    useState({
+      name:"",
+      kind:"sport",
+      description:"",
+    });
+
 
   const [teamForm,setTeamForm] =
     useState({
@@ -161,7 +224,7 @@ export default function Intramurals() {
     ] =
       await Promise.all([
         requestJson(
-          "/api/intramurals/teams",
+          "/api/intramurals/teams?scope=live",
         ),
 
         requestJson(
@@ -170,7 +233,60 @@ export default function Intramurals() {
       ]);
 
     setTeams(teamData);
-    setGames(gameData);
+
+    const liveTeamIds =
+      new Set(
+        teamData.map(
+          (team:Team) => team.team_id,
+        ),
+      );
+
+    setGames(
+      gameData.filter(
+        (game:Game) =>
+          liveTeamIds.has(game.away_team_id) &&
+          liveTeamIds.has(game.home_team_id),
+      ),
+    );
+
+    try {
+      const catalogData =
+        await requestJson(
+          "/api/intramurals/sports",
+        );
+
+      if (
+        Array.isArray(catalogData) &&
+        catalogData.length
+      ) {
+        setSportOptions([
+          ["all","All Sports"],
+          ...catalogData.map(
+            (item:any) =>
+              [
+                item.slug,
+                item.name,
+              ] as [string,string],
+          ),
+        ]);
+      }
+    } catch {
+      // Keep built-in fallback catalog.
+    }
+
+    if (user?.role === "admin") {
+      requestJson(
+        "/api/intramurals/activity-suggestions/pending",
+      )
+        .then(setActivitySuggestions)
+        .catch(
+          () =>
+            setActivitySuggestions([]),
+        );
+    } else {
+      setActivitySuggestions([]);
+    }
+
 
     if (isAuthenticated) {
       requestJson(
@@ -186,7 +302,72 @@ export default function Intramurals() {
       (error) =>
         setMessage(error.message),
     );
+  }, [isAuthenticated,user?.role]);
+
+  // INTRAMURAL_RETURN_ACTION_V1
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    const params =
+      new URLSearchParams(
+        window.location.search,
+      );
+
+    const requested =
+      params.get("action");
+
+    if (
+      requested === "team" ||
+      requested === "game" ||
+      requested === "score" ||
+      requested === "suggest"
+    ) {
+      setMode(requested);
+
+      params.delete("action");
+
+      const remaining =
+        params.toString();
+
+      window.history.replaceState(
+        {},
+        "",
+        remaining
+          ? `/intramurals?${remaining}`
+          : "/intramurals",
+      );
+    }
   }, [isAuthenticated]);
+
+
+  // INTRAMURAL_POPUP_ESCAPE_V1
+  useEffect(() => {
+    if (!joinPrompt) {
+      return;
+    }
+
+    const closeOnEscape = (
+      event:KeyboardEvent,
+    ) => {
+      if (event.key === "Escape") {
+        setJoinPrompt(null);
+      }
+    };
+
+    window.addEventListener(
+      "keydown",
+      closeOnEscape,
+    );
+
+    return () =>
+      window.removeEventListener(
+        "keydown",
+        closeOnEscape,
+      );
+  }, [joinPrompt]);
+
 
   const visibleGames =
     useMemo(
@@ -203,29 +384,93 @@ export default function Intramurals() {
   const tickerGames =
     visibleGames.slice(0,8);
 
-  async function createTeam(
+  function beginParticipation(
+    action:ParticipationAction,
+  ) {
+    if (!isAuthenticated) {
+      setJoinPrompt(action);
+      return;
+    }
+
+    setJoinPrompt(null);
+
+    setMode(
+      mode === action
+        ? null
+        : action,
+    );
+  }
+
+
+  async function suggestActivity(
     event:React.FormEvent,
   ) {
     event.preventDefault();
 
     try {
       await requestJson(
-        "/api/intramurals/teams",
+        "/api/intramurals/activity-suggestions",
         {
           method:"POST",
-          body:JSON.stringify(
-            teamForm,
-          ),
+          body:JSON.stringify({
+            name:
+              suggestForm.name,
+            kind:
+              suggestForm.kind,
+            description:
+              suggestForm.description ||
+              undefined,
+          }),
         },
       );
 
       setMessage(
-        "Team created.",
+        "Sport or activity submitted for review.",
       );
+
+      setSuggestForm({
+        name:"",
+        kind:"sport",
+        description:"",
+      });
 
       setMode(null);
 
       await refresh();
+    } catch (error:any) {
+      setMessage(error.message);
+    }
+  }
+
+
+  async function createTeam(
+    event:React.FormEvent,
+  ) {
+    event.preventDefault();
+
+    try {
+      const createdTeam =
+        await requestJson(
+          "/api/intramurals/teams",
+          {
+            method:"POST",
+            body:JSON.stringify(
+              teamForm,
+            ),
+          },
+        );
+
+      /*
+       * Creation is the boundary between the
+       * demonstration page and the LIVE system.
+       */
+      window.location.assign(
+        `/intramurals/live?created=${encodeURIComponent(
+          createdTeam.team_id,
+        )}`,
+      );
+
+      return;
     } catch (error:any) {
       setMessage(error.message);
     }
@@ -313,6 +558,49 @@ export default function Intramurals() {
     }
   }
 
+  async function reviewActivity(
+    id:string,
+    action:"approve" | "reject",
+  ) {
+    let reason = "";
+
+    if (action === "reject") {
+      reason =
+        window.prompt(
+          "Why is this sport/activity not approved? This explanation will be sent to the member.",
+        )?.trim() || "";
+
+      if (!reason) {
+        return;
+      }
+    }
+
+    try {
+      await requestJson(
+        `/api/intramurals/activity-suggestions/${id}/review`,
+        {
+          method:"POST",
+          body:JSON.stringify({
+            action,
+            reason:
+              reason || undefined,
+          }),
+        },
+      );
+
+      setMessage(
+        action === "approve"
+          ? "Sport or activity approved and added."
+          : "Suggestion rejected and member notified.",
+      );
+
+      await refresh();
+    } catch (error:any) {
+      setMessage(error.message);
+    }
+  }
+
+
   async function actOnSubmission(
     id:string,
     action:
@@ -342,81 +630,73 @@ export default function Intramurals() {
 
   return (
     <div className="min-h-screen bg-[#08090a] text-white">
-      <header className="border-b border-white/10 bg-black">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4 px-5 py-4">
-          <div>
-            <a
-              href="/"
-              className="text-xl font-black tracking-wide text-red-500"
-            >
-              COOGSNATION
-            </a>
-
-            <div className="text-[10px] font-bold tracking-[0.34em] text-white/55">
-              INTRAMURALS
-            </div>
-          </div>
-
-          <nav className="flex gap-5 text-sm font-semibold text-white/70">
-            <a href="/">
-              Home
-            </a>
-
-            <a
-              href="/live-sports"
-            >
-              College Sports
-            </a>
-
-            <span className="text-red-400">
-              Intramurals
-            </span>
-          </nav>
-        </div>
-      </header>
+      <Header />
 
       <main className="mx-auto max-w-[1500px] px-5 py-7">
+
+        <div
+          data-testid="intramural-view-tabs"
+          className="mb-7 flex overflow-hidden rounded-xl border border-white/15 bg-black"
+        >
+          <div className="flex-1 bg-red-600 px-5 py-3 text-center text-sm font-black text-white">
+            LIVE TEAMS
+          </div>
+
+          <Link
+            href="/intramurals/demo"
+            className="flex-1 px-5 py-3 text-center text-sm font-black text-white/70 transition hover:bg-white/5 hover:text-white"
+          >
+            DEMO
+          </Link>
+        </div>
 
         <section className="mb-7 flex flex-wrap items-center justify-between gap-5">
           <div>
             <div className="text-xs font-black uppercase tracking-[0.24em] text-red-400">
-              Intramural Card
+              Intramural Sports
             </div>
 
             <h1 className="mt-1 text-4xl font-black">
-              Play. Compete. Represent.
+              Intramural Sports & Activities
             </h1>
 
-            <p className="mt-2 max-w-2xl text-sm text-white/55">
-              Student-run teams, schedules,
-              verified results and standings.
-              Completely separate from the
-              college varsity ticker.
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-white/65">
+              Create teams, recruit members, schedule games and track
+              real community results, standings and player statistics.
+              Ready to participate? Click <strong className="text-white">
+              ADD YOUR TEAM TO THE ROSTER</strong> to get started.
             </p>
+
+            <Link
+              href="/forums/other-sports-men"
+              className="mt-4 inline-flex items-center rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-bold text-white/80 transition hover:bg-white/10 hover:text-white"
+            >
+              💬 Intramural Forum & Announcements →
+            </Link>
           </div>
 
-          {isAuthenticated && (
-            <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
               <button
                 onClick={() =>
-                  setMode(
-                    mode === "team"
-                      ? null
-                      : "team",
-                  )
+                  beginParticipation("team")
                 }
                 className="rounded-lg border border-white/20 px-4 py-3 text-sm font-bold"
               >
-                + Create Team
+                + ADD YOUR TEAM TO THE ROSTER
               </button>
 
               <button
                 onClick={() =>
-                  setMode(
-                    mode === "game"
-                      ? null
-                      : "game",
-                  )
+                  beginParticipation("suggest")
+                }
+                className="rounded-lg border border-white/20 px-4 py-3 text-sm font-bold"
+              >
+                + Suggest a Sport or Activity
+              </button>
+
+              <button
+                onClick={() =>
+                  beginParticipation("game")
                 }
                 className="rounded-lg border border-white/20 px-4 py-3 text-sm font-bold"
               >
@@ -425,24 +705,119 @@ export default function Intramurals() {
 
               <button
                 onClick={() =>
-                  setMode(
-                    mode === "score"
-                      ? null
-                      : "score",
-                  )
+                  beginParticipation("score")
                 }
                 className="rounded-lg bg-red-600 px-4 py-3 text-sm font-black"
               >
                 Submit Score
               </button>
             </div>
-          )}
         </section>
+
+        <UniversalParticipationGate
+          open={Boolean(joinPrompt) && !isAuthenticated}
+          onOpenChange={(open) => {
+            if (!open) setJoinPrompt(null);
+          }}
+          returnTo={
+            joinPrompt
+              ? `/intramurals?action=${joinPrompt}`
+              : "/intramurals"
+          }
+          description="Anyone can view Intramural Sports and Activities. A free CoogsNation membership is required to create or join teams, submit results, add games, or suggest a sport or activity."
+        />
+
 
         {message && (
           <div className="mb-5 rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm">
             {message}
           </div>
+        )}
+
+
+        {/* SUGGEST SPORT OR ACTIVITY */}
+        {mode === "suggest" && (
+          <form
+            onSubmit={suggestActivity}
+            className="mb-6 grid gap-3 rounded-xl border border-red-500/30 bg-white/[0.035] p-5 md:grid-cols-4"
+          >
+            <div className="md:col-span-4">
+              <div className="text-lg font-black">
+                Suggest a Sport or Activity
+              </div>
+
+              <p className="mt-1 text-sm text-white/60">
+                Don't see your sport or activity?
+                Submit it for review. Legitimate
+                community activities can be added
+                to the roster.
+              </p>
+            </div>
+
+            <input
+              required
+              minLength={2}
+              maxLength={100}
+              placeholder="Sport or activity name"
+              value={suggestForm.name}
+              onChange={(event) =>
+                setSuggestForm(
+                  (current) => ({
+                    ...current,
+                    name:event.target.value,
+                  }),
+                )
+              }
+              onKeyDown={(event) =>
+                event.stopPropagation()
+              }
+              className="rounded bg-black/50 p-3 md:col-span-2"
+            />
+
+            <select
+              value={suggestForm.kind}
+              onChange={(event) =>
+                setSuggestForm({
+                  ...suggestForm,
+                  kind:event.target.value,
+                })
+              }
+              className="rounded bg-black/50 p-3"
+            >
+              <option value="sport">
+                Sport
+              </option>
+
+              <option value="activity">
+                Activity
+              </option>
+            </select>
+
+            <button
+              className="rounded bg-red-600 p-3 font-black"
+            >
+              SUBMIT FOR REVIEW
+            </button>
+
+            <textarea
+              maxLength={600}
+              placeholder="Briefly describe the sport/activity and how members would participate."
+              value={suggestForm.description}
+              onChange={(event) =>
+                setSuggestForm(
+                  (current) => ({
+                    ...current,
+                    description:
+                      event.target.value,
+                  }),
+                )
+              }
+              onKeyDown={(event) =>
+                event.stopPropagation()
+              }
+              className="min-h-24 rounded bg-black/50 p-3 md:col-span-4"
+            />
+          </form>
         )}
 
 
@@ -475,7 +850,7 @@ export default function Intramurals() {
               }
               className="rounded bg-black/50 p-3"
             >
-              {SPORTS
+              {sportOptions
                 .filter(
                   ([value]) =>
                     value !== "all",
@@ -561,6 +936,8 @@ export default function Intramurals() {
               Primary
               <input
                 type="color"
+                title="Choose Team Color"
+                aria-label="Choose Team Color"
                 value={
                   teamForm.primaryColor
                 }
@@ -578,6 +955,8 @@ export default function Intramurals() {
               Secondary
               <input
                 type="color"
+                title="Choose Team Color"
+                aria-label="Choose Team Color"
                 value={
                   teamForm.secondaryColor
                 }
@@ -844,6 +1223,98 @@ export default function Intramurals() {
         )}
 
 
+        {user?.role === "admin" &&
+          activitySuggestions.length > 0 && (
+          <section className="mb-7 rounded-xl border border-amber-400/30 bg-amber-400/[0.05] p-5">
+            <div className="mb-4 text-sm font-black uppercase tracking-wider text-amber-300">
+              Sport & Activity Suggestions — Pending Review
+            </div>
+
+            <div className="grid gap-3">
+              {activitySuggestions.map(
+                (suggestion) => (
+                  <div
+                    key={
+                      suggestion.suggestion_id
+                    }
+                    className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-white/10 bg-black/30 p-4"
+                  >
+                    <div>
+                      <div className="text-lg font-black">
+                        {suggestion.name}
+                      </div>
+
+                      <div className="text-xs uppercase text-white/50">
+                        {suggestion.kind}
+                        {" • "}
+                        {suggestion.submitter_name}
+                        {suggestion.affiliation
+                          ? ` • ${suggestion.affiliation}`
+                          : ""}
+                      </div>
+
+                      {suggestion.description && (
+                        <p className="mt-2 max-w-3xl text-sm text-white/65">
+                          {suggestion.description}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() =>
+                          reviewActivity(
+                            suggestion.suggestion_id,
+                            "approve",
+                          )
+                        }
+                        className="rounded-lg bg-green-700 px-4 py-2 text-sm font-black"
+                      >
+                        APPROVE
+                      </button>
+
+                      <button
+                        onClick={() =>
+                          reviewActivity(
+                            suggestion.suggestion_id,
+                            "reject",
+                          )
+                        }
+                        className="rounded-lg bg-red-700 px-4 py-2 text-sm font-black"
+                      >
+                        REJECT
+                      </button>
+                    </div>
+                  </div>
+                ),
+              )}
+            </div>
+          </section>
+        )}
+
+        <div className="relative mb-7 overflow-hidden rounded-xl border border-red-500/30 bg-white/[0.02] p-4">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center overflow-hidden"
+          >
+            <div className="-rotate-12 select-none whitespace-nowrap text-5xl font-black tracking-[0.12em] text-white/10 md:text-7xl xl:text-8xl">
+              LIVE INTRAMURALS
+            </div>
+          </div>
+
+          <div className="relative z-20 mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div className="rounded-md bg-red-600 px-4 py-2 text-sm font-black uppercase tracking-wider">
+              Live Community
+            </div>
+
+            <button
+              onClick={() => setMode("team")}
+              className="rounded-lg bg-red-600 px-5 py-3 text-sm font-black"
+            >
+              + ADD YOUR TEAM TO THE ROSTER
+            </button>
+          </div>
+
         {/* INTRAMURAL TICKER */}
         <section className="mb-7">
           <div className="mb-3 text-sm font-black uppercase tracking-wider">
@@ -921,13 +1392,13 @@ export default function Intramurals() {
 
 
         <div className="grid gap-6 lg:grid-cols-[230px_1fr]">
-          {/* SPORTS */}
+          {/* sportOptions */}
           <aside className="rounded-xl border border-white/10 bg-[#111315] p-3">
             <div className="mb-2 px-2 text-xs font-black uppercase text-white/45">
               Choose Sport
             </div>
 
-            {SPORTS.map(
+            {sportOptions.map(
               ([value,label]) => (
                 <button
                   key={value}
@@ -1193,6 +1664,7 @@ export default function Intramurals() {
               </div>
             </section>
           )}
+        </div>
       </main>
     </div>
   );

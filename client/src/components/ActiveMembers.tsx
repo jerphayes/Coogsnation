@@ -1,3 +1,4 @@
+import MemberAvatar from "@/components/MemberAvatar";
 import { Card } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import type { ActiveMember } from "@shared/api-types";

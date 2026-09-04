@@ -1,3 +1,4 @@
+import MemberAvatar from "@/components/MemberAvatar";
 import { useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "wouter";
 import { Header } from "@/components/Header";
@@ -22,6 +23,7 @@ import { z } from "zod";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { RichContentRenderer } from "@/components/RichContentRenderer";
 import { forumCategoryPath, isVisibleForumCategory, resolveForumCategory } from "@/lib/forumNavigation";
+import UniversalParticipationGate from "@/components/UniversalParticipationGate";
 
 const createTopicSchema = insertForumTopicSchema.omit({ authorId: true, slug: true });
 type TopicForm = z.infer<typeof createTopicSchema>;
@@ -32,6 +34,8 @@ export default function ForumCategoryPage() {
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [participationGateOpen, setParticipationGateOpen] =
+    useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingTopic, setEditingTopic] = useState<ForumTopic | null>(null);
 
@@ -126,6 +130,58 @@ export default function ForumCategoryPage() {
     });
   };
 
+  const requestNewTopic = () => {
+    if (isAuthenticated) {
+      setIsCreateDialogOpen(true);
+      return;
+    }
+
+    setParticipationGateOpen(true);
+  };
+
+  useEffect(() => {
+    if (
+      !isAuthenticated ||
+      !currentCategory
+    ) {
+      return;
+    }
+
+    const params =
+      new URLSearchParams(
+        window.location.search,
+      );
+
+    if (
+      params.get("action") !==
+      "new-topic"
+    ) {
+      return;
+    }
+
+    setParticipationGateOpen(false);
+    setIsCreateDialogOpen(true);
+
+    params.delete("action");
+
+    const query =
+      params.toString();
+
+    navigate(
+      `${forumCategoryPath(
+        currentCategory.slug,
+      )}${query ? `?${query}` : ""}`,
+      {
+        replace: true,
+      },
+    );
+  }, [
+    isAuthenticated,
+    currentCategory,
+    navigate,
+  ]);
+
+
   if (!categoriesLoading && (!currentCategory || !categoryIsVisible)) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -147,6 +203,23 @@ export default function ForumCategoryPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
+
+      <UniversalParticipationGate
+        open={
+          participationGateOpen &&
+          !isAuthenticated
+        }
+        onOpenChange={
+          setParticipationGateOpen
+        }
+        returnTo={
+          currentCategory
+            ? `${forumCategoryPath(currentCategory.slug)}?action=new-topic`
+            : window.location.pathname
+        }
+        description="Anyone can read public forum discussions. Membership is required to create a topic, post or reply."
+      />
+
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {categoriesLoading || !currentCategory ? (
           <Card><CardContent className="p-10 text-center text-gray-600">Loading forum…</CardContent></Card>
@@ -165,17 +238,34 @@ export default function ForumCategoryPage() {
                 <p className="mt-2 text-sm text-gray-500">{topics.length} topics</p>
               </div>
 
-              {isAuthenticated && (
-                <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button className="bg-uh-red hover:bg-red-700">New Topic</Button>
-                  </DialogTrigger>
+              <div>
+                <Button
+                  className="bg-uh-red hover:bg-red-700"
+                  onClick={requestNewTopic}
+                >
+                  New Topic
+                </Button>
+
+                <Dialog
+                  open={isCreateDialogOpen}
+                  onOpenChange={setIsCreateDialogOpen}
+                >
                   <DialogContent className="max-w-2xl">
-                    <DialogHeader><DialogTitle>Create New Topic in {currentCategory.name}</DialogTitle></DialogHeader>
-                    <TopicEditor form={form} onSubmit={submitNewTopic} busy={createTopicMutation.isPending} submitLabel="Create Topic" />
+                    <DialogHeader>
+                      <DialogTitle>
+                        Create New Topic in {currentCategory.name}
+                      </DialogTitle>
+                    </DialogHeader>
+
+                    <TopicEditor
+                      form={form}
+                      onSubmit={submitNewTopic}
+                      busy={createTopicMutation.isPending}
+                      submitLabel="Create Topic"
+                    />
                   </DialogContent>
                 </Dialog>
-              )}
+              </div>
             </section>
 
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -246,13 +336,23 @@ export default function ForumCategoryPage() {
               ) : (
                 <Card>
                   <CardContent className="p-12 text-center">
-                    <h2 className="text-xl font-bold">No topics yet</h2>
+                    {currentCategory?.slug === "other-sports-men" && (
+            <a
+              href="/intramurals"
+              className="mb-6 inline-flex items-center rounded-lg border border-red-500 px-5 py-3 text-sm font-bold text-red-600 transition hover:bg-red-50"
+            >
+              ← BACK TO INTRAMURAL SPORTS (LIVE & RESULTS)
+            </a>
+          )}
+
+          <h2 className="text-xl font-bold">No topics yet</h2>
                     <p className="mt-2 text-gray-600">Be the first to start a discussion in {currentCategory.name}.</p>
-                    {isAuthenticated ? (
-                      <Button className="mt-6 bg-uh-red hover:bg-red-700" onClick={() => setIsCreateDialogOpen(true)}>Create First Topic</Button>
-                    ) : (
-                      <Link href="/login" className="mt-6 inline-block font-semibold text-uh-red hover:underline">Log in to start a topic</Link>
-                    )}
+                    <Button
+                      className="mt-6 bg-uh-red hover:bg-red-700"
+                      onClick={requestNewTopic}
+                    >
+                      Create First Topic
+                    </Button>
                   </CardContent>
                 </Card>
               )}

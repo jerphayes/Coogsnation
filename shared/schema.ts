@@ -11,6 +11,7 @@ import {
   decimal,
   serial,
   unique,
+  uuid,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -50,12 +51,13 @@ export const users = pgTable("users", {
   // Address information
   address: varchar("address"),
   city: varchar("city"),
-  state: varchar("state", { length: 2 }),
-  zipCode: varchar("zip_code", { length: 10 }),
+  state: varchar("state", { length: 100 }),
+  zipCode: varchar("zip_code", { length: 20 }),
   location: varchar("location", { length: 100 }), // Keep for backward compatibility
   
   // Personal information
   dateOfBirth: timestamp("date_of_birth"),
+  age: integer("age"), // Membership age certification; 18+ required for activation
   fanType: varchar("fan_type", { length: 50 }), // Graduate, Faculty, Staff, Coog Crazy Fan
   interest: varchar("interest", { length: 100 }),
   suggestionBox: text("suggestion_box"),
@@ -87,6 +89,7 @@ export const users = pgTable("users", {
   verificationResendCount: integer("verification_resend_count").default(0),
   verificationLastResentAt: timestamp("verification_last_resent_at"),
   scheduledDeletionAt: timestamp("scheduled_deletion_at"),
+  registrationReturnTo: varchar("registration_return_to", { length: 512 }),
   
   
   // Security fields for account lockout and MFA
@@ -104,6 +107,12 @@ export const users = pgTable("users", {
   hasConsentedToDataUse: boolean("has_consented_to_data_use").default(false),
   hasConsentedToMarketing: boolean("has_consented_to_marketing").default(false),
   consentedAt: timestamp("consented_at"),
+  termsVersion: varchar("terms_version", { length: 40 }),
+  termsAcceptedAt: timestamp("terms_accepted_at"),
+  privacyVersion: varchar("privacy_version", { length: 40 }),
+  privacyAcceptedAt: timestamp("privacy_accepted_at"),
+  intramuralAgreementVersion: varchar("intramural_agreement_version", { length: 40 }),
+  intramuralAgreementAcceptedAt: timestamp("intramural_agreement_accepted_at"),
   
   // Profile completion
   isProfileComplete: boolean("is_profile_complete").default(false),
@@ -338,6 +347,128 @@ export const notifications = pgTable("notifications", {
   relatedType: varchar("related_type", { length: 50 }),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+// NGF Intramural Sports & Activities catalog
+export const intramuralActivityCatalog =
+  pgTable(
+    "ngf_intramural_activity_catalog",
+    {
+      slug:
+        varchar("slug", { length:40 })
+          .primaryKey(),
+
+      name:
+        varchar("name", { length:100 })
+          .notNull()
+          .unique(),
+
+      kind:
+        varchar("kind", { length:20 })
+          .notNull()
+          .default("sport"),
+
+      isActive:
+        boolean("is_active")
+          .notNull()
+          .default(true),
+
+      source:
+        varchar("source", { length:20 })
+          .notNull()
+          .default("system"),
+
+      sortOrder:
+        integer("sort_order")
+          .notNull()
+          .default(1000),
+
+      createdBy:
+        varchar("created_by")
+          .references(
+            () => users.id,
+            { onDelete:"set null" },
+          ),
+
+      createdAt:
+        timestamp(
+          "created_at",
+          { withTimezone:true },
+        ).defaultNow(),
+
+      updatedAt:
+        timestamp(
+          "updated_at",
+          { withTimezone:true },
+        ).defaultNow(),
+    },
+  );
+
+export const intramuralActivitySuggestions =
+  pgTable(
+    "ngf_intramural_activity_suggestions",
+    {
+      suggestionId:
+        uuid("suggestion_id")
+          .primaryKey()
+          .default(
+            sql`gen_random_uuid()`,
+          ),
+
+      submittedBy:
+        varchar("submitted_by")
+          .notNull()
+          .references(
+            () => users.id,
+            { onDelete:"cascade" },
+          ),
+
+      name:
+        varchar("name", { length:100 })
+          .notNull(),
+
+      proposedSlug:
+        varchar(
+          "proposed_slug",
+          { length:40 },
+        ).notNull(),
+
+      kind:
+        varchar("kind", { length:20 })
+          .notNull()
+          .default("sport"),
+
+      description:
+        text("description"),
+
+      status:
+        varchar("status", { length:20 })
+          .notNull()
+          .default("pending"),
+
+      reviewReason:
+        text("review_reason"),
+
+      reviewedBy:
+        varchar("reviewed_by")
+          .references(
+            () => users.id,
+            { onDelete:"set null" },
+          ),
+
+      reviewedAt:
+        timestamp(
+          "reviewed_at",
+          { withTimezone:true },
+        ),
+
+      createdAt:
+        timestamp(
+          "created_at",
+          { withTimezone:true },
+        ).defaultNow(),
+    },
+  );
+
 
 // UH Hall of Fame
 export const hallOfFame = pgTable("hall_of_fame", {
@@ -1081,62 +1212,276 @@ export const userProfileUpdateSchema = z.object({
 }).strict();
 
 // Local account registration schema (password-based registration)
+//
+// PROFILE_V2_MEMBERSHIP_CONTRACT
+//
+// Email ownership is already verified before this schema is used.
+// Membership is 18+ only. Complete contact information is required.
+// Phone is optional and is NOT a marketing-consent field.
 export const localAccountRegistrationSchema = z.object({
-  email: z.string().trim().toLowerCase().email("Please enter a valid email address"),
-  handle: optionalHandleSchema,
-  firstName: z.string().trim().min(1, "First name is required"),
-  lastName: z.string().trim().min(1, "Last name is required"),
-  nickname: z.string().optional(),
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .email("Please enter a valid email address"),
+
+  handle: z
+    .string()
+    .trim()
+    .min(3, "CoogsNation handle must be at least 3 characters")
+    .max(30, "CoogsNation handle must be 30 characters or fewer")
+    .regex(
+      /^[a-zA-Z0-9_]+$/,
+      "Handle may contain only letters, numbers and underscores",
+    ),
+
+  firstName: z
+    .string()
+    .trim()
+    .min(1, "First name is required")
+    .max(100, "First name is too long"),
+
+  lastName: z
+    .string()
+    .trim()
+    .min(1, "Last name is required")
+    .max(100, "Last name is too long"),
+
+  nickname: z.string().trim().max(100).optional(),
+
   password: passwordSchema,
   confirmPassword: z.string(),
+
   backupEmail: backupEmailSchema,
-  address: z.string()
+
+  address: z
+    .string()
     .trim()
     .min(1, "Street address is required")
     .max(255, "Street address is too long"),
-  city: z.string()
+
+  city: z
+    .string()
     .trim()
     .min(1, "City is required")
     .max(100, "City is too long"),
-  state: requiredStateSchema,
-  zipCode: requiredZipCodeSchema,
-  dateOfBirth: z.coerce.date(),
+
+  state: z
+    .string()
+    .trim()
+    .min(1, "State, province or region is required")
+    .max(100, "State, province or region is too long"),
+
+  zipCode: z
+    .string()
+    .trim()
+    .min(1, "Postal / ZIP code is required")
+    .max(20, "Postal / ZIP code is too long"),
+
+  country: z
+    .string()
+    .trim()
+    .min(1, "Country is required")
+    .max(50, "Country is too long"),
+
+  age: z.coerce
+    .number()
+    .int("Age must be a whole number")
+    .min(
+      18,
+      "You must be 18 years of age or older to join CoogsNation.",
+    )
+    .max(130, "Please enter a valid age"),
+
+  // DOB is no longer required for membership.
+  // Retained only for compatibility with existing profile data.
+  dateOfBirth: z.coerce.date().optional(),
+
+  phoneNumber: z
+    .string()
+    .trim()
+    .max(20, "Phone number must be 20 characters or fewer")
+    .optional()
+    .or(z.literal("")),
+
   graduationYear: optionalGraduationYearSchema,
-  fanType: z.enum(["Student", "Ex-Student", "Graduate", "Post Graduate", "Faculty", "Staff", "Coog Crazy Fan", "Friend"]).optional(),
+
+  fanType: z
+    .enum([
+      "Student",
+      "Ex-Student",
+      "Graduate",
+      "Post Graduate",
+      "Faculty",
+      "Staff",
+      "Coog Crazy Fan",
+      "Friend",
+    ])
+    .optional(),
+
   interest: z.string().optional(),
   suggestionBox: z.string().optional(),
+
   memberCategory: z.preprocess(
     emptyStringToUndefined,
-    z.enum(["Student", "Ex-Student", "Graduate", "Post Graduate", "Faculty", "Staff", "Coog Crazy Fan", "Friend"]).optional(),
+    z
+      .enum([
+        "Student",
+        "Ex-Student",
+        "Graduate",
+        "Post Graduate",
+        "Faculty",
+        "Staff",
+        "Coog Crazy Fan",
+        "Friend",
+      ])
+      .optional(),
   ),
-  // Comments and favorite sports
-  commentsAndSuggestions: z.string().optional(),
-  favoriteSports: z.array(z.enum(["football", "basketball", "other"])).optional(),
-  otherSportComment: z.string().optional(),
-  hasConsentedToDataUse: z.boolean().refine(val => val === true, "You must consent to data use to continue"),
-  hasConsentedToMarketing: z.boolean().optional(),
-  
-  // Enhanced membership fields
-  aboutMe: z.string().max(2000, "About me must be less than 2000 characters").optional(),
-  interests: z.string().max(1000, "Interests must be less than 1000 characters").optional(),
-  affiliation: z.enum(["Student", "Current Student", "Ex-Student", "Graduate", "Post Graduate", "Faculty", "Staff", "Coog Crazy Fan", "Friend"]).optional(),
-  defaultAvatarChoice: z.number().int().min(1).max(5, "Avatar choice must be between 1 and 5").optional(),
-  majorOrDepartment: z.string().max(120, "Major/Department must be less than 120 characters").optional(),
-  socialLinks: z.object({
-    twitter: z.string().url("Please enter a valid Twitter URL").optional().or(z.literal('')),
-    linkedin: z.string().url("Please enter a valid LinkedIn URL").optional().or(z.literal('')),
-    instagram: z.string().url("Please enter a valid Instagram URL").optional().or(z.literal('')),
-    facebook: z.string().url("Please enter a valid Facebook URL").optional().or(z.literal('')),
-    website: z.string().url("Please enter a valid website URL").optional().or(z.literal('')),
-  }).optional(),
-  addressLine1: z.string().max(100, "Address line 1 must be less than 100 characters").optional(),
 
-  country: requiredCountrySchema,
+  commentsAndSuggestions: z.string().optional(),
+
+  favoriteSports: z
+    .array(
+      z.enum([
+        "football",
+        "basketball",
+        "other",
+      ]),
+    )
+    .optional(),
+
+  otherSportComment: z.string().optional(),
+
+  // Required privacy/data-use acceptance.
+  hasConsentedToDataUse: z
+    .boolean()
+    .refine(
+      (value) => value === true,
+      "You must accept the Privacy Policy and required data use to continue",
+    ),
+
+  // Required Terms acceptance.
+  hasAcceptedTerms: z
+    .boolean()
+    .refine(
+      (value) => value === true,
+      "You must accept the Terms of Use to continue",
+    ),
+
+  // Email marketing remains optional.
+  // This has NO relationship to phone/SMS use.
+  hasConsentedToMarketing: z.boolean().optional(),
+
+  // Optional affiliate / selected offers.
   optInOffers: z.boolean().optional(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords must match",
-  path: ["confirmPassword"],
-});
+
+  // Visible to everyone.
+  // Server determines whether this is mandatory from trusted signup origin.
+  intramuralAgreementAccepted: z.boolean().optional(),
+
+  aboutMe: z
+    .string()
+    .max(
+      2000,
+      "About me must be less than 2000 characters",
+    )
+    .optional(),
+
+  interests: z
+    .string()
+    .max(
+      1000,
+      "Interests must be less than 1000 characters",
+    )
+    .optional(),
+
+  affiliation: z
+    .enum([
+      "Student",
+      "Current Student",
+      "Ex-Student",
+      "Graduate",
+      "Post Graduate",
+      "Faculty",
+      "Staff",
+      "Coog Crazy Fan",
+      "Friend",
+    ])
+    .optional(),
+
+  defaultAvatarChoice: z
+    .number()
+    .int()
+    .min(1)
+    .max(
+      5,
+      "Avatar choice must be between 1 and 5",
+    )
+    .optional(),
+
+  majorOrDepartment: z
+    .string()
+    .max(
+      120,
+      "Major/Department must be less than 120 characters",
+    )
+    .optional(),
+
+  socialLinks: z
+    .object({
+      twitter: z
+        .string()
+        .url("Please enter a valid Twitter URL")
+        .optional()
+        .or(z.literal("")),
+
+      linkedin: z
+        .string()
+        .url("Please enter a valid LinkedIn URL")
+        .optional()
+        .or(z.literal("")),
+
+      instagram: z
+        .string()
+        .url("Please enter a valid Instagram URL")
+        .optional()
+        .or(z.literal("")),
+
+      facebook: z
+        .string()
+        .url("Please enter a valid Facebook URL")
+        .optional()
+        .or(z.literal("")),
+
+      website: z
+        .string()
+        .url("Please enter a valid website URL")
+        .optional()
+        .or(z.literal("")),
+    })
+    .optional(),
+
+  // Legacy field retained for profile compatibility.
+  addressLine1: z
+    .string()
+    .max(
+      100,
+      "Address line 1 must be less than 100 characters",
+    )
+    .optional(),
+})
+.refine(
+  (data) =>
+    data.password ===
+    data.confirmPassword,
+  {
+    message:
+      "Passwords must match",
+    path: [
+      "confirmPassword",
+    ],
+  },
+);
 
 // Local login schema - accepts username, email, or social media account
 export const localLoginSchema = z.object({

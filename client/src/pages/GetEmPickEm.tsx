@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   ArrowRight,
@@ -19,6 +19,7 @@ import { Header } from "@/components/Header";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import UniversalParticipationGate from "@/components/UniversalParticipationGate";
 
 type SportsGame = {
   gameId: string;
@@ -127,6 +128,8 @@ export default function GetEmPickEm() {
   const { toast } = useToast();
 
   const [dialog, setDialog] = useState<"create" | "join" | null>(null);
+  const [participationIntent, setParticipationIntent] =
+    useState<"create" | "join" | null>(null);
   const [createForm, setCreateForm] = useState(initialCreate);
   const [inviteCode, setInviteCode] = useState("");
   const [createdContest, setCreatedContest] = useState<CreatedContest | null>(null);
@@ -148,9 +151,75 @@ export default function GetEmPickEm() {
     [sports.data?.games],
   );
 
-  const requireMember = () => {
-    if (isAuthenticated) return true;
-    navigate("/login?returnTo=/get-em");
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    const params =
+      new URLSearchParams(
+        window.location.search,
+      );
+
+    const action =
+      params.get("action");
+
+    if (
+      action !== "create" &&
+      action !== "join"
+    ) {
+      return;
+    }
+
+    if (action === "join") {
+      const code =
+        (
+          params.get("code") ||
+          ""
+        )
+          .trim()
+          .toUpperCase()
+          .replace(/[^A-Z0-9]/g, "")
+          .slice(0, 6);
+
+      if (code) {
+        setInviteCode(code);
+      }
+    }
+
+    if (action === "create") {
+      setCreatedContest(null);
+    }
+
+    setParticipationIntent(null);
+    setDialog(action);
+
+    params.delete("action");
+    params.delete("code");
+
+    const query =
+      params.toString();
+
+    navigate(
+      `/get-em${query ? `?${query}` : ""}`,
+      {
+        replace: true,
+      },
+    );
+  }, [
+    isAuthenticated,
+    navigate,
+  ]);
+
+
+  const requireMember = (
+    action: "create" | "join",
+  ) => {
+    if (isAuthenticated) {
+      return true;
+    }
+
+    setParticipationIntent(action);
     return false;
   };
 
@@ -202,18 +271,41 @@ export default function GetEmPickEm() {
   });
 
   const openCreate = () => {
-    if (!requireMember()) return;
+    if (!requireMember("create")) return;
     setCreatedContest(null);
     setDialog("create");
   };
 
   const openJoin = () => {
-    if (!requireMember()) return;
+    if (!requireMember("join")) return;
     setDialog("join");
   };
 
   return (
     <div className="min-h-screen bg-[#050505] text-white">
+      <UniversalParticipationGate
+        open={
+          Boolean(participationIntent) &&
+          !isAuthenticated
+        }
+        onOpenChange={(open) => {
+          if (!open) {
+            setParticipationIntent(null);
+          }
+        }}
+        returnTo={
+          participationIntent
+            ? `/get-em?action=${participationIntent}${
+                participationIntent === "join" &&
+                inviteCode
+                  ? `&code=${encodeURIComponent(inviteCode)}`
+                  : ""
+              }`
+            : "/get-em"
+        }
+        description="Anyone can view Get'em / Pick'Em information. Membership is required to create a game, join a game, submit picks and compete."
+      />
+
       <Header
         leadingBrand={
           <Link href="/get-em" className="hidden shrink-0 sm:block" aria-label="NGF Productions Get'em">
@@ -303,7 +395,7 @@ export default function GetEmPickEm() {
                     <button
                       type="button"
                       onClick={() => {
-                        if (!requireMember()) return;
+                        if (!requireMember("join")) return;
                         if (inviteCode.length !== 6) {
                           toast({
                             title: "Invite code needed",

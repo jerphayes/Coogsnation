@@ -1,3 +1,4 @@
+import PageCardClose from "@/components/PageCardClose";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRight,
@@ -72,29 +73,14 @@ export default function JoinGate() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 text-black">
-      <Card className="w-full max-w-lg shadow-xl">
+      <Card className="relative w-full max-w-lg shadow-xl">
+        <PageCardClose />
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-600">
             <ShieldCheck className="h-8 w-8 text-white" />
           </div>
 
           <CardTitle className="text-3xl relative">
-        {/* UNIVERSAL_PAGE_CARD_CLOSE_V1 */}
-        <button
-          type="button"
-          aria-label="Close"
-          title="Close"
-          onClick={() => {
-            if (window.history.length > 1) {
-              window.history.back();
-            } else {
-              window.location.assign("/");
-            }
-          }}
-          className="absolute right-4 top-4 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white !text-gray-900 shadow-sm transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2"
-        >
-          <X className="h-5 w-5" aria-hidden="true" />
-        </button>
 
             Join the CoogsNation Community
           </CardTitle>
@@ -163,17 +149,19 @@ export default function JoinGate() {
             <ArrowRight className="h-4 w-4" />
           </Button>
 
-          <div className="pt-3">
-            <Button
-              type="button"
-              variant="ghost"
-              className="h-11 w-full text-gray-600"
-              onClick={continueAsGuest}
-            >
-              <UserRound className="mr-2 h-4 w-4" />
-              Not now — continue as Guest
-            </Button>
-          </div>
+          {returnTo === "/dashboard" && (
+            <div className="pt-3">
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-11 w-full text-gray-600"
+                onClick={continueAsGuest}
+              >
+                <UserRound className="mr-2 h-4 w-4" />
+                Not now — continue as Guest
+              </Button>
+            </div>
+          )}
 
           <p className="pt-3 text-center text-xs text-gray-500">
             Guests can browse public CoogsNation

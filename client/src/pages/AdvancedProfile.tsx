@@ -1,3 +1,4 @@
+import MemberAvatar from "@/components/MemberAvatar";
 import { useState, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Header } from "@/components/Header";

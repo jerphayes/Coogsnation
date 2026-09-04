@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { z } from "zod";
 
 import { pool } from "../db";
+import { registerIntramuralManagementRoutes } from "./management";
 import {
   isAuthenticated,
   requireAdmin,
@@ -11,21 +12,11 @@ const colorSchema =
   z.string().regex(/^#[0-9a-fA-F]{6}$/);
 
 const sportSchema =
-  z.enum([
-    "flag-football",
-    "basketball",
-    "soccer",
-    "volleyball",
-    "softball",
-    "baseball",
-    "hockey",
-    "lacrosse",
-    "rugby",
-    "cricket",
-    "ultimate-frisbee",
-    "dodgeball",
-    "other",
-  ]);
+  z.string()
+    .trim()
+    .min(2)
+    .max(40)
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 
 const genderSchema =
   z.enum([
@@ -101,6 +92,29 @@ const resolveScoreSchema =
       z.number().int().min(0).max(999),
   });
 
+const suggestActivitySchema =
+  z.object({
+    name:
+      z.string().trim().min(2).max(100),
+
+    kind:
+      z.enum(["sport","activity"])
+        .default("sport"),
+
+    description:
+      z.string().trim().max(600).optional(),
+  });
+
+const reviewActivitySchema =
+  z.object({
+    action:
+      z.enum(["approve","reject"]),
+
+    reason:
+      z.string().trim().max(600).optional(),
+  });
+
+
 function userIdOf(req: any): string | null {
   return req.user?.id || null;
 }
@@ -146,13 +160,219 @@ async function captainOfTeam(
   return result.rowCount === 1;
 }
 
+async function activeIntramuralActivityExists(
+  slug:string,
+): Promise<boolean> {
+
+  const result =
+    await pool.query(
+      `
+        SELECT 1
+        FROM ngf_intramural_activity_catalog
+        WHERE
+          slug=$1
+          AND is_active=true
+        LIMIT 1
+      `,
+      [slug],
+    );
+
+  return result.rowCount === 1;
+}
+
+function activitySlug(
+  value:string,
+): string {
+
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g,"")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g,"-")
+    .replace(/^-+|-+$/g,"")
+    .slice(0,40)
+    .replace(/-+$/g,"");
+}
+
+/*
+ * Deliver the review result to the existing member-message
+ * system where available, plus the normal notification system.
+ */
+async function sendIntramuralMemberMessage(
+  senderId:string,
+  recipientId:string,
+  content:string,
+  suggestionId:string,
+) {
+
+  try {
+    await pool.query(
+      `
+        INSERT INTO notifications(
+          user_id,
+          title,
+          message,
+          type,
+          is_read,
+          related_id,
+          related_type
+        )
+        VALUES(
+          $1,
+          'Intramural Sports and Activities',
+          $2,
+          'intramural_activity_review',
+          false,
+          $3,
+          'intramural_activity_suggestion'
+        )
+      `,
+      [
+        recipientId,
+        content,
+        suggestionId,
+      ],
+    );
+  } catch (error) {
+    console.error(
+      "[INTRAMURALS] notification delivery failed",
+      error,
+    );
+  }
+
+  try {
+    const target =
+      await pool.query(`
+        SELECT
+          table_name,
+          bool_or(
+            column_name='recipient_id'
+          ) AS has_recipient,
+          bool_or(
+            column_name='receiver_id'
+          ) AS has_receiver
+
+        FROM information_schema.columns
+
+        WHERE
+          table_schema='public'
+          AND column_name IN (
+            'sender_id',
+            'recipient_id',
+            'receiver_id',
+            'content'
+          )
+
+        GROUP BY table_name
+
+        HAVING
+          bool_or(column_name='sender_id')
+          AND bool_or(column_name='content')
+          AND (
+            bool_or(column_name='recipient_id')
+            OR
+            bool_or(column_name='receiver_id')
+          )
+
+        ORDER BY
+          CASE
+            WHEN table_name='messages' THEN 0
+            WHEN table_name='direct_messages' THEN 1
+            ELSE 2
+          END,
+          table_name
+
+        LIMIT 1
+      `);
+
+    const row =
+      target.rows[0];
+
+    if (!row) {
+      return;
+    }
+
+    const table =
+      String(row.table_name);
+
+    if (!/^[A-Za-z0-9_]+$/.test(table)) {
+      return;
+    }
+
+    const recipientColumn =
+      row.has_recipient
+        ? "recipient_id"
+        : "receiver_id";
+
+    await pool.query(
+      `
+        INSERT INTO "${table}"(
+          sender_id,
+          ${recipientColumn},
+          content
+        )
+        VALUES($1,$2,$3)
+      `,
+      [
+        senderId,
+        recipientId,
+        content,
+      ],
+    );
+  } catch (error) {
+    console.error(
+      "[INTRAMURALS] member-box delivery failed",
+      error,
+    );
+  }
+}
+
+
 export function registerIntramuralRoutes(
   app: Express,
 ) {
 
-  // ----------------------------------------------------------
+
+  registerIntramuralManagementRoutes(app);
+// ----------------------------------------------------------
   // PUBLIC READS
   // ----------------------------------------------------------
+  app.get(
+    "/api/intramurals/sports",
+    async (_req,res) => {
+      try {
+        const result =
+          await pool.query(`
+            SELECT
+              slug,
+              name,
+              kind
+            FROM ngf_intramural_activity_catalog
+            WHERE is_active=true
+            ORDER BY sort_order,name
+          `);
+
+        res.setHeader(
+          "Cache-Control",
+          "no-store",
+        );
+
+        res.json(result.rows);
+      } catch (error) {
+        console.error(
+          "[INTRAMURALS] sports catalog failed",
+          error,
+        );
+
+        res.status(500).json({
+          message:
+            "Unable to load sports and activities",
+        });
+      }
+    },
+  );
+
+
 
   app.get(
     "/api/intramurals/teams",
@@ -163,23 +383,54 @@ export function registerIntramuralRoutes(
             ? req.query.sport
             : null;
 
+        const requestedScope =
+          typeof req.query.scope === "string"
+            ? req.query.scope
+            : "live";
+
+        const scope =
+          requestedScope === "demo" ||
+          requestedScope === "all"
+            ? requestedScope
+            : "live";
+
         const result =
           await pool.query(
             `
               SELECT
                 t.*,
                 COUNT(m.user_id)::int AS member_count
+
               FROM ngf_intramural_teams t
+
               LEFT JOIN ngf_intramural_team_members m
                 ON m.team_id=t.team_id
-              WHERE ($1::text IS NULL OR t.sport=$1)
+
+              WHERE
+                ($1::text IS NULL OR t.sport=$1)
+
+                AND (
+                  $2::text='all'
+
+                  OR (
+                    $2::text='demo'
+                    AND t.is_demo=true
+                  )
+
+                  OR (
+                    $2::text='live'
+                    AND t.is_demo=false
+                  )
+                )
+
               GROUP BY t.team_id
+
               ORDER BY
                 t.sport,
                 t.league,
                 t.name
             `,
-            [sport],
+            [sport,scope],
           );
 
         res.setHeader(
@@ -467,6 +718,18 @@ export function registerIntramuralRoutes(
 
       const input =
         parsed.data;
+
+      const activeActivity =
+        await activeIntramuralActivityExists(
+          input.sport,
+        );
+
+      if (!activeActivity) {
+        return res.status(400).json({
+          message:
+            "Sport or activity is not approved for Intramural participation.",
+        });
+      }
 
       const client =
         await pool.connect();
@@ -873,6 +1136,366 @@ export function registerIntramuralRoutes(
         res.status(500).json({
           message:"Unable to submit score",
         });
+      }
+    },
+  );
+
+
+  // ----------------------------------------------------------
+  // SPORT / ACTIVITY SUGGESTIONS
+  // ----------------------------------------------------------
+
+  app.post(
+    "/api/intramurals/activity-suggestions",
+    isAuthenticated,
+    async (req,res) => {
+
+      const userId =
+        userIdOf(req);
+
+      if (!userId) {
+        return res.status(401).json({
+          message:"Login required",
+        });
+      }
+
+      const parsed =
+        suggestActivitySchema.safeParse(
+          req.body,
+        );
+
+      if (!parsed.success) {
+        return res.status(400).json({
+          message:
+            "Invalid sport or activity suggestion",
+          errors:
+            parsed.error.flatten(),
+        });
+      }
+
+      const input =
+        parsed.data;
+
+      const slug =
+        activitySlug(input.name);
+
+      if (!slug) {
+        return res.status(400).json({
+          message:
+            "Please use a recognizable sport or activity name.",
+        });
+      }
+
+      try {
+        const existing =
+          await pool.query(
+            `
+              SELECT slug,name
+              FROM ngf_intramural_activity_catalog
+              WHERE
+                is_active=true
+                AND (
+                  slug=$1
+                  OR lower(name)=lower($2)
+                )
+              LIMIT 1
+            `,
+            [
+              slug,
+              input.name,
+            ],
+          );
+
+        if (existing.rows[0]) {
+          return res.status(409).json({
+            message:
+              `${existing.rows[0].name} is already available.`,
+          });
+        }
+
+        const pending =
+          await pool.query(
+            `
+              SELECT suggestion_id
+              FROM ngf_intramural_activity_suggestions
+              WHERE
+                status='pending'
+                AND (
+                  proposed_slug=$1
+                  OR lower(name)=lower($2)
+                )
+              LIMIT 1
+            `,
+            [
+              slug,
+              input.name,
+            ],
+          );
+
+        if (pending.rows[0]) {
+          return res.status(409).json({
+            message:
+              "That sport or activity is already pending review.",
+          });
+        }
+
+        const created =
+          await pool.query(
+            `
+              INSERT INTO
+                ngf_intramural_activity_suggestions(
+                  submitted_by,
+                  name,
+                  proposed_slug,
+                  kind,
+                  description
+                )
+              VALUES($1,$2,$3,$4,$5)
+              RETURNING *
+            `,
+            [
+              userId,
+              input.name,
+              slug,
+              input.kind,
+              input.description || null,
+            ],
+          );
+
+        res.status(201).json({
+          ...created.rows[0],
+          message:
+            "Suggestion submitted for review.",
+        });
+      } catch (error) {
+        console.error(
+          "[INTRAMURALS] suggestion failed",
+          error,
+        );
+
+        res.status(500).json({
+          message:
+            "Unable to submit suggestion",
+        });
+      }
+    },
+  );
+
+
+  app.get(
+    "/api/intramurals/activity-suggestions/pending",
+    requireAdmin,
+    async (_req,res) => {
+
+      try {
+        const result =
+          await pool.query(`
+            SELECT
+              s.*,
+              COALESCE(
+                u.nickname,
+                u.handle,
+                u.username,
+                u.email,
+                'Member'
+              ) AS submitter_name,
+              u.affiliation
+
+            FROM ngf_intramural_activity_suggestions s
+
+            JOIN users u
+              ON u.id=s.submitted_by
+
+            WHERE s.status='pending'
+
+            ORDER BY s.created_at ASC
+          `);
+
+        res.setHeader(
+          "Cache-Control",
+          "no-store",
+        );
+
+        res.json(result.rows);
+      } catch (error) {
+        console.error(
+          "[INTRAMURALS] pending suggestions failed",
+          error,
+        );
+
+        res.status(500).json({
+          message:
+            "Unable to load suggestions",
+        });
+      }
+    },
+  );
+
+
+  app.post(
+    "/api/intramurals/activity-suggestions/:suggestionId/review",
+    requireAdmin,
+    async (req,res) => {
+
+      const reviewerId =
+        userIdOf(req);
+
+      if (!reviewerId) {
+        return res.status(401).json({
+          message:"Login required",
+        });
+      }
+
+      const parsed =
+        reviewActivitySchema.safeParse(
+          req.body,
+        );
+
+      if (!parsed.success) {
+        return res.status(400).json({
+          message:"Invalid review",
+        });
+      }
+
+      const {
+        action,
+        reason,
+      } = parsed.data;
+
+      if (
+        action === "reject" &&
+        !reason?.trim()
+      ) {
+        return res.status(400).json({
+          message:
+            "Give the member a reason for rejection.",
+        });
+      }
+
+      const client =
+        await pool.connect();
+
+      try {
+        await client.query("BEGIN");
+
+        const result =
+          await client.query(
+            `
+              SELECT *
+              FROM ngf_intramural_activity_suggestions
+              WHERE
+                suggestion_id=$1
+                AND status='pending'
+              FOR UPDATE
+            `,
+            [
+              req.params.suggestionId,
+            ],
+          );
+
+        const suggestion =
+          result.rows[0];
+
+        if (!suggestion) {
+          await client.query("ROLLBACK");
+
+          return res.status(404).json({
+            message:
+              "Pending suggestion not found",
+          });
+        }
+
+        if (action === "approve") {
+          await client.query(
+            `
+              INSERT INTO
+                ngf_intramural_activity_catalog(
+                  slug,
+                  name,
+                  kind,
+                  is_active,
+                  source,
+                  sort_order,
+                  created_by
+                )
+              VALUES(
+                $1,$2,$3,true,'member',1000,$4
+              )
+
+              ON CONFLICT(slug)
+              DO UPDATE SET
+                name=EXCLUDED.name,
+                kind=EXCLUDED.kind,
+                is_active=true,
+                updated_at=now()
+            `,
+            [
+              suggestion.proposed_slug,
+              suggestion.name,
+              suggestion.kind,
+              suggestion.submitted_by,
+            ],
+          );
+        }
+
+        await client.query(
+          `
+            UPDATE
+              ngf_intramural_activity_suggestions
+
+            SET
+              status=$2,
+              review_reason=$3,
+              reviewed_by=$4,
+              reviewed_at=now()
+
+            WHERE suggestion_id=$1
+          `,
+          [
+            suggestion.suggestion_id,
+            action === "approve"
+              ? "approved"
+              : "rejected",
+            reason || null,
+            reviewerId,
+          ],
+        );
+
+        await client.query("COMMIT");
+
+        const memberMessage =
+          action === "approve"
+            ? `Your Intramural Sports and Activities suggestion "${suggestion.name}" was approved. Members can now create teams using it.`
+            : `Your Intramural Sports and Activities suggestion "${suggestion.name}" was not approved. Reason: ${reason}`;
+
+        await sendIntramuralMemberMessage(
+          reviewerId,
+          suggestion.submitted_by,
+          memberMessage,
+          suggestion.suggestion_id,
+        );
+
+        res.json({
+          ok:true,
+          status:
+            action === "approve"
+              ? "approved"
+              : "rejected",
+        });
+      } catch (error) {
+        await client.query("ROLLBACK");
+
+        console.error(
+          "[INTRAMURALS] activity review failed",
+          error,
+        );
+
+        res.status(500).json({
+          message:
+            "Unable to review suggestion",
+        });
+      } finally {
+        client.release();
       }
     },
   );

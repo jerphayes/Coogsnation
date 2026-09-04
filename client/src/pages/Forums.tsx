@@ -1,3 +1,4 @@
+import MemberAvatar from "@/components/MemberAvatar";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -12,6 +13,7 @@ import { Link, useSearch } from "wouter";
 import { formatDistance } from "date-fns";
 import type { ForumCategory, ForumTopic } from "@shared/schema";
 import { forumCategoryPath, isVisibleForumCategory } from "@/lib/forumNavigation";
+import { ParticipationGateButton } from "@/components/UniversalParticipationGate";
 
 const sportsSlugs = new Set([
   "football",
@@ -544,7 +546,13 @@ export default function Forums() {
             <h2 className="font-bold">Community basics</h2>
             <p className="mt-2 text-sm">Be respectful, use descriptive topic titles, and place discussions in the most relevant board.</p>
             {!isAuthenticated && (
-              <Link href="/join" className="mt-4 inline-block font-semibold text-blue-700 hover:underline">Join to post and reply →</Link>
+              <ParticipationGateButton
+                returnTo="/forums"
+                variant="link"
+                className="mt-4 px-0 font-semibold text-blue-700 hover:underline"
+              >
+                Join to post and reply →
+              </ParticipationGateButton>
             )}
           </CardContent>
         </Card>
@@ -575,7 +583,12 @@ function CommunityGroupGrid({
       {groups.map((group) => (
         <details
           key={group.title}
-          className="group h-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:shadow-lg"
+          id={
+            group.title === "Coogs Marketplace"
+              ? "coogs-marketplace"
+              : undefined
+          }
+          className="group h-full scroll-mt-28 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:shadow-lg"
         >
           <summary
             className={`flex min-h-28 cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 [&::-webkit-details-marker]:hidden ${group.headerClasses}`}
@@ -777,60 +790,114 @@ function CategoryGrid({
             ? "Women Sports"
             : isIntramural
               ? "Intramural Sports"
-              : category.slug === "uh-hall-of-fame" ? "Coog's Hall of Fame" : category.name;
+              : category.slug === "uh-hall-of-fame"
+                ? "Coog's Hall of Fame"
+                : category.name;
+
+        /*
+         * Intramurals are one concept with two distinct destinations:
+         *
+         * 1. Community discussion / announcements
+         * 2. Teams / schedules / scores / results
+         *
+         * Do not wrap the whole card in one link.
+         */
+        if (isIntramural) {
+          return (
+            <Fragment key={category.id}>
+              <Card className="h-full overflow-hidden border border-gray-200 transition hover:-translate-y-0.5 hover:shadow-lg">
+
+                <div
+                  className={`flex min-h-16 items-center gap-3 px-5 py-4 ${categoryHeaderClasses(
+                    category
+                  )}`}
+                >
+                  <span
+                    className="text-2xl"
+                    aria-hidden="true"
+                  >
+                    {categoryIcon(category)}
+                  </span>
+
+                  <h2 className="text-lg font-bold">
+                    Intramural Sports
+                  </h2>
+                </div>
+
+                <CardContent className="bg-white p-5">
+                  <div className="grid gap-3">
+
+                    <Link
+                      href={forumCategoryPath(
+                        category.slug
+                      )}
+                      className="block rounded-lg border border-gray-200 px-4 py-3 transition hover:border-blue-300 hover:bg-blue-50"
+                    >
+                      <div className="font-bold text-gray-950">
+                        💬 Forum & Announcements
+                      </div>
+
+                      <div className="mt-1 text-xs leading-5 text-gray-600">
+                        Talk, organize, recruit, discuss and post activities.
+                      </div>
+                    </Link>
+
+                    <Link
+                      href="/intramurals"
+                      className="block rounded-lg border border-red-200 bg-red-50 px-4 py-3 transition hover:border-red-400 hover:bg-red-100"
+                    >
+                      <div className="font-bold text-red-700">
+                        🏆 Teams, Scores & Results
+                      </div>
+
+                      <div className="mt-1 text-xs leading-5 text-gray-700">
+                        Teams, schedules, standings, results and score submission.
+                      </div>
+                    </Link>
+
+                  </div>
+                </CardContent>
+
+              </Card>
+            </Fragment>
+          );
+        }
 
         return (
           <Fragment key={category.id}>
             <Link
-            key={category.id}
-            href={forumCategoryPath(
-              category.slug
-            )}
-            className="block h-full"
-          >
-            <Card className="h-full overflow-hidden border border-gray-200 transition hover:-translate-y-0.5 hover:shadow-lg">
+              href={forumCategoryPath(
+                category.slug
+              )}
+              className="block h-full"
+            >
+              <Card className="h-full overflow-hidden border border-gray-200 transition hover:-translate-y-0.5 hover:shadow-lg">
 
-              <div
-                className={`flex min-h-16 items-center gap-3 px-5 py-4 ${categoryHeaderClasses(
-                  category
-                )}`}
-              >
-                <span
-                  className="text-2xl"
-                  aria-hidden="true"
+                <div
+                  className={`flex min-h-16 items-center gap-3 px-5 py-4 ${categoryHeaderClasses(
+                    category
+                  )}`}
                 >
-                  {categoryIcon(category)}
-                </span>
+                  <span
+                    className="text-2xl"
+                    aria-hidden="true"
+                  >
+                    {categoryIcon(category)}
+                  </span>
 
-                <h2 className="text-lg font-bold">
-                  {displayName}
-                </h2>
-              </div>
+                  <h2 className="text-lg font-bold">
+                    {displayName}
+                  </h2>
+                </div>
 
-              <CardContent className="bg-white p-5">
-
-                {isIntramural ? (
-                  <p className="leading-6 text-gray-700">
-
-                    <span className="text-sm font-medium">
-                      Activities
-                    </span>
-
-                    <span className="ml-1 text-xs">
-                      / announcements on and off campus
-                    </span>
-
-                  </p>
-                ) : (
+                <CardContent className="bg-white p-5">
                   <p className="text-sm leading-6 text-gray-700">
                     {category.description ||
                       "Community discussion board"}
                   </p>
-                )}
+                </CardContent>
 
-              </CardContent>
-
-            </Card>
+              </Card>
             </Link>
 
             {category.slug === "track-field" ? (

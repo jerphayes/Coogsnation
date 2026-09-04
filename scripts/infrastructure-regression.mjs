@@ -17,7 +17,7 @@ assert(!viteServer.includes("nanoid"), "nanoid must not be used for development 
 assert(viteServer.includes('import("vite")'), "Vite must be dynamically imported inside setupVite");
 assert(viteServer.includes('import(viteConfigUrl)'), "vite.config must be loaded through a runtime URL so esbuild cannot bundle its dev dependencies");
 assert(dockerfile.includes('CMD ["node", "dist/index.js"]'), "runtime must launch Node directly");
-assert(dockerfile.includes("npm run check && npm run security:check && npm run build"), "Docker release stage must run all validation gates");
+assert(dockerfile.includes("npm run check && npm run ui:check && npm run security:check && npm run build"), "Docker release stage must run all validation gates");
 assert(devCompose.includes("env_file:"), "development Compose must load .env");
 assert(devCompose.includes("- .:/app"), "development Compose must bind mount the source tree");
 assert(devCompose.includes('$${DATABASE_BOOTSTRAP:-false}'), "development bootstrap must be controlled by container environment");

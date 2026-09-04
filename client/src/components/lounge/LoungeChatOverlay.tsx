@@ -1,3 +1,4 @@
+import MemberAvatar from "@/components/MemberAvatar";
 import { formatCentralChatTimestamp } from "@/lib/chatPresentation";
 /**
  * LoungeChatOverlay
@@ -452,14 +453,6 @@ export function LoungeChatOverlay(props: LoungeChatOverlayProps) {
 
   // MEMBER CHAT UI PHASE 1
   const memberName = occupants[0]?.displayName || "Coog Member";
-  const memberInitials =
-    memberName
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase() || "")
-      .join("") || "CN";
-
   const composerTools = [
     ["coogpack", "🐾 Coog Pack"],
     ["attach", "＋ Attach"],
@@ -779,9 +772,12 @@ export function LoungeChatOverlay(props: LoungeChatOverlayProps) {
             )}
             aria-label="Member identity and status"
           >
-            <div className="mx-auto mt-1 flex h-20 w-20 items-center justify-center rounded-xl border-2 border-[#b7863d] bg-gradient-to-br from-[#a7192a] to-black text-2xl font-black text-white shadow-lg">
-              {memberInitials}
-            </div>
+            <MemberAvatar
+              userId={occupants[0]?.userId}
+              displayName={memberName}
+              className="mx-auto mt-1 h-20 w-20 rounded-xl border-2 border-[#b7863d] shadow-lg"
+              fallbackClassName="bg-gradient-to-br from-[#a7192a] to-black text-2xl font-black text-white"
+            />
 
             <div className="mt-2 truncate text-center text-sm font-black">{memberName}</div>
 

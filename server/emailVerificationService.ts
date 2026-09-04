@@ -5,82 +5,112 @@ import {
 
 import { sendEmail } from "./emailService";
 
+
+/*
+ * Internal security deadline.
+ *
+ * Do not advertise this duration to the user.
+ * User-facing copy intentionally emphasizes immediate
+ * verification instead of encouraging delay.
+ */
 export const EMAIL_VERIFICATION_WINDOW_MS =
   24 * 60 * 60 * 1000;
 
-export function createEmailVerificationToken(): {
-  token: string;
-  tokenHash: string;
-} {
-  /*
-   * 32 random bytes = 256 bits of entropy.
-   * The raw token goes only into the email.
-   * The database stores only its SHA-256 hash.
-   */
-  const token =
-    randomBytes(32).toString("hex");
 
-  const tokenHash =
-    hashEmailVerificationToken(token);
+export function createEmailVerificationToken(): {
+  token:string;
+  tokenHash:string;
+} {
+  const token =
+    randomBytes(32)
+      .toString("hex");
 
   return {
     token,
-    tokenHash,
+    tokenHash:
+      hashEmailVerificationToken(
+        token,
+      ),
   };
 }
 
+
 export function hashEmailVerificationToken(
-  token: string,
-): string {
+  token:string,
+):string {
   return createHash("sha256")
-    .update(token, "utf8")
+    .update(
+      token,
+      "utf8",
+    )
     .digest("hex");
 }
 
+
 type VerificationEmailParams = {
-  email: string;
-  firstName?: string | null;
-  token: string;
-  baseUrl: string;
+  email:string;
+  firstName?:string | null;
+  token:string;
+  baseUrl:string;
+  returnTo?:string | null;
 };
+
 
 export async function sendMembershipVerificationEmail({
   email,
   firstName,
   token,
   baseUrl,
-}: VerificationEmailParams): Promise<boolean> {
-
+  returnTo,
+}:VerificationEmailParams):Promise<boolean> {
   const cleanBase =
-    baseUrl.replace(/\/+$/, "");
+    baseUrl.replace(
+      /\/+$/,
+      "",
+    );
+
+  const safeReturnTo =
+    returnTo &&
+    returnTo.startsWith("/") &&
+    !returnTo.startsWith("//")
+      ? returnTo
+      : null;
 
   const verifyUrl =
-    `${cleanBase}/verify-email?token=${encodeURIComponent(token)}`;
+    `${cleanBase}/verify-email?token=${encodeURIComponent(token)}` +
+    (
+      safeReturnTo
+        ? `&returnTo=${encodeURIComponent(safeReturnTo)}`
+        : ""
+    );
 
   const fromEmail =
     process.env.FROM_EMAIL ||
     "noreply@coogsnation.com";
 
   const memberName =
-    firstName?.trim() || "Coogs fan";
+    firstName?.trim() ||
+    "Coogs fan";
 
   const subject =
-    "Confirm your CoogsNation membership";
+    "VERIFY YOUR EMAIL NOW — CoogsNation";
 
   const text = `
-Hello ${memberName},
+Hello ${email},
 
-Thanks for joining CoogsNation.
+Thank you for wanting to become a member of our community.
 
-Your membership is NOT active yet.
+VERIFY YOUR EMAIL NOW TO CONTINUE — CoogsNation.com is your community.
 
-Confirm your email by opening this link:
+VERIFY YOUR EMAIL NOW TO CONTINUE.
+
+Your CoogsNation membership is not active yet.
+
+Verify your email by opening this link:
 
 ${verifyUrl}
 
-You must confirm your email within 24 hours.
-
-If you do not confirm within 24 hours, the pending membership will expire and you will need to register again.
+After verification, you will complete your CoogsNation profile and account setup.
 
 If you did not request this membership, you can ignore this email.
 
@@ -97,7 +127,7 @@ CoogsNation
     name="viewport"
     content="width=device-width, initial-scale=1"
   >
-  <title>Confirm your CoogsNation membership</title>
+  <title>Verify Your Email — CoogsNation</title>
 </head>
 
 <body
@@ -133,18 +163,23 @@ CoogsNation
           font-size:26px;
         "
       >
-        Confirm Your CoogsNation Membership
+        VERIFY YOUR EMAIL NOW
       </h1>
     </div>
 
     <div style="padding:30px;">
       <p>
-        Hello ${escapeHtml(memberName)},
+        Hello <strong>${escapeHtml(email)}</strong>,
       </p>
 
       <p>
-        Thanks for joining
-        <strong>CoogsNation</strong>.
+        Thank you for wanting to become a member of our community.
+      </p>
+
+      <p>
+        <strong>
+          VERIFY YOUR EMAIL NOW TO CONTINUE — CoogsNation.com is your community.
+        </strong>
       </p>
 
       <div
@@ -157,12 +192,12 @@ CoogsNation
         "
       >
         <strong>
-          Your membership is not active yet.
+          VERIFY YOUR EMAIL NOW TO CONTINUE
         </strong>
 
         <p style="margin-bottom:0;">
-          You must confirm your email within
-          <strong>24 hours</strong>.
+          Your CoogsNation membership is
+          not active yet.
         </p>
       </div>
 
@@ -184,11 +219,21 @@ CoogsNation
             border-radius:7px;
           "
         >
-          Confirm My Membership
+          VERIFY EMAIL NOW
         </a>
       </div>
 
-      <p style="font-size:14px;color:#4b5563;">
+      <p>
+        After verification, you will complete
+        your CoogsNation profile and account setup.
+      </p>
+
+      <p
+        style="
+          font-size:14px;
+          color:#4b5563;
+        "
+      >
         If the button does not work, copy and paste
         this address into your browser:
       </p>
@@ -201,12 +246,6 @@ CoogsNation
         "
       >
         ${escapeHtml(verifyUrl)}
-      </p>
-
-      <p>
-        If you do not confirm within 24 hours,
-        the pending membership will expire and
-        you will need to register again.
       </p>
 
       <p>
@@ -233,13 +272,17 @@ CoogsNation
   });
 }
 
+
 function escapeHtml(
-  value: string,
-): string {
+  value:string,
+):string {
   return value
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+    .replaceAll(
+      "'",
+      "&#039;",
+    );
 }

@@ -5,6 +5,7 @@ RUN npm ci --no-audit --no-fund
 
 FROM dependencies AS development
 COPY . .
+RUN npm run ui:check
 EXPOSE 5000
 CMD ["npm", "run", "dev"]
 
@@ -12,7 +13,7 @@ CMD ["npm", "run", "dev"]
 # TypeScript, security regression checks, or the production build fail.
 FROM dependencies AS validated-build
 COPY . .
-RUN npm run check && npm run security:check && npm run build
+RUN npm run check && npm run ui:check && npm run security:check && npm run build
 
 FROM node:22-bookworm-slim AS runtime
 ENV NODE_ENV=production

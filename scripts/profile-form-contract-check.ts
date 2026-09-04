@@ -39,47 +39,199 @@ const profileCompletionPath = resolve(process.cwd(), "client/src/pages/ProfileCo
 const profileCompletionSource = readFileSync(profileCompletionPath, "utf8");
 
 const requiredRegistrationFields = {
-  email: "member@example.com",
-  firstName: "Jordan",
+  email: "profile-v2-member@example.com",
+  handle: "ProfileV2Member",
+  firstName: "Alex",
   lastName: "Cougar",
-  password: "StrongPass1!",
-  confirmPassword: "StrongPass1!",
+  password: "ProfileV2Pass123!",
+  confirmPassword: "ProfileV2Pass123!",
   address: "123 Main St",
   city: "Houston",
   state: "TX",
   zipCode: "77002",
-  dateOfBirth: new Date("1990-01-01T00:00:00.000Z"),
-  hasConsentedToDataUse: true,
   country: "USA",
+  age: 18,
+  hasConsentedToDataUse: true,
+  hasAcceptedTerms: true,
 };
 
-const minimalRegistration = localAccountRegistrationSchema.safeParse(requiredRegistrationFields);
+const minimalRegistration =
+  localAccountRegistrationSchema.safeParse(
+    requiredRegistrationFields,
+  );
+
 assert.equal(
   minimalRegistration.success,
   true,
-  "Local registration must succeed with only name, email, password, date of birth, and required consent",
+  "Profile v2 registration must succeed with verified email, handle, name, password, age 18+, complete address, Terms, and Privacy consent",
 );
 
-const blankOptionalRegistration = localAccountRegistrationSchema.safeParse({
-  ...requiredRegistrationFields,
-  handle: "",
-  backupEmail: "",
-  memberCategory: "",
-  country: "USA",
-  socialLinks: {
-    twitter: "",
-    linkedin: "",
-    instagram: "",
-    facebook: "",
-    website: "",
-  },
-});
-assert.equal(blankOptionalRegistration.success, true, "Blank optional registration fields must not block signup");
-if (blankOptionalRegistration.success) {
-  assert.equal(blankOptionalRegistration.data.handle, undefined, "Blank handle must normalize to undefined");
-  assert.equal(blankOptionalRegistration.data.backupEmail, undefined, "Blank backup email must normalize to undefined");
-  assert.equal(blankOptionalRegistration.data.graduationYear, undefined, "Blank graduation year must normalize to undefined");
+if (minimalRegistration.success) {
+  assert.equal(
+    minimalRegistration.data.dateOfBirth,
+    undefined,
+    "Date of birth must not be required for membership",
+  );
+
+  assert.equal(
+    minimalRegistration.data.phoneNumber,
+    undefined,
+    "Phone number must remain optional for membership",
+  );
 }
+
+const underAgeRegistration =
+  localAccountRegistrationSchema.safeParse({
+    ...requiredRegistrationFields,
+    age: 17,
+  });
+
+assert.equal(
+  underAgeRegistration.success,
+  false,
+  "Membership must reject anyone younger than 18",
+);
+
+const age18Registration =
+  localAccountRegistrationSchema.safeParse({
+    ...requiredRegistrationFields,
+    age: 18,
+  });
+
+assert.equal(
+  age18Registration.success,
+  true,
+  "Age 18 must satisfy the membership age requirement",
+);
+
+const missingHandleRegistration =
+  localAccountRegistrationSchema.safeParse({
+    ...requiredRegistrationFields,
+    handle: "",
+  });
+
+assert.equal(
+  missingHandleRegistration.success,
+  false,
+  "CoogsNation handle is required for membership",
+);
+
+for (const field of [
+  "address",
+  "city",
+  "state",
+  "zipCode",
+  "country",
+]) {
+  const candidate: Record<string, unknown> = {
+    ...requiredRegistrationFields,
+  };
+
+  candidate[field] = "";
+
+  const result =
+    localAccountRegistrationSchema.safeParse(
+      candidate,
+    );
+
+  assert.equal(
+    result.success,
+    false,
+    `${field} must be required for membership`,
+  );
+}
+
+const noTermsRegistration =
+  localAccountRegistrationSchema.safeParse({
+    ...requiredRegistrationFields,
+    hasAcceptedTerms: false,
+  });
+
+assert.equal(
+  noTermsRegistration.success,
+  false,
+  "Terms of Use acceptance must be required",
+);
+
+const noPrivacyRegistration =
+  localAccountRegistrationSchema.safeParse({
+    ...requiredRegistrationFields,
+    hasConsentedToDataUse: false,
+  });
+
+assert.equal(
+  noPrivacyRegistration.success,
+  false,
+  "Privacy/data-use acceptance must be required",
+);
+
+const optionalPhoneRegistration =
+  localAccountRegistrationSchema.safeParse({
+    ...requiredRegistrationFields,
+    phoneNumber: "",
+  });
+
+assert.equal(
+  optionalPhoneRegistration.success,
+  true,
+  "Phone number must remain optional for membership",
+);
+
+const normalSignupWithoutIntramuralAgreement =
+  localAccountRegistrationSchema.safeParse({
+    ...requiredRegistrationFields,
+    intramuralAgreementAccepted: false,
+  });
+
+assert.equal(
+  normalSignupWithoutIntramuralAgreement.success,
+  true,
+  "Intramural agreement must remain optional at the schema level for ordinary membership",
+);
+
+const signupWithIntramuralAgreement =
+  localAccountRegistrationSchema.safeParse({
+    ...requiredRegistrationFields,
+    intramuralAgreementAccepted: true,
+  });
+
+assert.equal(
+  signupWithIntramuralAgreement.success,
+  true,
+  "Members must be able to accept the Intramural agreement during ordinary registration",
+);
+
+/*
+ * Intramural-origin enforcement belongs on the server because
+ * the browser must not decide whether the agreement is mandatory.
+ */
+const membershipRegistrationPath =
+  resolve(
+    process.cwd(),
+    "server/membershipRegistration.ts",
+  );
+
+const membershipRegistrationSource =
+  readFileSync(
+    membershipRegistrationPath,
+    "utf8",
+  );
+
+assert.equal(
+  membershipRegistrationSource.includes(
+    "lookup.user.registrationReturnTo",
+  ),
+  true,
+  "Intramural requirement must derive from server-persisted signup origin",
+);
+
+assert.equal(
+  membershipRegistrationSource.includes(
+    "INTRAMURAL_AGREEMENT_REQUIRED",
+  ),
+  true,
+  "Intramural-origin membership must have a server-side agreement enforcement path",
+);
 
 const minimalProfileCompletion = userProfileCompletionSchema.safeParse({
   email: "oauth-member@example.com",
@@ -121,12 +273,81 @@ assert.equal(
   "MemberDashboard must not link to the removed /profile/local route",
 );
 assert.ok(
-  memberDashboardSource.includes('href="/complete-profile"'),
-  "MemberDashboard profile actions must link to /complete-profile",
+  memberDashboardSource.includes('href="/profile/edit"'),
+  "MemberDashboard Edit Profile action must link to /profile/edit",
 );
+
+assert.equal(
+  memberDashboardSource.includes('href="/complete-profile"'),
+  false,
+  "Established members must not be sent back through /complete-profile onboarding",
+);
+
+assert.ok(
+  appSource.includes('path="/profile" component={MemberDashboard}'),
+  "App router must expose MemberDashboard at canonical /profile",
+);
+
+assert.ok(
+  appSource.includes('path="/profile/edit" component={ProfileCompletion}'),
+  "App router must expose ProfileCompletion at /profile/edit for established members",
+);
+
 assert.ok(
   appSource.includes('path="/complete-profile"'),
-  "App router must expose the /complete-profile route",
+  "App router must preserve /complete-profile for onboarding",
+);
+
+const serverRoutesSource = readFileSync(
+  resolve(process.cwd(), "server/routes.ts"),
+  "utf8",
+);
+
+assert.ok(
+  profileCompletionSource.includes("PROFILE_ONBOARDING_ONE_TIME_V1"),
+  "ProfileCompletion must enforce one-time onboarding semantics",
+);
+
+assert.ok(
+  profileCompletionSource.includes("PROFILE_ESTABLISHED_EDIT_V1"),
+  "ProfileCompletion must preserve established-member edit mode",
+);
+
+assert.ok(
+  profileCompletionSource.includes("PROFILE_ESTABLISHED_UPDATE_V1") &&
+    profileCompletionSource.includes("/api/auth/update-profile") &&
+    profileCompletionSource.includes("profileUpdateMutation"),
+  "Established-member editor must use the authenticated profile-update path",
+);
+
+assert.ok(
+  profileCompletionSource.includes("user?.isProfileComplete") &&
+    profileCompletionSource.includes('setLocation("/profile")'),
+  "Completed members visiting /complete-profile must redirect to /profile",
+);
+
+assert.ok(
+  serverRoutesSource.includes("PROFILE_ONBOARDING_ONE_TIME_V1") &&
+    serverRoutesSource.includes("currentUser.isProfileComplete") &&
+    serverRoutesSource.includes("res.status(409)"),
+  "Server must reject profile completion for an already-completed member",
+);
+
+assert.ok(
+  appSource.includes('import { Switch, Route, Redirect } from "wouter";'),
+  "App router must import Wouter Redirect for legacy aliases",
+);
+
+assert.ok(
+  appSource.includes('path="/profile/advanced"') &&
+    appSource.includes('<Redirect to="/profile" />'),
+  "Legacy /profile/advanced must redirect to canonical /profile",
+);
+
+assert.ok(
+  appSource.includes('path="/member-dashboard"') &&
+    appSource.includes('<Redirect to="/dashboard" />'),
+  "Legacy /member-dashboard must redirect to canonical /dashboard",
 );
 
 console.log("Member dashboard profile-route checks passed.");

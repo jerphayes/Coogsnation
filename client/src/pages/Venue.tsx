@@ -9,6 +9,7 @@ import {
   type VenueBridgeEvent,
 } from "@shared/venue";
 import type { VenueSession } from "@/venue-engine";
+import UniversalParticipationGate from "@/components/UniversalParticipationGate";
 
 /**
  * Immersive venue page.
@@ -128,11 +129,21 @@ export default function Venue() {
 
   if (!isAuthenticated) {
     return (
-      <VenueMessage
-        title="Sign in required"
-        detail="Venues are available to CoogsNation members."
-        action={{ label: "Sign in", onClick: () => navigate("/login") }}
-      />
+      <div className="min-h-screen bg-black">
+        <UniversalParticipationGate
+          open
+          onOpenChange={(open) => {
+            if (!open) navigate("/");
+          }}
+          returnTo={`${window.location.pathname}${window.location.search}`}
+          description="CoogsNation venues are member participation spaces. Join or sign in to enter the venue."
+        />
+
+        <VenueMessage
+          title="Membership required"
+          detail="Join or sign in to enter this CoogsNation venue."
+        />
+      </div>
     );
   }
 

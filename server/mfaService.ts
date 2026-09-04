@@ -141,13 +141,31 @@ export class MfaService {
     const purposeText = purpose === 'password_reset' ? 'password reset' : 'login verification';
     const smsMessage = `Your CoogsNation ${purposeText} code is: ${token}. This code expires in ${MFA_CONFIG.expiryMinutes} minutes.`;
     
-    // Send SMS if phone number is available
+    // PASSWORD_RECOVERY_CHANNEL_ISOLATION_V1
+    // SMS and email are independent delivery channels.
+    // An unavailable SMS provider must never prevent email recovery.
     let smsSuccess = false;
+
     if (user.phoneNumber) {
-      smsSuccess = await this.smsProvider.sendSms(user.phoneNumber, smsMessage);
+      try {
+        smsSuccess =
+          await this.smsProvider.sendSms(
+            user.phoneNumber,
+            smsMessage,
+          );
+      } catch (error) {
+        console.error(
+          `[MFA] SMS delivery unavailable for user ${userId}; continuing with email recovery.`,
+          error instanceof Error
+            ? error.message
+            : error,
+        );
+
+        smsSuccess = false;
+      }
     }
 
-    // Send email as backup
+    // Send email independently
     let emailSuccess = false;
     if (user.email) {
       const emailSubject = `CoogsNation ${purposeText.charAt(0).toUpperCase() + purposeText.slice(1)} Code`;

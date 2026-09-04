@@ -1,171 +1,1088 @@
-import { useEffect } from "react";
+import MemberAvatar from "@/components/MemberAvatar";
+import { useEffect, useState } from "react";
+import { Link, useLocation } from "wouter";
+import {
+  useMutation,
+  useQuery,
+} from "@tanstack/react-query";
+
+import MemberMfaPanel from "@/components/MemberMfaPanel";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 import { useAuth } from "@/hooks/useAuth";
-import { Link } from "wouter";
+import { queryClient } from "@/lib/queryClient";
+
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+
+const DASHBOARD_TABS = [
+  "overview",
+  "posts",
+  "orders",
+  "notifications",
+  "stats",
+  "account",
+] as const;
+
+type DashboardTab =
+  (typeof DASHBOARD_TABS)[number];
+
+function requestedTab(): DashboardTab {
+  const value =
+    new URLSearchParams(
+      window.location.search,
+    ).get("tab");
+
+  return DASHBOARD_TABS.includes(
+    value as DashboardTab,
+  )
+    ? (value as DashboardTab)
+    : "overview";
+}
 
 export default function MemberDashboard() {
-  const { user, isLoading, isAuthenticated } = useAuth();
+  const {
+    user,
+    isLoading,
+    isAuthenticated,
+  } = useAuth();
+
+  const [, navigate] = useLocation();
+
+  const member = user as any;
+
+  const [showDeleteConfirmation, setShowDeleteConfirmation] =
+    useState(false);
+
+  const [deleteConfirmed, setDeleteConfirmed] =
+    useState(false);
+
+  const [deletingMembership, setDeletingMembership] =
+    useState(false);
+
+  const [deleteError, setDeleteError] =
+    useState("");
+
+  const [tab, setTab] =
+    useState<DashboardTab>(() => requestedTab());
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      window.location.href = "/login";
+    if (
+      !isLoading &&
+      !isAuthenticated
+    ) {
+      navigate(
+        "/login?returnTo=%2Fdashboard",
+        {
+          replace: true,
+        },
+      );
     }
-  }, [isLoading, isAuthenticated]);
+  }, [
+    isLoading,
+    isAuthenticated,
+    navigate,
+  ]);
 
-  if (isLoading || !user) {
+  /*
+   * One personal control center.
+   * Legacy /profile and /member-dashboard
+   * aliases canonicalize to /dashboard.
+   */
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    if (
+      window.location.pathname ===
+        "/profile" ||
+      window.location.pathname ===
+        "/member-dashboard"
+    ) {
+      navigate(
+        `/dashboard${window.location.search}`,
+        {
+          replace: true,
+        },
+      );
+    }
+  }, [
+    isAuthenticated,
+    navigate,
+  ]);
+
+  const userId =
+    member?.id;
+
+  const {
+    data: userPosts = [],
+    isLoading: postsLoading,
+  } = useQuery<any[]>({
+    queryKey: [
+      "/api/users",
+      userId,
+      "posts",
+    ],
+    enabled: Boolean(userId),
+  });
+
+  const {
+    data: userOrders = [],
+    isLoading: ordersLoading,
+  } = useQuery<any[]>({
+    queryKey: [
+      "/api/users",
+      userId,
+      "orders",
+    ],
+    enabled: Boolean(userId),
+  });
+
+  const {
+    data: notifications = [],
+    isLoading: notificationsLoading,
+  } = useQuery<any[]>({
+    queryKey: [
+      "/api/users",
+      userId,
+      "notifications",
+    ],
+    enabled: Boolean(userId),
+  });
+
+  const markNotificationRead =
+    useMutation({
+      mutationFn:
+        async (
+          notificationId: number,
+        ) => {
+          const response =
+            await fetch(
+              `/api/notifications/${notificationId}/read`,
+              {
+                method: "PUT",
+                credentials:
+                  "include",
+              },
+            );
+
+          if (!response.ok) {
+            throw new Error(
+              "Unable to update notification.",
+            );
+          }
+        },
+
+      onSuccess: () => {
+        void queryClient.invalidateQueries({
+          queryKey: [
+            "/api/users",
+            userId,
+            "notifications",
+          ],
+        });
+      },
+    });
+
+  if (
+    isLoading ||
+    !isAuthenticated ||
+    !user
+  ) {
     return (
-      <div className="text-center mt-20 text-gray-700">
-        Loading your dashboard...
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+
+        <main className="mx-auto max-w-7xl px-4 py-16 text-center text-gray-600">
+          Loading your dashboard…
+        </main>
+
+        <Footer />
       </div>
     );
   }
 
-  return (
-    <div className="max-w-5xl mx-auto mt-10 p-6 bg-white rounded-lg shadow" data-testid="card-dashboard">
-      <div className="mb-6">
-        <a
-          href="/"
-          className="inline-flex items-center text-red-600 hover:text-red-700 font-semibold"
-          data-testid="link-home"
-        >
-          ← Home
-        </a>
-      </div>
-      <h2 className="text-3xl font-bold text-center text-red-700 mb-6" data-testid="title-welcome">
-        Welcome back, {user.handle || user.firstName || user.email}!
-      </h2>
+  const firstName =
+    member.firstName || "";
 
-      <p className="text-center text-gray-600 mb-6">
-        Ready to Go Coogs! Here's what's happening in your community.
+  const lastName =
+    member.lastName || "";
+
+  const fullName =
+    `${firstName} ${lastName}`.trim() ||
+    member.email ||
+    "CoogsNation Member";
+
+  const handle =
+    member.handle ||
+    member.username ||
+    "";
+
+  const initials =
+    (
+      `${firstName?.[0] || ""}${
+        lastName?.[0] || ""
+      }` ||
+      handle?.slice(0, 2) ||
+      "CN"
+    ).toUpperCase();
+
+  const avatarUrl =
+    member.profileImageUrl ||
+    member.avatarUrl ||
+    member.profileImage ||
+    member.avatar ||
+    "";
+
+  const reputation =
+    member.reputation || 0;
+
+  const postCount =
+    userPosts.length ||
+    member.postCount ||
+    0;
+
+  const unreadNotifications =
+    notifications.filter(
+      (item: any) =>
+        !item.isRead,
+    ).length;
+
+  const memberSince =
+    member.createdAt
+      ? new Date(
+          member.createdAt,
+        ).toLocaleDateString()
+      : "—";
+
+  async function permanentlyDeleteMembership() {
+    if (!deleteConfirmed || deletingMembership) {
+      return;
+    }
+
+    setDeleteError("");
+    setDeletingMembership(true);
+
+    try {
+      const response =
+        await fetch(
+          "/api/users/profile",
+          {
+            method: "DELETE",
+            credentials: "include",
+          },
+        );
+
+      if (!response.ok) {
+        const data =
+          await response
+            .json()
+            .catch(() => ({}));
+
+        throw new Error(
+          data?.message ||
+            "Unable to delete membership.",
+        );
+      }
+
+      await fetch(
+        "/api/logout",
+        {
+          method: "POST",
+          credentials: "include",
+        },
+      ).catch(() => undefined);
+
+      queryClient.clear();
+
+      window.location.href = "/";
+    } catch (error) {
+      setDeleteError(
+        error instanceof Error
+          ? error.message
+          : "Unable to delete membership.",
+      );
+
+      setDeletingMembership(false);
+    }
+  }
+
+  function changeTab(
+    nextTab: string,
+  ) {
+    if (
+      !DASHBOARD_TABS.includes(
+        nextTab as DashboardTab,
+      )
+    ) {
+      return;
+    }
+
+    const safeTab =
+      nextTab as DashboardTab;
+
+    setTab(safeTab);
+
+    navigate(
+      `/dashboard?tab=${safeTab}`,
+      {
+        replace: true,
+      },
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Header />
+
+      <main
+        className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8"
+        data-testid="member-dashboard"
+      >
+        <div className="mb-7">
+          <h1 className="text-3xl font-black text-gray-950">
+            Your Dashboard
+          </h1>
+
+          <p className="mt-1 text-sm text-gray-600">
+            Your CoogsNation activity,
+            account and community
+            information in one place.
+          </p>
+        </div>
+
+        <div className="grid items-start gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+          {/* MEMBER IDENTITY */}
+          <Card className="overflow-hidden">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt=""
+                    className="h-20 w-20 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-red-700 text-2xl font-black text-white">
+                    {initials}
+                  </div>
+                )}
+
+                <div className="min-w-0">
+                  <h2 className="truncate text-xl font-bold text-gray-950">
+                    {fullName}
+                  </h2>
+
+                  {handle && (
+                    <p className="truncate text-sm font-medium text-gray-600">
+                      @{handle}
+                    </p>
+                  )}
+
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Badge variant="secondary">
+                      {reputation} Rep
+                    </Badge>
+
+                    <Badge variant="outline">
+                      {postCount} Posts
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-5 border-t pt-4 text-sm text-gray-600">
+                Member since{" "}
+                <span className="font-semibold text-gray-900">
+                  {memberSince}
+                </span>
+              </div>
+
+              <Link
+                href="/profile/edit"
+                className="mt-5 flex min-h-11 w-full items-center justify-center rounded-md border border-gray-300 bg-white px-4 font-semibold text-gray-900 transition hover:bg-gray-50"
+                data-testid="button-edit-profile"
+              >
+                ✎&nbsp;&nbsp;Edit Profile
+              </Link>
+
+              <button
+                type="button"
+                onClick={() =>
+                  changeTab(
+                    "account",
+                  )
+                }
+                className="mt-3 min-h-11 w-full rounded-md border border-gray-300 bg-white px-4 font-semibold text-gray-900 transition hover:bg-gray-50"
+              >
+                Account & Security
+              </button>
+            </CardContent>
+          </Card>
+
+          {/* DASHBOARD CONTENT */}
+          <Tabs
+            value={tab}
+            onValueChange={changeTab}
+            className="min-w-0"
+          >
+            <TabsList className="grid h-auto w-full grid-cols-3 gap-1 bg-gray-100 p-1 sm:grid-cols-6">
+              <TabsTrigger value="overview">
+                Overview
+              </TabsTrigger>
+
+              <TabsTrigger value="posts">
+                Posts
+              </TabsTrigger>
+
+              <TabsTrigger value="orders">
+                Orders
+              </TabsTrigger>
+
+              <TabsTrigger value="notifications">
+                Notifications
+              </TabsTrigger>
+
+              <TabsTrigger value="stats">
+                Stats
+              </TabsTrigger>
+
+              <TabsTrigger value="account">
+                Account
+              </TabsTrigger>
+            </TabsList>
+
+            {/* OVERVIEW */}
+            <TabsContent
+              value="overview"
+              className="mt-5 space-y-5"
+            >
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <DashboardStat
+                  label="Posts"
+                  value={postCount}
+                  href="/dashboard?tab=posts"
+                />
+
+                <DashboardStat
+                  label="Orders"
+                  value={userOrders.length}
+                  href="/dashboard?tab=orders"
+                />
+
+                <DashboardStat
+                  label="Notifications"
+                  value={unreadNotifications}
+                  href="/dashboard?tab=notifications"
+                />
+
+                <DashboardStat
+                  label="Messages"
+                  value="Open"
+                  href="/messages"
+                />
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>
+                    Quick Access
+                  </CardTitle>
+                </CardHeader>
+
+                <CardContent>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <DashboardLink
+                      href="/forums"
+                      label="Forums"
+                    />
+
+                    <DashboardLink
+                      href="/event-management"
+                      label="Events"
+                    />
+
+                    <DashboardLink
+                      href="/store"
+                      label="Shopping"
+                    />
+
+                    <DashboardLink
+                      href="/messages"
+                      label="Messages"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>
+                    Recent Activity
+                  </CardTitle>
+                </CardHeader>
+
+                <CardContent>
+                  {postsLoading ? (
+                    <LoadingRows />
+                  ) : userPosts.length >
+                    0 ? (
+                    <div className="space-y-4">
+                      {userPosts
+                        .slice(
+                          0,
+                          4,
+                        )
+                        .map(
+                          (
+                            post:
+                              any,
+                          ) => (
+                            <PostRow
+                              key={
+                                post.id
+                              }
+                              post={
+                                post
+                              }
+                            />
+                          ),
+                        )}
+                    </div>
+                  ) : (
+                    <EmptyState text="No posts yet" />
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* POSTS */}
+            <TabsContent
+              value="posts"
+              className="mt-5"
+            >
+              <Card>
+                <CardHeader>
+                  <CardTitle>
+                    Your Posts
+                  </CardTitle>
+                </CardHeader>
+
+                <CardContent>
+                  {postsLoading ? (
+                    <LoadingRows />
+                  ) : userPosts.length >
+                    0 ? (
+                    <div className="space-y-4">
+                      {userPosts.map(
+                        (
+                          post:
+                            any,
+                        ) => (
+                          <PostRow
+                            key={
+                              post.id
+                            }
+                            post={
+                              post
+                            }
+                          />
+                        ),
+                      )}
+                    </div>
+                  ) : (
+                    <EmptyState text="No posts yet" />
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* ORDERS */}
+            <TabsContent
+              value="orders"
+              className="mt-5"
+            >
+              <Card>
+                <CardHeader>
+                  <CardTitle>
+                    Order History
+                  </CardTitle>
+                </CardHeader>
+
+                <CardContent>
+                  {ordersLoading ? (
+                    <LoadingRows />
+                  ) : userOrders.length >
+                    0 ? (
+                    <div className="space-y-4">
+                      {userOrders.map(
+                        (
+                          order:
+                            any,
+                        ) => (
+                          <div
+                            key={
+                              order.id
+                            }
+                            className="rounded-lg border p-4"
+                          >
+                            <div className="flex flex-wrap items-start justify-between gap-4">
+                              <div>
+                                <p className="font-semibold">
+                                  Order #
+                                  {
+                                    order.id
+                                  }
+                                </p>
+
+                                <p className="mt-1 text-sm text-gray-500">
+                                  {order.createdAt
+                                    ? new Date(
+                                        order.createdAt,
+                                      ).toLocaleDateString()
+                                    : ""}
+                                </p>
+                              </div>
+
+                              <div className="text-right">
+                                <p className="font-bold text-red-700">
+                                  $
+                                  {
+                                    order.totalAmount
+                                  }
+                                </p>
+
+                                <Badge
+                                  variant="secondary"
+                                  className="mt-1"
+                                >
+                                  {
+                                    order.status
+                                  }
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  ) : (
+                    <EmptyState text="No orders yet" />
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* NOTIFICATIONS */}
+            <TabsContent
+              value="notifications"
+              className="mt-5"
+            >
+              <Card>
+                <CardHeader>
+                  <CardTitle>
+                    Notifications
+                  </CardTitle>
+                </CardHeader>
+
+                <CardContent>
+                  {notificationsLoading ? (
+                    <LoadingRows />
+                  ) : notifications.length >
+                    0 ? (
+                    <div className="space-y-3">
+                      {notifications.map(
+                        (
+                          notification:
+                            any,
+                        ) => (
+                          <button
+                            key={
+                              notification.id
+                            }
+                            type="button"
+                            onClick={() =>
+                              markNotificationRead.mutate(
+                                notification.id,
+                              )
+                            }
+                            className={`w-full rounded-lg border p-4 text-left transition hover:bg-gray-50 ${
+                              notification.isRead
+                                ? "bg-gray-50"
+                                : "border-red-300 bg-white"
+                            }`}
+                          >
+                            <p className="font-semibold text-gray-950">
+                              {
+                                notification.title
+                              }
+                            </p>
+
+                            <p className="mt-1 text-sm text-gray-600">
+                              {
+                                notification.message
+                              }
+                            </p>
+
+                            <p className="mt-2 text-xs text-gray-500">
+                              {notification.createdAt
+                                ? new Date(
+                                    notification.createdAt,
+                                  ).toLocaleDateString()
+                                : ""}
+                            </p>
+                          </button>
+                        ),
+                      )}
+                    </div>
+                  ) : (
+                    <EmptyState text="No notifications" />
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* STATS */}
+            <TabsContent
+              value="stats"
+              className="mt-5"
+            >
+              <div className="grid gap-5 md:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>
+                      Community Activity
+                    </CardTitle>
+                  </CardHeader>
+
+                  <CardContent className="space-y-4">
+                    <StatRow
+                      label="Posts"
+                      value={postCount}
+                    />
+
+                    <StatRow
+                      label="Reputation"
+                      value={
+                        reputation
+                      }
+                    />
+
+                    <StatRow
+                      label="Member Since"
+                      value={
+                        memberSince
+                      }
+                    />
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>
+                      Account
+                    </CardTitle>
+                  </CardHeader>
+
+                  <CardContent className="space-y-4">
+                    <StatRow
+                      label="Email"
+                      value={
+                        member.email
+                      }
+                    />
+
+                    <StatRow
+                      label="Handle"
+                      value={
+                        handle
+                          ? `@${handle}`
+                          : "—"
+                      }
+                    />
+
+                    <StatRow
+                      label="Status"
+                      value={
+                        member.accountStatus ||
+                        "active"
+                      }
+                    />
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            {/* ACCOUNT */}
+            <TabsContent
+              value="account"
+              className="mt-5 space-y-5"
+            >
+              <Card>
+                <CardHeader>
+                  <CardTitle>
+                    Profile & Personal Information
+                  </CardTitle>
+                </CardHeader>
+
+                <CardContent>
+                  <p className="mb-4 text-sm leading-6 text-gray-600">
+                    Update your name,
+                    CoogsNation handle,
+                    avatar, contact
+                    information and member
+                    preferences from the
+                    canonical profile editor.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>
+                    Account & Security
+                  </CardTitle>
+                </CardHeader>
+
+                <CardContent>
+                  <MemberMfaPanel />
+                </CardContent>
+              </Card>
+
+              <Card className="border-red-300">
+                <CardHeader>
+                  <CardTitle className="text-red-700">
+                    Delete Membership
+                  </CardTitle>
+                </CardHeader>
+
+                <CardContent>
+                  {!showDeleteConfirmation ? (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={() => {
+                        setDeleteConfirmed(false);
+                        setDeleteError("");
+                        setShowDeleteConfirmation(true);
+                      }}
+                      data-testid="button-delete-membership"
+                    >
+                      DELETE MEMBERSHIP
+                    </Button>
+                  ) : (
+                    <div className="space-y-4">
+                      <p className="font-bold text-red-700">
+                        Delete Your Membership?
+                      </p>
+
+                      <p className="text-sm font-semibold text-gray-800">
+                        This action is permanent and cannot be undone.
+                        All records will be unrecoverable.
+                      </p>
+
+                      <label className="flex items-start gap-3 text-sm font-semibold text-gray-800">
+                        <input
+                          type="checkbox"
+                          checked={deleteConfirmed}
+                          onChange={(event) =>
+                            setDeleteConfirmed(
+                              event.target.checked,
+                            )
+                          }
+                          className="mt-1 h-4 w-4"
+                          data-testid="checkbox-confirm-delete-membership"
+                        />
+
+                        <span>
+                          I understand and want to permanently
+                          delete my membership.
+                        </span>
+                      </label>
+
+                      {deleteError && (
+                        <p
+                          role="alert"
+                          className="text-sm font-semibold text-red-700"
+                        >
+                          {deleteError}
+                        </p>
+                      )}
+
+                      <div className="flex flex-wrap gap-3">
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          disabled={
+                            !deleteConfirmed ||
+                            deletingMembership
+                          }
+                          onClick={
+                            permanentlyDeleteMembership
+                          }
+                          data-testid="button-confirm-delete-membership"
+                        >
+                          {deletingMembership
+                            ? "DELETING…"
+                            : "PERMANENTLY DELETE MY MEMBERSHIP"}
+                        </Button>
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={deletingMembership}
+                          onClick={() => {
+                            setShowDeleteConfirmation(false);
+                            setDeleteConfirmed(false);
+                            setDeleteError("");
+                          }}
+                        >
+                          CANCEL
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </main>
+
+      <Footer />
+    </div>
+  );
+}
+
+function DashboardStat({
+  label,
+  value,
+  href,
+}: {
+  label: string;
+  value: string | number;
+  href: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="rounded-xl border bg-white p-5 shadow-sm transition hover:border-red-300 hover:shadow-md"
+    >
+      <p className="text-sm font-semibold text-gray-500">
+        {label}
       </p>
 
-      {/* Profile Completion Prompt for New Users */}
-      <div className="mb-8 bg-white border-2 border-red-200 rounded-lg p-6 text-center">
-        <h3 className="text-xl font-bold text-red-700 mb-2">
-          👋 Complete Your Member Profile
-        </h3>
-        <p className="text-gray-700 mb-4">
-          Add more details about yourself, upload an avatar, and connect with the CoogsNation community!
+      <p className="mt-2 text-2xl font-black text-gray-950">
+        {value}
+      </p>
+    </Link>
+  );
+}
+
+function DashboardLink({
+  href,
+  label,
+}: {
+  href: string;
+  label: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex min-h-12 items-center justify-center rounded-lg border bg-white px-4 text-center font-semibold text-gray-900 transition hover:border-red-300 hover:bg-red-50"
+    >
+      {label}
+    </Link>
+  );
+}
+
+function PostRow({
+  post,
+}: {
+  post: any;
+}) {
+  return (
+    <div className="border-b pb-4 last:border-b-0">
+      <p className="font-semibold text-gray-950">
+        {post.topicTitle ||
+          post.title ||
+          "Forum post"}
+      </p>
+
+      <p className="mt-1 line-clamp-2 text-sm text-gray-600">
+        {post.content}
+      </p>
+
+      {post.createdAt && (
+        <p className="mt-2 text-xs text-gray-500">
+          {new Date(
+            post.createdAt,
+          ).toLocaleDateString()}
         </p>
-        <div className="flex flex-wrap justify-center gap-3">
-          <a
-            href="/complete-profile"
-            className="bg-white border-2 border-red-600 text-red-600 px-6 py-3 rounded-lg hover:bg-red-50 font-semibold inline-flex items-center gap-2"
-            data-testid="button-complete-profile"
-          >
-            <span>📝</span> Complete Your Profile
-          </a>
-          <a
-            href="/members"
-            className="bg-white border-2 border-red-600 text-red-600 px-6 py-3 rounded-lg hover:bg-red-50 font-semibold inline-flex items-center gap-2"
-            data-testid="button-browse-members"
-          >
-            <span>👥</span> Browse Members
-          </a>
-        </div>
-      </div>
+      )}
+    </div>
+  );
+}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-center">
-        <div className="p-4 border rounded-lg shadow hover:shadow-md">
-          <h3 className="text-xl font-semibold">Unread Messages</h3>
-          <p className="text-4xl text-red-600 mt-2">0</p>
-          <Link
-            href="/messages"
-            className="mt-3 inline-block bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
-            data-testid="button-view-messages"
+function LoadingRows() {
+  return (
+    <div className="space-y-4">
+      {[1, 2, 3].map(
+        (item) => (
+          <div
+            key={item}
+            className="animate-pulse"
           >
-            View Messages
-          </Link>
-        </div>
+            <div className="mb-2 h-4 w-3/4 rounded bg-gray-200" />
+            <div className="h-3 w-1/2 rounded bg-gray-200" />
+          </div>
+        ),
+      )}
+    </div>
+  );
+}
 
-        <div className="p-4 border rounded-lg shadow hover:shadow-md">
-          <h3 className="text-xl font-semibold">Upcoming Events</h3>
-          <p className="text-4xl text-green-600 mt-2">0</p>
-          <Link
-            href="/event-management"
-            className="mt-3 inline-block bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
-            data-testid="button-manage-events"
-          >
-            Manage Events
-          </Link>
-        </div>
+function EmptyState({
+  text,
+}: {
+  text: string;
+}) {
+  return (
+    <p className="py-10 text-center text-gray-500">
+      {text}
+    </p>
+  );
+}
 
-        <div className="p-4 border rounded-lg shadow hover:shadow-md">
-          <h3 className="text-xl font-semibold">Community Members</h3>
-          <p className="text-4xl text-purple-600 mt-2">2</p>
-          <Link
-            href="/forums"
-            className="mt-3 inline-block bg-purple-500 text-white px-3 py-1 rounded hover:bg-purple-600"
-            data-testid="button-join-discussion"
-          >
-            Join Discussion
-          </Link>
-        </div>
-      </div>
+function StatRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: any;
+}) {
+  return (
+    <div className="flex flex-wrap justify-between gap-3 border-b pb-3 last:border-b-0">
+      <span className="text-gray-600">
+        {label}
+      </span>
 
-      <div className="mt-12 border-t pt-6 text-center">
-        <h3 className="text-lg font-semibold text-gray-700 mb-3">Quick Actions</h3>
-        <div className="flex flex-wrap justify-center gap-3">
-          <Link
-            href="/forums"
-            className="inline-block bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
-            data-testid="button-join-forum"
-          >
-            Join Forum Discussion
-          </Link>
-          <Link
-            href="/event-management?create=1"
-            className="inline-block bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600"
-            data-testid="button-create-event"
-          >
-            Create Event
-          </Link>
-          <Link
-            href="/store"
-            className="inline-block bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-            data-testid="button-shop-merchandise"
-          >
-            Shop Merchandise
-          </Link>
-          <Link
-            href="/messages"
-            className="inline-block bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800"
-            data-testid="button-send-message"
-          >
-            Send Message
-          </Link>
-          <a
-            href="/complete-profile"
-            className="bg-purple-600 px-4 py-2 rounded hover:bg-purple-700 inline-block"
-            style={{ textDecoration: 'none' }}
-            data-testid="button-create-profile"
-          >
-            <span style={{ color: '#ffffff' }}>Create/Profile Page</span>
-          </a>
-        </div>
-      </div>
-
-      <div className="mt-12 text-center">
-        <button
-          className="text-sm text-red-500 hover:text-red-700 underline"
-          data-testid="button-delete-membership"
-          onClick={() => {
-            if (confirm("Are you sure you want to delete your membership?")) {
-              void fetch("/api/users/profile", {
-                method: "DELETE",
-                credentials: "same-origin",
-              })
-                .then(() =>
-                  fetch("/api/logout", { method: "POST", credentials: "same-origin" })
-                )
-                .finally(() => {
-                  window.location.href = "/";
-                });
-            }
-          }}
-        >
-          Delete Membership
-        </button>
-      </div>
+      <span className="font-semibold text-gray-950">
+        {value ?? "—"}
+      </span>
     </div>
   );
 }

@@ -159,13 +159,70 @@ h1, h2, h3, h4, h5, h6 {
   color: #222 !important; /* ensure welcome area is darker */
 }
 
-a, .link {
-  color: #c8102e !important; /* UH red links */
+/*
+ * COOGSNATION LINK COLOR BASELINE
+ *
+ * Generic text links are UH red, but NEVER use !important here.
+ * Components/buttons that explicitly specify text-white,
+ * text-black, etc. must be allowed to control their own contrast.
+ */
+:where(a, .link) {
+  color: #c8102e;
   text-decoration: none;
 }
 
-a:hover, .link:hover {
+:where(a, .link):hover {
   text-decoration: underline;
+}
+
+/*
+ * GLOBAL ACTION-CONTRAST GUARD
+ *
+ * High-intensity action backgrounds require light text.
+ * This protects CTA links/buttons across the entire site from
+ * future inherited/global-link color regressions.
+ */
+:where(
+  a.bg-uh-red,
+  button.bg-uh-red,
+  a.bg-primary,
+  button.bg-primary,
+  a.bg-destructive,
+  button.bg-destructive,
+
+  a.bg-red-500,
+  button.bg-red-500,
+  a.bg-red-600,
+  button.bg-red-600,
+  a.bg-red-700,
+  button.bg-red-700,
+  a.bg-red-800,
+  button.bg-red-800,
+  a.bg-red-900,
+  button.bg-red-900,
+
+  a.bg-blue-600,
+  button.bg-blue-600,
+  a.bg-blue-700,
+  button.bg-blue-700,
+  a.bg-green-600,
+  button.bg-green-600,
+  a.bg-green-700,
+  button.bg-green-700
+) {
+  color: #ffffff !important;
+}
+
+/*
+ * Explicit text utilities always mean what the component says.
+ */
+a.text-white,
+a[class*="!text-white"] {
+  color: #ffffff !important;
+}
+
+a.text-black {
+  color: #000000 !important;
 }
 
 .hero-text {

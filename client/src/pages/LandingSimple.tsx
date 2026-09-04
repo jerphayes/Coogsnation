@@ -1231,7 +1231,7 @@ export default function Landing() {
             </a>
 
             <a
-              href="/profile"
+              href="/dashboard?tab=overview"
               className="cn-nav-link"
             >
               {(user as any)?.handle || "Profile"}

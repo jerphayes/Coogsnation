@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
 import { Link } from "wouter";
+import { Eye, EyeOff } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiRequest } from "@/lib/queryClient";
+import SecurePasswordGenerator from "@/components/SecurePasswordGenerator";
 
 type Step = "request" | "verify" | "complete" | "done";
 
@@ -21,13 +23,25 @@ async function responseMessage(response: Response, fallback: string): Promise<st
 
 export default function ResetPassword() {
   const [step, setStep] = useState<Step>("request");
-  const [identifier, setIdentifier] = useState("");
+  const [identifier, setIdentifier] = useState(
+    () =>
+      new URLSearchParams(
+        window.location.search,
+      ).get("identifier") || "",
+  );
+
+  const lockedFromLogin =
+    new URLSearchParams(
+      window.location.search,
+    ).get("locked") === "1";
   const [mfaToken, setMfaToken] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -93,6 +107,20 @@ export default function ResetPassword() {
               </div>
             ) : (
               <form className="space-y-5" onSubmit={submit}>
+                {lockedFromLogin && (
+                  <div
+                    role="alert"
+                    className="rounded-md border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"
+                  >
+                    <p className="font-bold">
+                      Account Temporarily Locked
+                    </p>
+
+                    <p className="mt-1">
+                      Password login has been temporarily locked after three unsuccessful sign-in attempts. Account recovery is available now. Send a verification code to your registered email to reset your password.
+                    </p>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="reset-identifier">Email or member handle</Label>
                   <Input
@@ -123,27 +151,60 @@ export default function ResetPassword() {
 
                 {step === "complete" && (
                   <>
+                    <SecurePasswordGenerator
+                      onUse={(value) => {
+                        setNewPassword(value);
+                        setConfirmPassword(value);
+                      }}
+                    />
+
                     <div className="space-y-2">
                       <Label htmlFor="reset-new-password">New password</Label>
-                      <Input
-                        id="reset-new-password"
-                        type="password"
-                        value={newPassword}
-                        onChange={(event) => setNewPassword(event.target.value)}
-                        autoComplete="new-password"
-                        required
-                      />
+                      <div className="relative">
+                        <Input
+                          id="reset-new-password"
+                          type={showNewPassword ? "text" : "password"}
+                          value={newPassword}
+                          onChange={(event) => setNewPassword(event.target.value)}
+                          autoComplete="new-password"
+                          className="pr-12"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword(v => !v)}
+                          aria-label={showNewPassword ? "Hide password" : "Show password"}
+                          className="absolute right-3 top-1/2 -translate-y-1/2"
+                        >
+                          {showNewPassword
+                            ? <EyeOff className="h-5 w-5" />
+                            : <Eye className="h-5 w-5" />}
+                        </button>
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="reset-confirm-password">Confirm new password</Label>
-                      <Input
-                        id="reset-confirm-password"
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(event) => setConfirmPassword(event.target.value)}
-                        autoComplete="new-password"
-                        required
-                      />
+                      <div className="relative">
+                        <Input
+                          id="reset-confirm-password"
+                          type={showConfirmPassword ? "text" : "password"}
+                          value={confirmPassword}
+                          onChange={(event) => setConfirmPassword(event.target.value)}
+                          autoComplete="new-password"
+                          className="pr-12"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(v => !v)}
+                          aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                          className="absolute right-3 top-1/2 -translate-y-1/2"
+                        >
+                          {showConfirmPassword
+                            ? <EyeOff className="h-5 w-5" />
+                            : <Eye className="h-5 w-5" />}
+                        </button>
+                      </div>
                     </div>
                   </>
                 )}

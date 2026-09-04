@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { forumCategoryPath } from "@/lib/forumNavigation";
 
 import type { ForumCategory, ForumTopic } from "@shared/schema";
+import { ParticipationGateButton } from "@/components/UniversalParticipationGate";
 
 export default function ForumTopicPage() {
   const { topicId = "" } = useParams<{ topicId: string }>();
@@ -126,25 +127,20 @@ export default function ForumTopicPage() {
               {!isAuthenticated && (
                 <section className="rounded-xl border border-amber-300/20 bg-black/50 p-5 text-center backdrop-blur-md">
                   <h2 className="text-lg font-semibold">
-                    Enter the discussion
+                    Participate in the discussion
                   </h2>
 
                   <p className="mt-2 text-sm text-white/60">
-                    Use Guest Mode or sign in to participate.
+                    Membership is required to post, reply and participate in the live discussion.
                   </p>
 
-                  <div className="mt-4 flex justify-center gap-3">
-                    <Link href="/">
-                      <Button variant="outline">
-                        Guest Mode
-                      </Button>
-                    </Link>
-
-                    <Link href="/login">
-                      <Button>
-                        Log In
-                      </Button>
-                    </Link>
+                  <div className="mt-4 flex justify-center">
+                    <ParticipationGateButton
+                      returnTo={`${window.location.pathname}?action=participate`}
+                      className="bg-red-700 font-bold text-white hover:bg-red-800"
+                    >
+                      JOIN OR SIGN IN TO PARTICIPATE
+                    </ParticipationGateButton>
                   </div>
                 </section>
               )}

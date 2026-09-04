@@ -1,3 +1,4 @@
+import MemberAvatar from "@/components/MemberAvatar";
 import { useEffect, useState } from "react";
 
 export default function ProfileDisplay() {

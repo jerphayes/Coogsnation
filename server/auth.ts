@@ -330,6 +330,59 @@ export function evaluateSessionState(
   return null;
 }
 
+/*
+ * PASSPORT_LOGOUT_SESSION_RACE_V1
+ *
+ * Passport 0.7 logout saves and regenerates the session before
+ * invoking its callback. Never destroy req.session concurrently
+ * with req.logout(), or Passport can later dereference an
+ * already-destroyed req.session.
+ */
+async function invalidatePassportSession(
+  req:any,
+):Promise<void> {
+  await new Promise<void>(
+    (
+      resolve,
+      reject,
+    ) => {
+      req.logout(
+        (
+          logoutError:any,
+        ) => {
+          if (logoutError) {
+            reject(logoutError);
+            return;
+          }
+
+          /*
+           * Passport has now completed its own regeneration.
+           * It is safe for us to destroy the replacement
+           * session.
+           */
+          if (!req.session) {
+            resolve();
+            return;
+          }
+
+          req.session.destroy(
+            (
+              sessionError:any,
+            ) => {
+              if (sessionError) {
+                reject(sessionError);
+                return;
+              }
+
+              resolve();
+            },
+          );
+        },
+      );
+    },
+  );
+}
+
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   // TEMPORARY PUBLIC PREVIEW MODE.
   // Opens normal member-gated site areas while development is underway.
@@ -345,7 +398,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   try {
     const dbUser = await storage.getUser(req.user.id);
     if (!dbUser) {
-      req.logout(() => undefined);
+      await invalidatePassportSession(req);
       return res.status(401).json({ message: "Unauthorized" });
     }
 
@@ -354,8 +407,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
       (req.session as any)?.sessionVersion,
     );
     if (rejection) {
-      req.logout(() => undefined);
-      req.session?.destroy(() => undefined);
+      await invalidatePassportSession(req);
       return res.status(401).json({ message: rejection });
     }
 
@@ -380,8 +432,7 @@ export const requireAdmin: RequestHandler = async (req, res, next) => {
       (req.session as any)?.sessionVersion,
     );
     if (rejection) {
-      req.logout(() => undefined);
-      req.session?.destroy(() => undefined);
+      await invalidatePassportSession(req);
       return res.status(401).json({ message: rejection });
     }
 
@@ -426,8 +477,7 @@ export const requireOwner: RequestHandler = async (req, res, next) => {
       (req.session as any)?.sessionVersion,
     );
     if (rejection) {
-      req.logout(() => undefined);
-      req.session?.destroy(() => undefined);
+      await invalidatePassportSession(req);
       return res.status(401).json({ message: rejection });
     }
 

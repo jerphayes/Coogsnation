@@ -49,6 +49,11 @@ import {
   registerAdminMfaRoutes,
   requireAdminMfa,
 } from "./adminMfa";
+import {
+  memberMfaEnabled,
+  registerMemberMfaRoutes,
+  verifyMemberMfaToken,
+} from "./memberMfa";
 import { registerPublicAIRoutes } from "./publicAI";
 import { registerCommerceRoutes } from "./commerce/routes";
 import { registerVenueRoutes } from "./venue/routes";
@@ -234,6 +239,7 @@ const aiService = getAIService();
   // Registered after the origin guard so every state-changing action receives
   // the same CSRF/origin protection as the rest of the authenticated API.
   registerAdminMfaRoutes(app);
+  registerMemberMfaRoutes(app);
 
   // All Control Room APIs require a verified privileged MFA session.
   app.use("/api/admin", requireAdminMfa);
@@ -289,8 +295,11 @@ const aiService = getAIService();
       }
       // Return profile data compatible with ProfileDisplay
       res.json({
+        id: user.id,
         handle: user.handle,
-        displayName: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "Coogs Fan",
+        displayName: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.handle || "Coogs Fan",
+        profileImageUrl: user.profileImageUrl || null,
+        defaultAvatarChoice: user.defaultAvatarChoice || null,
         avatar_url: user.profileImageUrl || ""
       });
     } catch (error) {
@@ -298,6 +307,65 @@ const aiService = getAIService();
       res.status(500).json({ message: "Failed to fetch profile" });
     }
   });
+
+  // MEMBER_AVATAR_PUBLIC_IDENTITY_V1
+  // Canonical safe identity used anywhere another member is displayed.
+  // Never return email, phone, address, DOB, auth state, MFA data,
+  // session data, or other private account fields.
+  app.get(
+    '/api/community/members/:id/identity',
+    isAuthenticated,
+    async (req: any, res) => {
+      try {
+        const member =
+          await storage.getUser(
+            String(req.params.id),
+          );
+
+        if (!member) {
+          return res.status(404).json({
+            message: "Member not found",
+          });
+        }
+
+        const displayName =
+          [
+            member.firstName,
+            member.lastName,
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .trim() ||
+          member.nickname ||
+          member.handle ||
+          member.username ||
+          "CoogsNation Member";
+
+        return res.json({
+          id: member.id,
+          handle: member.handle,
+          username: member.username,
+          firstName: member.firstName,
+          lastName: member.lastName,
+          displayName,
+          profileImageUrl:
+            member.profileImageUrl || null,
+          defaultAvatarChoice:
+            member.defaultAvatarChoice || null,
+        });
+      } catch (error) {
+        console.error(
+          "Error fetching canonical member identity:",
+          error,
+        );
+
+        return res.status(500).json({
+          message:
+            "Failed to fetch member identity",
+        });
+      }
+    },
+  );
 
   // Check handle availability
   app.get('/api/auth/check-handle', async (req, res) => {
@@ -399,7 +467,39 @@ const aiService = getAIService();
           userAgent: userAgentOf(req as any),
           detail: "invalid_password",
         });
-        return res.status(401).json({ message: "Invalid username/email or password" });
+        const updatedAfterFailure =
+          await storage.getUser(
+            user.id,
+          );
+
+        const failedAttempts =
+          updatedAfterFailure
+            ?.failedLoginAttempts ??
+          (
+            (user.failedLoginAttempts || 0)
+            + 1
+          );
+
+        const attemptsRemaining =
+          Math.max(
+            0,
+            3 - failedAttempts,
+          );
+
+        const warningMessage =
+          attemptsRemaining === 2
+            ? "Sign-in failed. Warning: 2 attempts remaining before your account is temporarily locked."
+            : attemptsRemaining === 1
+              ? "Sign-in failed. Final warning: 1 attempt remaining before your account is temporarily locked."
+              : "Invalid username/email or password";
+
+        return res.status(401).json({
+          message:
+            warningMessage,
+          failedLoginAttempts:
+            failedAttempts,
+          attemptsRemaining,
+        });
       }
 
       // Enforce account lifecycle state: only active accounts may authenticate.
@@ -416,6 +516,39 @@ const aiService = getAIService();
         });
         return res.status(403).json({
           message: "This account is not active. Please contact support.",
+        });
+      }
+
+      if (await memberMfaEnabled(user.id)) {
+        await storage.clearFailedLoginAttempts(user.id);
+
+        return req.session.regenerate((err: unknown) => {
+          if (err) {
+            return res.status(500).json({
+              message: "Login failed - session error",
+            });
+          }
+
+          (req.session as any).pendingMemberMfa = {
+            userId: user.id,
+            identifier,
+            sessionVersion: user.sessionVersion ?? 0,
+            expiresAt: Date.now() + 10 * 60 * 1000,
+          };
+
+          req.session.save((saveError) => {
+            if (saveError) {
+              return res.status(500).json({
+                message: "Login failed - session error",
+              });
+            }
+
+            return res.status(202).json({
+              message: "Two-factor authentication required",
+              code: "MEMBER_MFA_REQUIRED",
+              mfaRequired: true,
+            });
+          });
         });
       }
 
@@ -482,6 +615,131 @@ const aiService = getAIService();
     }
   });
 
+  app.post(
+    "/api/auth/login-mfa",
+    loginLimiter,
+    async (req: any, res) => {
+      try {
+        const token =
+          typeof req.body?.token === "string"
+            ? req.body.token.trim()
+            : "";
+
+        if (token.length < 6 || token.length > 40) {
+          return res.status(400).json({
+            message:
+              "Enter a valid authenticator or recovery code",
+          });
+        }
+
+        const pending =
+          (req.session as any).pendingMemberMfa;
+
+        if (
+          !pending?.userId ||
+          typeof pending.expiresAt !== "number" ||
+          pending.expiresAt < Date.now()
+        ) {
+          delete (req.session as any).pendingMemberMfa;
+
+          return res.status(401).json({
+            message:
+              "Your two-factor login session has expired. Sign in again.",
+          });
+        }
+
+        const user =
+          await storage.getUser(pending.userId);
+
+        if (
+          !user ||
+          (user.accountStatus ?? "active") !== "active" ||
+          (user.sessionVersion ?? 0) !==
+            pending.sessionVersion
+        ) {
+          delete (req.session as any).pendingMemberMfa;
+
+          return res.status(401).json({
+            message:
+              "Your login session is no longer valid. Sign in again.",
+          });
+        }
+
+        const verified =
+          await verifyMemberMfaToken(
+            user.id,
+            token,
+          );
+
+        if (!verified.okay) {
+          return res
+            .status(verified.locked ? 423 : 401)
+            .json({
+              message: verified.locked
+                ? "Two-factor authentication is temporarily locked after repeated failures."
+                : "Invalid authenticator or recovery code",
+            });
+        }
+
+        return req.session.regenerate((err: unknown) => {
+          if (err) {
+            return res.status(500).json({
+              message: "Login failed - session error",
+            });
+          }
+
+          (req.session as any).sessionVersion =
+            user.sessionVersion ?? 0;
+
+          const authUser = {
+            id: user.id,
+            provider: "local",
+          };
+
+          req.logIn(authUser, (loginError: unknown) => {
+            if (loginError) {
+              return res.status(500).json({
+                message: "Login failed",
+              });
+            }
+
+            void recordAuthEvent({
+              eventType: "login",
+              outcome: "success",
+              userId: user.id,
+              identifier:
+                String(
+                  pending.identifier ||
+                  user.email ||
+                  user.handle ||
+                  user.id,
+                ),
+              clientIp: clientIpOf(req as any),
+              userAgent: userAgentOf(req as any),
+              detail:
+                `member_mfa=${verified.method || "verified"}`,
+            });
+
+            return res.json({
+              message: "Login successful",
+              mfaVerified: true,
+            });
+          });
+        });
+      } catch (error) {
+        console.error(
+          "Member MFA login failure:",
+          error,
+        );
+
+        return res.status(500).json({
+          message:
+            "Unable to verify two-factor authentication",
+        });
+      }
+    },
+  );
+
   // SECURE Password reset endpoints with durable rate limiting and brute force protection
   
   // Step 1: Request password reset (sends MFA code via SMS/email) - RATE LIMITED
@@ -508,11 +766,52 @@ const aiService = getAIService();
         success: true
       };
 
-      // Find user by email or handle
-      let user = await storage.getUserByEmail(validatedData.identifier);
-      if (!user) {
-        user = await storage.getUserByHandle(validatedData.identifier);
+      // PASSWORD_RECOVERY_CANONICAL_IDENTITY_V1
+      // Email and handle are identifiers for the same membership.
+      // Resolve both without treating either identifier as authoritative.
+      const recoveryIdentifier =
+        validatedData.identifier.trim();
+
+      const [
+        userByEmail,
+        userByHandle,
+      ] = await Promise.all([
+        storage.getUserByEmail(
+          recoveryIdentifier,
+        ),
+        storage.getUserByHandle(
+          recoveryIdentifier,
+        ),
+      ]);
+
+      // A single identifier must never resolve to two different
+      // memberships. Fail closed while preserving enumeration safety.
+      if (
+        userByEmail &&
+        userByHandle &&
+        userByEmail.id !==
+          userByHandle.id
+      ) {
+        console.error(
+          `[SECURITY] Ambiguous password-reset identifier detected: ${recoveryIdentifier}`,
+        );
+
+        await storage.recordRateLimitAttempt(
+          ipKey,
+          'password_reset',
+        );
+
+        return res.json(
+          successResponse,
+        );
       }
+
+      const user =
+        userByEmail ??
+        userByHandle;
+
+      // From this point forward recovery operates on the one canonical
+      // user record and sends mail only to that record's registered email.
 
       // Record rate limit attempt in database
       await storage.recordRateLimitAttempt(ipKey, 'password_reset');
@@ -530,12 +829,10 @@ const aiService = getAIService();
         return res.json(successResponse); // Don't reveal MFA lock status
       }
 
-      // Check if account is locked
-      const isLocked = await storage.isAccountLocked(user.id);
-      if (isLocked) {
-        console.log(`[SECURITY] Password reset requested for locked account: ${user.handle} (ID: ${user.id})`);
-        return res.json(successResponse); // Don't reveal account is locked
-      }
+      // PASSWORD_RECOVERY_ALLOWED_DURING_LOGIN_LOCK_V1
+      // A password-login lock must never prevent the member from
+      // using verified account recovery. Recovery-code/MFA lock
+      // protection above remains enforced independently.
 
       console.log(`[SECURITY] Password reset requested for user: ${user.handle} (ID: ${user.id}) from IP ${clientIp}`);
       
@@ -605,7 +902,7 @@ const aiService = getAIService();
         
         // Check if we need to lock MFA due to too many attempts
         const updatedUser = await storage.getUser(user.id);
-        if (updatedUser && (updatedUser.mfaAttempts || 0) >= 5) {
+        if (updatedUser && (updatedUser.mfaAttempts || 0) >= 3) {
           await storage.lockMfaForUser(user.id, 15); // 15 minutes lockout
           console.log(`[SECURITY] MFA locked for 15 minutes due to ${updatedUser.mfaAttempts} failed attempts for user: ${user.handle} (ID: ${user.id})`);
         }
@@ -615,6 +912,25 @@ const aiService = getAIService();
       
       // Success! Clear MFA attempts
       await storage.clearMfaAttempts(user.id);
+
+      // PASSWORD_RESET_VERIFIED_SESSION_GRANT_V2
+      // Email code has been verified exactly once.
+      (req.session as any).passwordResetGrant = {
+        userId: user.id,
+        expiresAt: Date.now() + 10 * 60 * 1000,
+      };
+
+      await mfaService.clearMfaToken(user.id);
+
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((error) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+          resolve();
+        });
+      });
       console.log(`[SECURITY] MFA token verified for password reset: ${user.handle} (ID: ${user.id}) from IP ${clientIp}`);
       
       res.json({
@@ -659,25 +975,26 @@ const aiService = getAIService();
         return res.status(400).json(genericErrorResponse);
       }
 
-      // Record MFA attempt before verification
-      await storage.recordMfaAttempt(user.id);
-      
-      // Verify MFA token one more time for security
-      const isValidToken = await mfaService.verifyMfaToken(user.id, validatedData.mfaToken);
-      
-      if (!isValidToken) {
-        console.log(`[SECURITY] Invalid MFA token for password reset completion: ${user.handle} (ID: ${user.id}) from IP ${clientIp}`);
-        
-        // Check if we need to lock MFA
-        const updatedUser = await storage.getUser(user.id);
-        if (updatedUser && (updatedUser.mfaAttempts || 0) >= 5) {
-          await storage.lockMfaForUser(user.id, 15);
-          console.log(`[SECURITY] MFA locked for password reset completion due to failed attempts for user: ${user.handle} (ID: ${user.id})`);
-        }
-        
-        return res.status(400).json({ message: "Invalid verification code" });
+      // PASSWORD_RESET_REQUIRE_SESSION_GRANT_V2
+      // The email code was already verified in Step 2.
+      const passwordResetGrant =
+        (req.session as any).passwordResetGrant;
+
+      const validResetGrant =
+        passwordResetGrant &&
+        passwordResetGrant.userId === user.id &&
+        typeof passwordResetGrant.expiresAt === "number" &&
+        passwordResetGrant.expiresAt > Date.now();
+
+      if (!validResetGrant) {
+        delete (req.session as any).passwordResetGrant;
+
+        return res.status(400).json({
+          message:
+            "Password reset verification expired. Request a new verification code.",
+        });
       }
-      
+
       // Hash the new password
       const newPasswordHash = await PasswordService.hashPassword(validatedData.newPassword);
       
@@ -688,6 +1005,19 @@ const aiService = getAIService();
         storage.clearMfaAttempts(user.id),
         mfaService.clearMfaToken(user.id)
       ]);
+
+      // PASSWORD_RESET_CONSUME_SESSION_GRANT_V2
+      delete (req.session as any).passwordResetGrant;
+
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((error) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+          resolve();
+        });
+      });
 
       console.log(`[SECURITY] Password reset completed successfully for user: ${user.handle} (ID: ${user.id}) from IP ${clientIp}`);
       
@@ -747,10 +1077,14 @@ const aiService = getAIService();
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      // SECURITY: Validate file size again (defense in depth)
-      if (file.size > 2 * 1024 * 1024) {
+      // SECURITY: Validate file size again (defense in depth).
+      // Keep this synchronized with Multer and the browser.
+      // Accepted phone photos are normalized below to 512x512 WebP.
+      if (file.size > 10 * 1024 * 1024) {
         console.log(`[SECURITY] Avatar upload blocked - file too large: ${file.size} bytes for user ${userId}`);
-        return res.status(400).json({ message: "File too large. Maximum size is 2MB" });
+        return res.status(400).json({
+          message: "File too large. Maximum size is 10MB",
+        });
       }
 
       // SECURITY: Content-Type sniffing - verify actual file format using Sharp
@@ -836,7 +1170,7 @@ const aiService = getAIService();
       if (error instanceof multer.MulterError) {
         if (error.code === 'LIMIT_FILE_SIZE') {
           console.log(`[SECURITY] Avatar upload blocked - size limit exceeded for user ${userId} (${duration}ms)`);
-          return res.status(400).json({ message: "File too large. Maximum size is 2MB" });
+          return res.status(400).json({ message: "File too large. Maximum size is 10MB" });
         }
         console.log(`[SECURITY] Avatar upload blocked - multer error for user ${userId}: ${error.code} (${duration}ms)`);
         return res.status(400).json({ message: "File upload error" });
@@ -1615,17 +1949,34 @@ const aiService = getAIService();
     try {
       const userId = req.user.id;
       const requestedUserId = req.params.userId;
-      
-      // Only allow users to delete their own profile
+
+      // Only allow members to delete their own profile.
       if (userId !== requestedUserId) {
-        return res.status(403).json({ message: "You can only delete your own profile" });
+        return res.status(403).json({
+          message: "You can only delete your own profile",
+        });
       }
-      
+
+      // OWNER_DELETE_GUARD_V1
+      // BigCat / configured Platform Owner must never be tombstoned
+      // through any public self-service deletion endpoint.
+      if (isConfiguredOwner(userId)) {
+        return res.status(403).json({
+          message:
+            "Platform Owner membership is protected and cannot be deleted through the public membership flow.",
+        });
+      }
+
       await storage.deleteUserProfile(userId);
-      res.json({ message: "Profile deleted successfully" });
+
+      return res.json({
+        message: "Membership deleted. Email and handle released for reuse.",
+      });
     } catch (error) {
-      console.error("Error deleting user profile:", error);
-      res.status(500).json({ message: "Failed to delete profile" });
+      console.error("Error deleting membership:", error);
+      return res.status(500).json({
+        message: "Failed to delete membership",
+      });
     }
   });
 
@@ -1754,6 +2105,23 @@ const aiService = getAIService();
   app.post('/api/auth/complete-profile', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
+
+      /*
+       * PROFILE_ONBOARDING_ONE_TIME_V1
+       * Profile completion activates an unfinished member exactly once.
+       */
+      const currentUser = await storage.getUser(userId);
+
+      if (!currentUser) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      if (currentUser.isProfileComplete) {
+        return res.status(409).json({
+          error: 'Profile is already complete. Use the profile editor to make changes.',
+        });
+      }
+
       const profileData = userProfileCompletionSchema.parse(req.body);
 
       // A custom handle is optional. Names and household addresses are not
