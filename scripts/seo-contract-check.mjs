@@ -19,13 +19,15 @@ function mustNot(path, text) {
 }
 
 must("client/public/robots.txt", "User-agent: *");
+must("client/public/robots.txt", "Allow: /");
+must("client/public/robots.txt", "Disallow: /api/");
 must(
   "client/public/robots.txt",
   "Sitemap: https://coogsnation.com/sitemap.xml",
 );
-must("client/public/robots.txt", "Disallow: /admin");
-must("client/public/robots.txt", "Disallow: /profile");
-must("client/public/robots.txt", "Disallow: /login");
+mustNot("client/public/robots.txt", "Disallow: /admin");
+mustNot("client/public/robots.txt", "Disallow: /profile");
+mustNot("client/public/robots.txt", "Disallow: /login");
 
 must(
   "client/public/sitemap.xml",
@@ -48,9 +50,15 @@ mustNot(
   "/login",
 );
 
+must("shared/seo.ts", 'export const SITE_URL = "https://coogsnation.com"');
+must("shared/seo.ts", "isPrivatePath");
+must("shared/seo.ts", "isKnownSpaPath");
+must("shared/seo.ts", '"/admin-full"');
+must("shared/seo.ts", '"/verify-email-pending"');
+
 must(
   "client/src/components/SeoHead.tsx",
-  'const SITE = "https://coogsnation.com"',
+  'from "@shared/seo"',
 );
 must(
   "client/src/components/SeoHead.tsx",
@@ -64,6 +72,12 @@ must(
   "client/src/App.tsx",
   "<SeoHead />",
 );
+
+must("server/vite.ts", 'res.setHeader("X-Robots-Tag", "noindex, nofollow")');
+must("server/vite.ts", "isKnownSpaPath");
+must("server/vite.ts", "renderSeoHtml");
+must("server/vite.ts", "express.static(distPath, { index: false })");
+must("server/vite.ts", "status === 404");
 
 must(
   "server/index.ts",

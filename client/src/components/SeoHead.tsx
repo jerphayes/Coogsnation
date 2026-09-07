@@ -1,80 +1,11 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
-
-const SITE = "https://coogsnation.com";
-
-const PUBLIC_META: Record<string, { title: string; description: string }> = {
-  "/": {
-    title: "CoogsNation | University of Houston Fan Community",
-    description:
-      "CoogsNation is an independent University of Houston fan community for Cougar sports, news, forums, live scores, events and fan experiences.",
-  },
-  "/forums": {
-    title: "Houston Cougars Forums | CoogsNation",
-    description:
-      "Join University of Houston fans discussing Cougar football, basketball, recruiting, athletics and campus sports.",
-  },
-  "/news": {
-    title: "Houston Cougars News | CoogsNation",
-    description:
-      "Follow University of Houston Cougars sports news, updates and fan coverage from CoogsNation.",
-  },
-  "/store": {
-    title: "CoogsNation Store | Houston Cougar Fan Gear",
-    description:
-      "Browse CoogsNation merchandise and fan gear for University of Houston supporters.",
-  },
-  "/events": {
-    title: "Houston Cougar Events | CoogsNation",
-    description:
-      "Discover events and fan activities for the University of Houston Cougar community.",
-  },
-  "/community": {
-    title: "CoogsNation Community | Houston Cougar Fans",
-    description:
-      "Connect with fellow University of Houston fans across the CoogsNation community.",
-  },
-  "/members": {
-    title: "CoogsNation Members | Houston Cougar Community",
-    description:
-      "Explore the CoogsNation community of University of Houston Cougar fans.",
-  },
-  "/live-sports": {
-    title: "Houston Cougars Live Sports & Scores | CoogsNation",
-    description:
-      "Follow University of Houston sports, live scores and game information on CoogsNation.",
-  },
-  "/intramurals": {
-    title: "CoogsNation Intramurals",
-    description:
-      "CoogsNation intramural sports, teams, competition and community participation.",
-  },
-  "/get-em": {
-    title: "Get 'Em Pick 'Em | CoogsNation",
-    description:
-      "Make your CoogsNation game picks and follow the competition.",
-  },
-  "/terms": {
-    title: "Terms & Privacy | CoogsNation",
-    description:
-      "CoogsNation terms of use, privacy information and legal policies.",
-  },
-};
-
-const PRIVATE_PREFIXES = [
-  "/admin",
-  "/dashboard",
-  "/member-dashboard",
-  "/profile",
-  "/messages",
-  "/event-management",
-  "/login",
-  "/reset-password",
-  "/join",
-  "/signup",
-  "/complete-profile",
-  "/verify-email",
-];
+import {
+  SITE_URL,
+  getSeoMeta,
+  isPrivatePath,
+  normalizeSeoPath,
+} from "@shared/seo";
 
 function setMeta(name: string, content: string) {
   let element = document.head.querySelector<HTMLMetaElement>(
@@ -122,23 +53,14 @@ export default function SeoHead() {
   const [location] = useLocation();
 
   useEffect(() => {
-    const path = location.split("?")[0] || "/";
-    const isPrivate = PRIVATE_PREFIXES.some(
-      prefix => path === prefix || path.startsWith(`${prefix}/`),
-    );
-
-    const meta = PUBLIC_META[path] ?? {
-      title: "CoogsNation | University of Houston Fan Community",
-      description:
-        "CoogsNation is an independent University of Houston fan community for Cougar sports, news, forums and fan experiences.",
-    };
-
-    const canonical = `${SITE}${path === "/" ? "/" : path}`;
+    const path = normalizeSeoPath(location);
+    const isPrivate = isPrivatePath(path);
+    const meta = getSeoMeta(path);
+    const canonical = `${SITE_URL}${path === "/" ? "/" : path}`;
 
     document.title = meta.title;
     setMeta("description", meta.description);
     setMeta("robots", isPrivate ? "noindex, nofollow" : "index, follow");
-
     setCanonical(canonical);
 
     setProperty("og:type", "website");
