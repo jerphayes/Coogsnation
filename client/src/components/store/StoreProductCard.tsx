@@ -39,24 +39,24 @@ export function StoreProductCard({ product }: { product: StorefrontProduct }) {
   );
 
   return (
-    <Card className="overflow-hidden hover:shadow-xl transition-shadow duration-200" data-testid={`store-product-${product.id}`}>
-      <div className="relative h-56 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+    <Card className="h-full overflow-hidden hover:shadow-xl transition-shadow duration-200 flex flex-col" data-testid={`store-product-${product.id}`}>
+      <div className="relative aspect-square bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center overflow-hidden">
         {product.imageUrl ? (
-          <img src={product.imageUrl} alt={product.title} className="w-full h-full object-cover" loading="lazy" />
+          <img src={product.imageUrl} alt={product.title} className="w-full h-full object-cover" loading="lazy" decoding="async" />
         ) : (
           <i className={`${product.highValue ? "fas fa-gem" : "fas fa-shopping-bag"} text-5xl text-gray-400`} aria-hidden="true"></i>
         )}
-        <div className="absolute left-3 top-3 flex flex-wrap gap-2">
+        <div className="absolute left-3 right-3 top-3 flex flex-wrap gap-2">
           {product.officiallyLicensed && <Badge className="bg-green-700">Officially Licensed</Badge>}
           {product.licenseStatus === "coogsnation_original" && <Badge className="bg-uh-red">CoogsNation Original</Badge>}
           {product.highValue && <Badge className="bg-gray-900">Premium</Badge>}
         </div>
       </div>
 
-      <CardContent className="p-5 flex flex-col min-h-[310px]">
+      <CardContent className="p-4 sm:p-5 flex flex-col flex-1">
         <div className="mb-3">
           <p className="text-xs uppercase tracking-wide text-gray-500">{product.merchant}</p>
-          <h3 className="font-bold text-xl text-uh-black line-clamp-2">{product.title}</h3>
+          <h3 className="font-bold text-lg sm:text-xl text-uh-black line-clamp-2">{product.title}</h3>
         </div>
         <p className="text-gray-600 text-sm line-clamp-3 flex-1">{product.description || "Product details are available from the merchant."}</p>
         <div className="my-4">
