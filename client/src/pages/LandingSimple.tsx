@@ -1414,14 +1414,14 @@ export default function Landing() {
         /* Notebook / small laptop. */
         @media(min-width:1024px) and (max-width:1279px){
           .cn-victory-hero{
-            aspect-ratio:auto!important;
-            height:clamp(520px,50vw,620px)!important;
+            aspect-ratio:2098 / 750!important;
+            height:auto!important;
           }
           .cn-victory-art{
-            object-position:center 44%!important;
+            object-position:center!important;
           }
           .cn-feature-section{
-            padding:12px 24px 24px!important;
+            padding:0 24px 24px!important;
             border-top:0!important;
           }
         }
@@ -1429,14 +1429,14 @@ export default function Landing() {
         /* Laptop / desktop. */
         @media(min-width:1280px) and (max-width:1535px){
           .cn-victory-hero{
-            aspect-ratio:auto!important;
-            height:clamp(560px,46vw,680px)!important;
+            aspect-ratio:2098 / 750!important;
+            height:auto!important;
           }
           .cn-victory-art{
-            object-position:center 45%!important;
+            object-position:center!important;
           }
           .cn-feature-section{
-            padding:12px 24px 24px!important;
+            padding:0 24px 24px!important;
             border-top:0!important;
           }
         }
@@ -1444,14 +1444,14 @@ export default function Landing() {
         /* Large desktop / wide browser. */
         @media(min-width:1536px){
           .cn-victory-hero{
-            aspect-ratio:auto!important;
-            height:clamp(620px,39vw,720px)!important;
+            aspect-ratio:2098 / 750!important;
+            height:auto!important;
           }
           .cn-victory-art{
-            object-position:center 46%!important;
+            object-position:center!important;
           }
           .cn-feature-section{
-            padding:12px 28px 26px!important;
+            padding:0 28px 26px!important;
             border-top:0!important;
           }
         }
@@ -1503,11 +1503,18 @@ export default function Landing() {
           className="cn-victory-hero"
           aria-label="Coog Victory Celebration"
         >
-          <img
-            src="/coog-victory-celebration.gif"
-            alt="Coog Victory Celebration"
-            className="cn-victory-art"
-          />
+          <picture>
+            <source
+              media="(min-width: 1024px)"
+              srcSet="/coog-victory-desktop.webp"
+              type="image/webp"
+            />
+            <img
+              src="/coog-victory-celebration.gif"
+              alt="Coog Victory Celebration"
+              className="cn-victory-art"
+            />
+          </picture>
 
           <div
             className="cn-victory-shade"
