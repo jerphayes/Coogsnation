@@ -1835,6 +1835,22 @@ export type AIV3ChatRequest = z.infer<typeof aiV3ChatRequestSchema>;
 export type AIModerationRequest = z.infer<typeof aiModerationRequestSchema>;
 export type AIFeedback = z.infer<typeof aiFeedbackSchema>;
 
+// Owner-controlled landing-page victory celebration.
+// Timestamps use timezone-aware storage and serialize through the API as UTC.
+export const siteVictoryCelebration = pgTable("site_victory_celebration", {
+  id: integer("id").primaryKey(),
+  enabled: boolean("enabled").notNull().default(false),
+  houstonScore: integer("houston_score"),
+  opponentName: varchar("opponent_name", { length: 120 }),
+  opponentScore: integer("opponent_score"),
+  activatedAt: timestamp("activated_at", { withTimezone: true }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  updatedByUserId: varchar("updated_by_user_id").references(() => users.id, { onDelete: "set null" }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export type SiteVictoryCelebration = typeof siteVictoryCelebration.$inferSelect;
+
 // Provider-neutral commerce tracking. The legacy local product/cart/order tables
 // remain for data preservation, but the active storefront uses Shopify and
 // approved affiliate providers through server/commerce.

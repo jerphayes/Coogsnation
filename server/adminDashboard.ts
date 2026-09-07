@@ -4,7 +4,7 @@ import type { Express } from "express";
 import { rateLimit } from "express-rate-limit";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
-import { createAdminSafeUser, users } from "@shared/schema";
+import { createAdminSafeUser, siteVictoryCelebration, users } from "@shared/schema";
 import { db, pool } from "./db";
 import { storage } from "./storage";
 import { PasswordService } from "./passwordService";
@@ -28,6 +28,29 @@ const statusActionSchema = securedActionSchema.extend({
 const roleActionSchema = securedActionSchema.extend({
   role: roleSchema,
 }).strict();
+
+const victoryCelebrationActionSchema = securedActionSchema.extend({
+  enabled: z.boolean(),
+  houstonScore: z.number().int().min(0).max(999).optional(),
+  opponentName: z.string().trim().min(1).max(120).optional(),
+  opponentScore: z.number().int().min(0).max(999).optional(),
+  durationMinutes: z.number().int().min(1).max(10080).optional(),
+}).strict().superRefine((value, ctx) => {
+  if (!value.enabled) return;
+
+  if (value.houstonScore === undefined) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["houstonScore"], message: "Houston score is required" });
+  }
+  if (!value.opponentName) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["opponentName"], message: "Opponent name is required" });
+  }
+  if (value.opponentScore === undefined) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["opponentScore"], message: "Opponent score is required" });
+  }
+  if (value.durationMinutes === undefined) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["durationMinutes"], message: "Run time is required" });
+  }
+});
 
 const adminAIQuestionSchema = z.object({
   question: z.string().trim().min(1).max(3_000),
@@ -394,6 +417,49 @@ function sendAdminError(res: any, error: unknown, fallback: string) {
   return res.status(500).json({ message: fallback });
 }
 
+type VictoryCelebrationSnapshot = {
+  enabled: boolean;
+  houstonScore: number | null;
+  opponentName: string | null;
+  opponentScore: number | null;
+  activatedAt: string | null;
+  expiresAt: string | null;
+};
+
+async function getVictoryCelebrationSnapshot(): Promise<VictoryCelebrationSnapshot> {
+  const [row] = await db
+    .select()
+    .from(siteVictoryCelebration)
+    .where(eq(siteVictoryCelebration.id, 1))
+    .limit(1);
+
+  if (!row) {
+    return {
+      enabled: false,
+      houstonScore: null,
+      opponentName: null,
+      opponentScore: null,
+      activatedAt: null,
+      expiresAt: null,
+    };
+  }
+
+  const now = Date.now();
+  const effectiveEnabled =
+    row.enabled &&
+    row.expiresAt instanceof Date &&
+    row.expiresAt.getTime() > now;
+
+  return {
+    enabled: effectiveEnabled,
+    houstonScore: row.houstonScore,
+    opponentName: row.opponentName,
+    opponentScore: row.opponentScore,
+    activatedAt: row.activatedAt?.toISOString() ?? null,
+    expiresAt: row.expiresAt?.toISOString() ?? null,
+  };
+}
+
 export function registerAdminDashboardRoutes(app: Express): void {
   const adminAILimiter = rateLimit({
     windowMs: 60 * 1000,
@@ -401,6 +467,92 @@ export function registerAdminDashboardRoutes(app: Express): void {
     standardHeaders: true,
     legacyHeaders: false,
     message: { message: "Too many administrator AI requests. Please try again shortly." },
+  });
+
+  // Public landing-page state. This exposes only presentation data.
+  app.get("/api/site/victory-celebration", async (_req, res) => {
+    try {
+      return res.json(await getVictoryCelebrationSnapshot());
+    } catch (error) {
+      console.error("Failed to load victory celebration state", error);
+      return res.status(500).json({ message: "Failed to load victory celebration state" });
+    }
+  });
+
+  app.get("/api/admin/victory-celebration", requireAdmin, async (_req, res) => {
+    try {
+      return res.json(await getVictoryCelebrationSnapshot());
+    } catch (error) {
+      return sendAdminError(res, error, "Failed to load victory celebration control");
+    }
+  });
+
+  app.patch("/api/admin/victory-celebration", requireAdmin, async (req: any, res) => {
+    try {
+      const input = victoryCelebrationActionSchema.parse(req.body);
+      const actor = await confirmAdminPassword(req.user.id, input.currentPassword);
+      const now = new Date();
+
+      const updated = await db.transaction(async (tx) => {
+        const activatedAt = input.enabled ? now : null;
+        const expiresAt =
+          input.enabled && input.durationMinutes !== undefined
+            ? new Date(now.getTime() + input.durationMinutes * 60_000)
+            : null;
+
+        const [row] = await tx
+          .insert(siteVictoryCelebration)
+          .values({
+            id: 1,
+            enabled: input.enabled,
+            houstonScore: input.enabled ? input.houstonScore! : null,
+            opponentName: input.enabled ? input.opponentName! : null,
+            opponentScore: input.enabled ? input.opponentScore! : null,
+            activatedAt,
+            expiresAt,
+            updatedByUserId: actor.id,
+            updatedAt: now,
+          })
+          .onConflictDoUpdate({
+            target: siteVictoryCelebration.id,
+            set: {
+              enabled: input.enabled,
+              houstonScore: input.enabled ? input.houstonScore! : null,
+              opponentName: input.enabled ? input.opponentName! : null,
+              opponentScore: input.enabled ? input.opponentScore! : null,
+              activatedAt,
+              expiresAt,
+              updatedByUserId: actor.id,
+              updatedAt: now,
+            },
+          })
+          .returning();
+
+        await recordRequiredAuthEvent({
+          eventType: "admin_account_action",
+          outcome: "success",
+          userId: actor.id,
+          identifier: actor.email || actor.handle,
+          clientIp: clientIpOf(req),
+          userAgent: userAgentOf(req),
+          detail: input.enabled
+            ? `actor=${actor.id}; action=victory_celebration_enable; houston_score=${input.houstonScore}; opponent=${input.opponentName}; opponent_score=${input.opponentScore}; duration_minutes=${input.durationMinutes}; expires_at=${expiresAt?.toISOString()}; reason=${cleanReason(input.reason)}`
+            : `actor=${actor.id}; action=victory_celebration_disable; reason=${cleanReason(input.reason)}`,
+        }, tx);
+
+        return row;
+      });
+
+      return res.json({
+        message: input.enabled
+          ? "Victory celebration enabled"
+          : "Victory celebration disabled",
+        celebration: await getVictoryCelebrationSnapshot(),
+        updatedAt: updated.updatedAt.toISOString(),
+      });
+    } catch (error) {
+      return sendAdminError(res, error, "Failed to update victory celebration");
+    }
   });
 
   app.get("/api/admin/access", requireAdmin, async (req: any, res) => {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Activity,
@@ -30,6 +30,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -179,6 +180,15 @@ interface AdminUserDetail {
   recentAudit: AuditEvent[];
 }
 
+interface VictoryCelebrationState {
+  enabled: boolean;
+  houstonScore: number | null;
+  opponentName: string | null;
+  opponentScore: number | null;
+  activatedAt: string | null;
+  expiresAt: string | null;
+}
+
 type ActionState =
   | { type: "status"; user: AdminUser; value: AdminUser["accountStatus"] }
   | { type: "role"; user: AdminUser; value: "member" | "admin" }
@@ -265,6 +275,13 @@ export default function OwnerAdminDashboard() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [aiQuestion, setAiQuestion] = useState("");
   const [aiAnswer, setAiAnswer] = useState<string | null>(null);
+  const [victoryEnabled, setVictoryEnabled] = useState(false);
+  const [victoryHoustonScore, setVictoryHoustonScore] = useState("");
+  const [victoryOpponentName, setVictoryOpponentName] = useState("");
+  const [victoryOpponentScore, setVictoryOpponentScore] = useState("");
+  const [victoryDurationMinutes, setVictoryDurationMinutes] = useState("1440");
+  const [victoryReason, setVictoryReason] = useState("");
+  const [victoryPassword, setVictoryPassword] = useState("");
 
   const adminIdentity =
     isAuthenticated &&
@@ -289,6 +306,10 @@ export default function OwnerAdminDashboard() {
   const auditQuery = useQuery<AuditEvent[]>({ queryKey: ["/api/admin/audit?limit=150"], enabled: adminEnabled });
   const accessQuery = useQuery<AdminAccess>({ queryKey: ["/api/admin/access"], enabled: adminEnabled });
   const systemQuery = useQuery<SystemStatus>({ queryKey: ["/api/admin/system-status"], enabled: adminEnabled });
+  const victoryQuery = useQuery<VictoryCelebrationState>({
+    queryKey: ["/api/admin/victory-celebration"],
+    enabled: adminEnabled,
+  });
   const aiStatusQuery = useQuery<AdminAIStatus>({ queryKey: ["/api/admin/ai/status"], enabled: adminEnabled });
   const merlinControlQuery = useQuery<MerlinControlStatus>({
     queryKey: ["/api/admin/merlin-control"],
@@ -298,6 +319,20 @@ export default function OwnerAdminDashboard() {
     queryKey: [`/api/admin/users/${selectedUserId}`],
     enabled: adminEnabled && Boolean(selectedUserId),
   });
+
+  useEffect(() => {
+    const celebration = victoryQuery.data;
+    if (!celebration) return;
+
+    setVictoryEnabled(celebration.enabled);
+    setVictoryHoustonScore(
+      celebration.houstonScore === null ? "" : String(celebration.houstonScore)
+    );
+    setVictoryOpponentName(celebration.opponentName ?? "");
+    setVictoryOpponentScore(
+      celebration.opponentScore === null ? "" : String(celebration.opponentScore)
+    );
+  }, [victoryQuery.data]);
 
   const filteredUsers = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -318,6 +353,7 @@ export default function OwnerAdminDashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/audit?limit=150"] }),
       queryClient.invalidateQueries({ queryKey: ["/api/admin/access"] }),
       queryClient.invalidateQueries({ queryKey: ["/api/admin/system-status"] }),
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/victory-celebration"] }),
       queryClient.invalidateQueries({ queryKey: ["/api/admin/ai/status"] }),
       queryClient.invalidateQueries({ queryKey: ["/api/admin/merlin-control"] }),
     ]);
@@ -348,6 +384,74 @@ export default function OwnerAdminDashboard() {
     },
     onError: (error: Error) => {
       toast({ title: "Administrator action failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const victoryMutation = useMutation({
+    mutationFn: async () => {
+      const body: {
+        enabled: boolean;
+        reason: string;
+        currentPassword: string;
+        houstonScore?: number;
+        opponentName?: string;
+        opponentScore?: number;
+        durationMinutes?: number;
+      } = {
+        enabled: victoryEnabled,
+        reason: victoryReason,
+        currentPassword: victoryPassword,
+      };
+
+      if (victoryEnabled) {
+        const houstonScore = Number(victoryHoustonScore);
+        const opponentScore = Number(victoryOpponentScore);
+        const durationMinutes = Number(victoryDurationMinutes);
+
+        if (!Number.isInteger(houstonScore) || houstonScore < 0 || houstonScore > 999) {
+          throw new Error("Enter a valid Houston score from 0 to 999");
+        }
+        if (!victoryOpponentName.trim()) {
+          throw new Error("Enter the opponent name");
+        }
+        if (!Number.isInteger(opponentScore) || opponentScore < 0 || opponentScore > 999) {
+          throw new Error("Enter a valid opponent score from 0 to 999");
+        }
+        if (!Number.isInteger(durationMinutes) || durationMinutes < 1 || durationMinutes > 10080) {
+          throw new Error("Run time must be between 1 minute and 7 days");
+        }
+
+        body.houstonScore = houstonScore;
+        body.opponentName = victoryOpponentName.trim();
+        body.opponentScore = opponentScore;
+        body.durationMinutes = durationMinutes;
+      }
+
+      const response = await apiRequest("PATCH", "/api/admin/victory-celebration", body);
+      return response.json() as Promise<{
+        message: string;
+        celebration: VictoryCelebrationState;
+        updatedAt: string;
+      }>;
+    },
+    onSuccess: async (data) => {
+      toast({
+        title: data.celebration.enabled
+          ? "Coog Victory Celebration is LIVE"
+          : "Coog Victory Celebration is OFF",
+        description: "The site control change was recorded in the append-only audit log.",
+      });
+      setVictoryReason("");
+      setVictoryPassword("");
+      await queryClient.invalidateQueries({ queryKey: ["/api/admin/victory-celebration"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/admin/audit?limit=150"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Victory Celebration update failed",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -471,6 +575,7 @@ export default function OwnerAdminDashboard() {
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="flex h-auto w-full flex-wrap items-center justify-between gap-x-3 gap-y-1">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="site-controls">Site Controls</TabsTrigger>
             <TabsTrigger value="marketing">Mkt / Acquisition / Traffic</TabsTrigger>
             <TabsTrigger value="merchandise">Merch / Sales</TabsTrigger>
             <TabsTrigger value="affiliates">Affiliate / Partners</TabsTrigger>
@@ -511,6 +616,184 @@ export default function OwnerAdminDashboard() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="site-controls" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <CardTitle>Coog Victory Celebration</CardTitle>
+                    <CardDescription>
+                      Replace the normal landing-page hero with the animated victory presentation and final score.
+                    </CardDescription>
+                  </div>
+                  {victoryQuery.data?.enabled ? (
+                    <Badge>LIVE</Badge>
+                  ) : (
+                    <Badge variant="secondary">OFF</Badge>
+                  )}
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-6">
+                {victoryQuery.isError && (
+                  <Alert variant="destructive">
+                    <ShieldAlert className="h-4 w-4" />
+                    <AlertTitle>Celebration state unavailable</AlertTitle>
+                    <AlertDescription>
+                      The live site state could not be loaded. No change should be submitted until this is resolved.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <div className="rounded-lg border p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <Label htmlFor="victory-enabled" className="text-base font-semibold">
+                        Victory Celebration
+                      </Label>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        ON replaces the normal hero. OFF restores the normal red Cougar immediately.
+                      </p>
+                    </div>
+                    <Switch
+                      id="victory-enabled"
+                      checked={victoryEnabled}
+                      onCheckedChange={setVictoryEnabled}
+                      disabled={victoryQuery.isLoading || victoryQuery.isError || victoryMutation.isPending}
+                    />
+                  </div>
+                </div>
+
+                {victoryEnabled && (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="victory-houston-score">Houston score</Label>
+                      <Input
+                        id="victory-houston-score"
+                        type="number"
+                        min="0"
+                        max="999"
+                        inputMode="numeric"
+                        value={victoryHoustonScore}
+                        onChange={(event) => setVictoryHoustonScore(event.target.value)}
+                        placeholder="34"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="victory-opponent">Opponent</Label>
+                      <Input
+                        id="victory-opponent"
+                        value={victoryOpponentName}
+                        onChange={(event) => setVictoryOpponentName(event.target.value)}
+                        maxLength={120}
+                        placeholder="Texas Tech"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="victory-opponent-score">Opponent score</Label>
+                      <Input
+                        id="victory-opponent-score"
+                        type="number"
+                        min="0"
+                        max="999"
+                        inputMode="numeric"
+                        value={victoryOpponentScore}
+                        onChange={(event) => setVictoryOpponentScore(event.target.value)}
+                        placeholder="27"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="victory-duration">Run time</Label>
+                      <Select
+                        value={victoryDurationMinutes}
+                        onValueChange={setVictoryDurationMinutes}
+                      >
+                        <SelectTrigger id="victory-duration">
+                          <SelectValue placeholder="Select run time" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="60">1 hour</SelectItem>
+                          <SelectItem value="180">3 hours</SelectItem>
+                          <SelectItem value="360">6 hours</SelectItem>
+                          <SelectItem value="720">12 hours</SelectItem>
+                          <SelectItem value="1440">24 hours</SelectItem>
+                          <SelectItem value="2880">2 days</SelectItem>
+                          <SelectItem value="4320">3 days</SelectItem>
+                          <SelectItem value="10080">7 days</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+
+                {victoryQuery.data?.enabled && (
+                  <div className="rounded-lg border bg-muted/30 p-4 text-sm">
+                    <div className="font-semibold">
+                      FINAL — HOUSTON {victoryQuery.data.houstonScore} · {victoryQuery.data.opponentName} {victoryQuery.data.opponentScore}
+                    </div>
+                    <div className="mt-1 text-muted-foreground">
+                      Activated: {formatDate(victoryQuery.data.activatedAt)}
+                    </div>
+                    <div className="text-muted-foreground">
+                      Automatic restore: {formatDate(victoryQuery.data.expiresAt)}
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="victory-reason">Audit reason</Label>
+                    <Textarea
+                      id="victory-reason"
+                      value={victoryReason}
+                      onChange={(event) => setVictoryReason(event.target.value)}
+                      placeholder="Post-game victory celebration."
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="victory-password">Your current password</Label>
+                    <Input
+                      id="victory-password"
+                      type="password"
+                      autoComplete="current-password"
+                      value={victoryPassword}
+                      onChange={(event) => setVictoryPassword(event.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      The slider prepares the change. Nothing goes live until you confirm below.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm text-muted-foreground">
+                    Every change is password-confirmed and written to the administrator audit log.
+                  </p>
+                  <Button
+                    onClick={() => victoryMutation.mutate()}
+                    disabled={
+                      victoryQuery.isLoading ||
+                      victoryQuery.isError ||
+                      victoryMutation.isPending ||
+                      victoryReason.trim().length < 3 ||
+                      !victoryPassword
+                    }
+                  >
+                    {victoryMutation.isPending
+                      ? "Confirming…"
+                      : victoryEnabled
+                        ? "Confirm & Go Live"
+                        : "Confirm & Turn Off"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="marketing" className="space-y-6">

@@ -85,14 +85,131 @@ function FeatureCard({
   );
 }
 
+interface VictoryCelebrationState {
+  enabled: boolean;
+  houstonScore: number;
+  opponentName: string;
+  opponentScore: number;
+  expiresAt: string;
+}
+
 export default function Landing() {
   const { isAuthenticated } = useAuth();
 
   const [openMenu, setOpenMenu] =
     useState<string | null>(null);
 
+  const [victoryCelebration, setVictoryCelebration] =
+    useState<VictoryCelebrationState | null>(null);
+
   const [forumCategoryLinks, setForumCategoryLinks] =
     useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    let expiryTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const clearExpiryTimer = () => {
+      if (expiryTimer !== null) {
+        clearTimeout(expiryTimer);
+        expiryTimer = null;
+      }
+    };
+
+    const refreshVictoryCelebration = async () => {
+      try {
+        const response = await fetch("/api/site/victory-celebration", {
+          credentials: "same-origin",
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          throw new Error("Victory celebration state unavailable");
+        }
+
+        const data = await response.json();
+
+        const houstonScore = Number(data?.houstonScore);
+        const opponentScore = Number(data?.opponentScore);
+        const opponentName =
+          typeof data?.opponentName === "string"
+            ? data.opponentName.trim()
+            : "";
+        const expiresAt =
+          typeof data?.expiresAt === "string"
+            ? data.expiresAt
+            : "";
+        const expiresAtMs = Date.parse(expiresAt);
+
+        const valid =
+          data?.enabled === true &&
+          Number.isInteger(houstonScore) &&
+          houstonScore >= 0 &&
+          houstonScore <= 999 &&
+          Number.isInteger(opponentScore) &&
+          opponentScore >= 0 &&
+          opponentScore <= 999 &&
+          opponentName.length > 0 &&
+          Number.isFinite(expiresAtMs) &&
+          expiresAtMs > Date.now();
+
+        if (cancelled) return;
+
+        clearExpiryTimer();
+
+        if (!valid) {
+          setVictoryCelebration(null);
+          return;
+        }
+
+        setVictoryCelebration({
+          enabled: true,
+          houstonScore,
+          opponentName,
+          opponentScore,
+          expiresAt,
+        });
+
+        expiryTimer = setTimeout(() => {
+          if (!cancelled) {
+            setVictoryCelebration(null);
+          }
+        }, Math.max(0, expiresAtMs - Date.now()));
+      } catch {
+        if (!cancelled) {
+          clearExpiryTimer();
+          setVictoryCelebration(null);
+        }
+      }
+    };
+
+    const handleFocus = () => {
+      void refreshVictoryCelebration();
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void refreshVictoryCelebration();
+      }
+    };
+
+    void refreshVictoryCelebration();
+
+    const pollTimer = window.setInterval(() => {
+      void refreshVictoryCelebration();
+    }, 15_000);
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(pollTimer);
+      clearExpiryTimer();
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, []);
 
 
 
@@ -969,10 +1086,215 @@ export default function Landing() {
             padding-right: 15px;
           }
         }
+
+        .cn-victory-hero {
+          position: relative;
+          min-height: 610px;
+          overflow: hidden;
+          background: #070d13;
+          isolation: isolate;
+          display: flex;
+          align-items: stretch;
+          justify-content: center;
+        }
+
+        .cn-victory-art {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          object-position: center;
+          z-index: -3;
+        }
+
+        .cn-victory-shade {
+          position: absolute;
+          inset: 0;
+          z-index: -2;
+          background:
+            linear-gradient(
+              180deg,
+              rgba(0, 0, 0, .08) 0%,
+              rgba(0, 0, 0, .02) 48%,
+              rgba(0, 0, 0, .72) 100%
+            );
+          pointer-events: none;
+        }
+
+        .cn-victory-score-wrap {
+          width: 100%;
+          min-height: 610px;
+          display: flex;
+          flex-direction: column;
+          justify-content: flex-end;
+          align-items: center;
+          padding: 36px 24px 42px;
+          color: #fff;
+          text-align: center;
+        }
+
+        .cn-victory-scoreboard {
+          width: min(760px, calc(100vw - 40px));
+          padding: 18px 24px 22px;
+          border: 1px solid rgba(255,255,255,.42);
+          border-radius: 18px;
+          background: rgba(3, 7, 12, .82);
+          box-shadow:
+            0 18px 50px rgba(0,0,0,.42),
+            inset 0 1px 0 rgba(255,255,255,.14);
+          backdrop-filter: blur(8px);
+        }
+
+        .cn-victory-final {
+          margin-bottom: 12px;
+          font-size: 15px;
+          line-height: 1;
+          font-weight: 900;
+          letter-spacing: .22em;
+          color: #fff;
+        }
+
+        .cn-victory-matchup {
+          display: grid;
+          grid-template-columns: 1fr auto 1fr;
+          align-items: center;
+          gap: 22px;
+        }
+
+        .cn-victory-team {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 18px;
+          min-width: 0;
+        }
+
+        .cn-victory-team-name {
+          overflow: hidden;
+          font-size: clamp(18px, 2.3vw, 30px);
+          line-height: 1.05;
+          font-weight: 900;
+          letter-spacing: .03em;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .cn-victory-team-score {
+          flex: 0 0 auto;
+          font-size: clamp(42px, 6vw, 72px);
+          line-height: .9;
+          font-weight: 950;
+          font-variant-numeric: tabular-nums;
+        }
+
+        .cn-victory-divider {
+          width: 1px;
+          height: 58px;
+          background: rgba(255,255,255,.35);
+        }
+
+        @media (max-width: 700px) {
+          .cn-victory-hero,
+          .cn-victory-score-wrap {
+            min-height: 560px;
+          }
+
+          .cn-victory-art {
+            object-fit: cover;
+            object-position: center;
+          }
+
+          .cn-victory-score-wrap {
+            padding: 24px 14px 28px;
+          }
+
+          .cn-victory-scoreboard {
+            width: 100%;
+            padding: 15px 14px 18px;
+            border-radius: 14px;
+          }
+
+          .cn-victory-matchup {
+            grid-template-columns: 1fr;
+            gap: 9px;
+          }
+
+          .cn-victory-divider {
+            width: 100%;
+            height: 1px;
+          }
+
+          .cn-victory-team {
+            width: 100%;
+          }
+
+          .cn-victory-team-name {
+            font-size: clamp(17px, 5.2vw, 24px);
+          }
+
+          .cn-victory-team-score {
+            font-size: clamp(40px, 13vw, 58px);
+          }
+        }
+
       `}</style>
 
       <Header />
 
+      {victoryCelebration ? (
+        <section
+          className="cn-victory-hero"
+          aria-label="Coog Victory Celebration"
+        >
+          <img
+            src="/coog-victory-celebration.gif"
+            alt="Coog Victory Celebration"
+            className="cn-victory-art"
+          />
+
+          <div
+            className="cn-victory-shade"
+            aria-hidden="true"
+          />
+
+          <div className="cn-victory-score-wrap">
+            <div
+              className="cn-victory-scoreboard"
+              aria-live="polite"
+            >
+              <div className="cn-victory-final">
+                FINAL
+              </div>
+
+              <div className="cn-victory-matchup">
+                <div className="cn-victory-team">
+                  <span className="cn-victory-team-name">
+                    HOUSTON
+                  </span>
+                  <strong className="cn-victory-team-score">
+                    {victoryCelebration.houstonScore}
+                  </strong>
+                </div>
+
+                <div
+                  className="cn-victory-divider"
+                  aria-hidden="true"
+                />
+
+                <div className="cn-victory-team">
+                  <span className="cn-victory-team-name">
+                    {victoryCelebration.opponentName.toUpperCase()}
+                  </span>
+                  <strong className="cn-victory-team-score">
+                    {victoryCelebration.opponentScore}
+                  </strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : (
       <section className="cn-hero">
         <div
           className="cn-hero-blur"
@@ -1048,6 +1370,7 @@ export default function Landing() {
           </div>
         </div>
       </section>
+      )}
 
       <section className="cn-feature-section">
         <div className="cn-feature-heading">
