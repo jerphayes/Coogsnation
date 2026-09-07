@@ -1415,7 +1415,7 @@ export default function Landing() {
         @media(min-width:1024px) and (max-width:1279px){
           .cn-victory-hero{
             aspect-ratio:auto!important;
-            height:clamp(520px,50vw,620px)!important;
+            height:clamp(420px,56dvh,500px)!important;
           }
           .cn-victory-art{
             object-position:center 44%!important;
@@ -1430,7 +1430,7 @@ export default function Landing() {
         @media(min-width:1280px) and (max-width:1535px){
           .cn-victory-hero{
             aspect-ratio:auto!important;
-            height:clamp(560px,46vw,680px)!important;
+            height:clamp(440px,56dvh,520px)!important;
           }
           .cn-victory-art{
             object-position:center 45%!important;
@@ -1445,7 +1445,7 @@ export default function Landing() {
         @media(min-width:1536px){
           .cn-victory-hero{
             aspect-ratio:auto!important;
-            height:clamp(620px,39vw,720px)!important;
+            height:clamp(460px,56dvh,540px)!important;
           }
           .cn-victory-art{
             object-position:center 46%!important;
