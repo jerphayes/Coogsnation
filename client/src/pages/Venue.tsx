@@ -158,7 +158,7 @@ export default function Venue() {
   }
 
   return (
-    <div className="relative h-[calc(100vh-4rem)] w-full overflow-hidden bg-black">
+    <div className="relative h-[calc(100dvh-4rem)] w-full overflow-hidden bg-black">
       <div ref={containerRef} className="venue-container absolute inset-0" />
 
       {!ready && !error && (
@@ -208,7 +208,7 @@ function VenueMessage(props: {
   action?: { label: string; onClick: () => void };
 }) {
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col items-center justify-center gap-4 p-6 text-center">
+    <div className="flex h-[calc(100dvh-4rem)] flex-col items-center justify-center gap-4 p-6 text-center">
       <div className="text-lg font-semibold">{props.title}</div>
       <p className="max-w-md text-sm text-muted-foreground">{props.detail}</p>
       {props.action && (
