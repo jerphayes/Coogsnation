@@ -146,13 +146,13 @@ export default function EventManagement() {
         
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-3xl font-bold text-uh-black mb-2">Event Management</h1>
               <p className="text-gray-600">Discover and manage CoogsNation community events</p>
             </div>
             
-            <div className="flex items-center space-x-4">
+            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
               <div className="flex items-center space-x-2">
                 <Button
                   variant={viewMode === "list" ? "default" : "outline"}
@@ -179,7 +179,7 @@ export default function EventManagement() {
                     Create Event
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                <DialogContent className="max-h-[90dvh] w-[calc(100vw-2rem)] max-w-2xl overflow-y-auto sm:max-h-[80vh]">
                   <DialogHeader>
                     <DialogTitle>Create New Event</DialogTitle>
                   </DialogHeader>
@@ -218,7 +218,7 @@ export default function EventManagement() {
                         )}
                       />
                       
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <FormField
                           control={form.control}
                           name="category"
@@ -272,7 +272,7 @@ export default function EventManagement() {
                         </div>
                       </div>
                       
-                      <div className="flex justify-end space-x-2">
+                      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                         <Button
                           type="button"
                           variant="outline"
@@ -306,7 +306,7 @@ export default function EventManagement() {
               <div className="space-y-2">
                 <Label htmlFor="category-filter">Category</Label>
                 <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className="w-full sm:w-[180px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -325,7 +325,7 @@ export default function EventManagement() {
 
         {/* Main Content */}
         <Tabs defaultValue="upcoming" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="upcoming">Upcoming Events</TabsTrigger>
             <TabsTrigger value="past">Past Events</TabsTrigger>
           </TabsList>
@@ -337,7 +337,7 @@ export default function EventManagement() {
                   <CardTitle>Calendar View</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-7 gap-4 mb-4">
+                  <div className="overflow-x-auto pb-2">\n                    <div className="mb-4 grid min-w-[700px] grid-cols-7 gap-4">
                     {weekDays.map((day, index) => (
                       <div key={index} className="text-center">
                         <div className="font-semibold text-uh-black mb-2">
@@ -356,6 +356,7 @@ export default function EventManagement() {
                         </div>
                       </div>
                     ))}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
