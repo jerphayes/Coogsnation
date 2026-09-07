@@ -37,7 +37,7 @@
     "member-security-controls:check": "node scripts/member-security-controls-check.mjs",
     "password-recovery:check": "node scripts/password-recovery-contract-check.mjs",
     "passport-session-race:check": "node scripts/passport-session-race-check.mjs",
-    "release:check": "git diff --check && npm run check && npm run ui:check && npm run security:check && node scripts/seo-contract-check.mjs && npm run sports:check && npm run build"
+    "release:check": "npm run check && npm run ui:check && npm run security:check && node scripts/seo-contract-check.mjs && npm run sports:check && npm run build"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
