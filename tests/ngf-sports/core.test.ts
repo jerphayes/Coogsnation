@@ -21,6 +21,14 @@ const reconciled = reconcileGame([obs("ncaa", 38, 35), obs("big12", 38, 35), obs
 if (!reconciled) throw new Error("reconciliation failed");
 assert.equal(reconciled.awayScore, 38);
 assert.deepEqual(new Set(reconciled.agreeingSources), new Set(["ncaa","big12"]));
+
+// Football/basketball 0-0 FINAL is invalid canonical score data.
+const zeroZeroFinal = reconcileGame([
+  obs("zero-a", 0, 0),
+  obs("zero-b", 0, 0),
+  obs("zero-c", 0, 0),
+], [], new Date("2026-09-05T20:30:01Z"));
+assert.equal(zeroZeroFinal, null);
 const upset = detectUpset(reconciled);
 if (!upset) throw new Error("upset not detected");
 assert.equal(upset.severity, "top5");

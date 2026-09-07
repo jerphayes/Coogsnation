@@ -1238,9 +1238,608 @@ export default function Landing() {
           }
         }
 
+
+        .cn-victory-score-wrap{
+          width:100%;
+          min-height:610px;
+          position:relative;
+          display:block;
+          padding:0;
+          text-align:center;
+        }
+        .cn-victory-scoreboard{
+          position:absolute;
+          top:20px;
+          left:58%;
+          width:min(320px,30vw);
+          padding:10px 14px 12px;
+          border-radius:12px;
+        }
+        .cn-victory-final{
+          margin-bottom:7px;
+          font-size:12px;
+          text-align:center;
+        }
+        .cn-victory-matchup{
+          grid-template-columns:1fr auto 1fr;
+          gap:12px;
+        }
+        .cn-victory-team{
+          flex-direction:column;
+          align-items:center;
+          justify-content:center;
+          gap:3px;
+          text-align:center;
+        }
+        .cn-victory-team-name{
+          max-width:100%;
+          font-size:13px;
+          text-align:center;
+        }
+        .cn-victory-team-score{
+          font-size:30px;
+          line-height:.95;
+          text-align:center;
+        }
+        .cn-victory-divider{
+          height:42px;
+        }
+        @media(max-width:1100px){
+          .cn-victory-scoreboard{
+            left:auto;
+            right:18px;
+            width:min(310px,38vw);
+          }
+        }
+        @media(max-width:820px){
+          .cn-victory-scoreboard{
+            top:auto;
+            left:50%;
+            right:auto;
+            bottom:20px;
+            width:min(320px,calc(100vw - 24px));
+            padding:10px 12px 12px;
+            transform:translateX(-50%);
+          }
+          .cn-victory-team-name{font-size:12px}
+          .cn-victory-team-score{font-size:26px}
+          .cn-victory-divider{width:1px;height:36px}
+        }
+
+        /* FINAL VICTORY RESPONSIVE OVERRIDES */
+
+        /* Desktop: preserve top of artwork / CELEBRATION lettering */
+        .cn-victory-art{
+          object-fit:cover;
+          object-position:center top;
+        }
+
+        .cn-victory-scoreboard{
+          top:22px;
+          left:58%;
+          width:min(320px,30vw);
+        }
+
+        /* Mobile */
+        @media(max-width:820px){
+
+          .cn-victory-hero{
+            min-height:360px;
+            background:#070d13;
+          }
+
+          /* Fill the phone hero behind the complete foreground artwork */
+          .cn-victory-hero::before{
+            content:"";
+            position:absolute;
+            inset:0;
+            z-index:-4;
+            background-image:url("/coog-victory-celebration.gif");
+            background-size:cover;
+            background-position:center top;
+            filter:blur(8px) brightness(.55);
+            transform:scale(1.05);
+          }
+
+          /* Show the COMPLETE victory artwork on mobile */
+          .cn-victory-art{
+            width:100%;
+            height:auto;
+            max-height:none;
+            object-fit:contain;
+            object-position:center top;
+            inset:0 auto auto 0;
+          }
+
+          .cn-victory-score-wrap{
+            min-height:360px;
+            padding:0;
+          }
+
+          /* Compact horizontal FINAL box below the full wording */
+          .cn-victory-scoreboard{
+            top:calc(32vw + 14px);
+            bottom:auto;
+            left:50%;
+            right:auto;
+            width:min(300px,calc(100vw - 28px));
+            padding:8px 10px 9px;
+            border-radius:10px;
+            transform:translateX(-50%);
+          }
+
+          .cn-victory-final{
+            margin-bottom:6px;
+            font-size:10px;
+            line-height:1;
+            letter-spacing:.18em;
+          }
+
+          .cn-victory-matchup{
+            display:grid;
+            grid-template-columns:1fr auto 1fr;
+            align-items:center;
+            gap:8px;
+          }
+
+          .cn-victory-team{
+            width:auto;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            justify-content:center;
+            gap:2px;
+            text-align:center;
+          }
+
+          .cn-victory-team-name{
+            max-width:115px;
+            font-size:11px;
+            line-height:1.05;
+            text-align:center;
+            white-space:nowrap;
+            overflow:hidden;
+            text-overflow:ellipsis;
+          }
+
+          .cn-victory-team-score{
+            font-size:24px;
+            line-height:.95;
+            text-align:center;
+          }
+
+          .cn-victory-divider{
+            width:1px;
+            height:34px;
+          }
+        }
+
+        @media(max-width:420px){
+          .cn-victory-hero,
+          .cn-victory-score-wrap{
+            min-height:330px;
+          }
+
+          .cn-victory-scoreboard{
+            top:calc(32vw + 12px);
+            width:min(286px,calc(100vw - 22px));
+          }
+
+          .cn-victory-team-name{
+            font-size:10px;
+            max-width:105px;
+          }
+
+          .cn-victory-team-score{
+            font-size:22px;
+          }
+        }
+
+        /* END FINAL VICTORY RESPONSIVE OVERRIDES */
+
+
+        /* MOBILE VICTORY SCORE — compact, right of CELEBRATION */
+        @media(max-width:820px){
+
+          .cn-victory-score-wrap{
+            min-height:360px;
+            position:relative;
+            padding:0;
+          }
+
+          .cn-victory-scoreboard{
+            position:absolute;
+            top:clamp(72px,20vw,96px);
+            right:10px;
+            bottom:auto;
+            left:auto;
+            transform:none;
+
+            width:150px;
+            padding:6px 7px 7px;
+
+            border-radius:8px;
+            background:rgba(3,7,12,.84);
+          }
+
+          .cn-victory-final{
+            margin:0 0 4px;
+            font-size:8px;
+            line-height:1;
+            letter-spacing:.16em;
+            text-align:center;
+          }
+
+          .cn-victory-matchup{
+            display:grid;
+            grid-template-columns:1fr auto 1fr;
+            align-items:center;
+            gap:5px;
+          }
+
+          .cn-victory-team{
+            width:auto;
+            min-width:0;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            justify-content:center;
+            gap:1px;
+          }
+
+          .cn-victory-team-name{
+            max-width:58px;
+            font-size:8px;
+            line-height:1;
+            letter-spacing:0;
+            white-space:nowrap;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            text-align:center;
+          }
+
+          .cn-victory-team-score{
+            font-size:18px;
+            line-height:.95;
+            text-align:center;
+          }
+
+          .cn-victory-divider{
+            width:1px;
+            height:27px;
+          }
+        }
+
+        @media(max-width:420px){
+          .cn-victory-scoreboard{
+            top:clamp(68px,19vw,84px);
+            right:7px;
+            width:142px;
+            padding:5px 6px 6px;
+          }
+
+          .cn-victory-team-name{
+            max-width:54px;
+            font-size:7.5px;
+          }
+
+          .cn-victory-team-score{
+            font-size:17px;
+          }
+        }
+
+
+        /* FINAL DESKTOP / TABLET VICTORY LAYOUT */
+        @media(min-width:768px){
+
+          .cn-victory-hero{
+            min-height:610px;
+            overflow:hidden;
+          }
+
+          .cn-victory-art{
+            position:absolute;
+            inset:0;
+            width:100%;
+            height:100%;
+            max-height:none;
+            object-fit:cover !important;
+
+            /*
+             * Preserve the CELEBRATION composition.
+             * Slightly above center reveals the lettering
+             * without exposing the full COOG VICTORY artwork.
+             */
+            object-position:center 46% !important;
+
+            transform:none !important;
+          }
+
+          .cn-victory-score-wrap{
+            width:100%;
+            min-height:610px;
+            position:relative;
+            display:block;
+            padding:0;
+          }
+
+          .cn-victory-scoreboard{
+            position:absolute !important;
+
+            top:20px !important;
+            left:58% !important;
+            right:auto !important;
+            bottom:auto !important;
+
+            width:320px !important;
+            max-width:30vw;
+
+            padding:10px 14px 12px !important;
+            border-radius:12px;
+
+            transform:none !important;
+
+            background:rgba(3,7,12,.84);
+          }
+
+          .cn-victory-final{
+            margin:0 0 7px;
+            font-size:12px;
+            line-height:1;
+            letter-spacing:.18em;
+            text-align:center;
+          }
+
+          .cn-victory-matchup{
+            display:grid !important;
+            grid-template-columns:1fr auto 1fr !important;
+            align-items:center;
+            gap:12px !important;
+          }
+
+          .cn-victory-team{
+            width:auto !important;
+            min-width:0;
+            display:flex;
+            flex-direction:column !important;
+            align-items:center !important;
+            justify-content:center;
+            gap:3px;
+            text-align:center;
+          }
+
+          .cn-victory-team-name{
+            max-width:120px;
+            font-size:13px !important;
+            line-height:1.05;
+            text-align:center;
+            white-space:nowrap;
+            overflow:hidden;
+            text-overflow:ellipsis;
+          }
+
+          .cn-victory-team-score{
+            font-size:30px !important;
+            line-height:.95;
+            text-align:center;
+          }
+
+          .cn-victory-divider{
+            width:1px !important;
+            height:42px !important;
+          }
+        }
+
+        /* Tablet / narrower browser */
+        @media(min-width:768px) and (max-width:1100px){
+
+          .cn-victory-scoreboard{
+            left:auto !important;
+            right:18px !important;
+            width:290px !important;
+            max-width:38vw;
+          }
+
+          .cn-victory-team-name{
+            font-size:12px !important;
+            max-width:105px;
+          }
+
+          .cn-victory-team-score{
+            font-size:27px !important;
+          }
+        }
+
+
+        /* MOBILE ONLY: victory score lives in header below ticker */
+        @media(max-width:767px){
+
+          /* Remove the old hero score box on phones only */
+          .cn-victory-scoreboard{
+            display:none !important;
+          }
+
+          .cn-mobile-header-score{
+            width:176px;
+            padding:4px 7px 5px;
+            border:1px solid rgba(255,255,255,.36);
+            border-radius:7px;
+            background:rgba(3,7,12,.92);
+            color:#fff;
+            box-shadow:0 4px 12px rgba(0,0,0,.35);
+            text-align:center;
+          }
+
+          .cn-mobile-header-final{
+            margin-bottom:3px;
+            font-size:7px;
+            line-height:1;
+            font-weight:900;
+            letter-spacing:.16em;
+          }
+
+          .cn-mobile-header-matchup{
+            display:grid;
+            grid-template-columns:1fr 1px 1fr;
+            align-items:center;
+            gap:5px;
+          }
+
+          .cn-mobile-header-matchup > div{
+            min-width:0;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:4px;
+          }
+
+          .cn-mobile-header-matchup span{
+            overflow:hidden;
+            max-width:52px;
+            font-size:7px;
+            line-height:1;
+            font-weight:900;
+            white-space:nowrap;
+            text-overflow:ellipsis;
+          }
+
+          .cn-mobile-header-matchup strong{
+            font-size:15px;
+            line-height:1;
+            font-weight:950;
+          }
+
+          .cn-mobile-header-matchup i{
+            width:1px;
+            height:19px;
+            background:rgba(255,255,255,.34);
+          }
+        }
+
+        @media(min-width:768px){
+          .cn-mobile-header-score{
+            display:none !important;
+          }
+        }
+
+        /* CANONICAL HEADER SCORE */
+        .cn-victory-scoreboard{display:none!important}
+        .cn-header-score{width:max-content;max-width:calc(100vw - 150px);padding:0;border:0;background:transparent;box-shadow:none;color:#fff;text-align:center;white-space:nowrap}
+        .cn-header-final{margin:0 0 3px;font-size:7px;line-height:1;font-weight:900;letter-spacing:.17em;text-align:center}
+        .cn-header-matchup{display:flex;align-items:center;justify-content:center;gap:5px}
+        .cn-header-matchup>div{min-width:0;display:flex;align-items:center;justify-content:center;gap:4px}
+        .cn-header-matchup span{overflow:hidden;max-width:84px;font-size:15px;line-height:1;font-weight:900;white-space:nowrap;text-overflow:ellipsis}
+        .cn-header-matchup strong{font-size:15px;line-height:1;font-weight:950;font-variant-numeric:tabular-nums}
+        .cn-header-matchup i{display:block;width:1px;height:18px;background:rgba(255,255,255,.42)}
+        .cn-header-score.is-uh-win .cn-header-matchup strong{color:#c8102e}
+        .cn-header-score.is-uh-loss .cn-header-matchup strong{color:#fff}
+        @media(min-width:768px){.cn-header-final{font-size:8px}.cn-header-matchup{gap:7px}.cn-header-matchup span{max-width:120px;font-size:17px}.cn-header-matchup strong{font-size:17px}.cn-header-matchup i{height:21px}}
+        @media(min-width:1024px){.cn-header-matchup span{font-size:18px}.cn-header-matchup strong{font-size:18px}}
+        @media(min-width:1280px){.cn-header-score{max-width:420px}.cn-header-final{font-size:9px}.cn-header-matchup span{max-width:140px;font-size:19px}.cn-header-matchup strong{font-size:19px}.cn-header-matchup i{height:23px}}
+
+        /* FINAL MOBILE-GUIDED PAGE COMPOSITION */
+
+        @media(min-width:768px){
+
+          .cn-victory-hero{
+            height:clamp(580px,44vw,720px)!important;
+            min-height:0!important;
+            margin:0!important;
+            border:0!important;
+            overflow:hidden!important;
+            background:#070d13!important;
+          }
+
+          .cn-victory-hero::before{
+            content:"";
+            position:absolute;
+            inset:-20px;
+            z-index:-4;
+            background-image:url("/coog-victory-celebration.gif");
+            background-size:cover;
+            background-position:center;
+            filter:blur(14px) brightness(.42);
+            transform:scale(1.05);
+          }
+
+          .cn-victory-art{
+            position:absolute!important;
+            inset:0!important;
+            width:100%!important;
+            height:100%!important;
+            max-height:none!important;
+            object-fit:contain!important;
+            object-position:center center!important;
+            transform:none!important;
+          }
+
+          .cn-victory-shade{
+            background:linear-gradient(
+              180deg,
+              rgba(0,0,0,.02) 0%,
+              rgba(0,0,0,.01) 80%,
+              rgba(0,0,0,.12) 100%
+            )!important;
+          }
+
+          .cn-feature-section{
+            padding:12px 24px 24px!important;
+            border-top:0!important;
+          }
+
+          .cn-feature-heading{
+            margin:0 auto 10px!important;
+          }
+
+          .cn-feature-heading h2{
+            margin:0 0 4px!important;
+            font-size:clamp(24px,2.3vw,34px)!important;
+          }
+
+          .cn-feature-heading p{
+            margin:0!important;
+          }
+
+          .cn-feature-grid{
+            margin-top:8px!important;
+          }
+        }
+
+        @media(min-width:768px) and (max-width:1023px){
+          .cn-victory-hero{
+            height:clamp(560px,72vw,680px)!important;
+          }
+
+          .cn-feature-section{
+            padding-top:10px!important;
+          }
+        }
+
       `}</style>
 
-      <Header />
+      <Header
+        centerScore={
+          victoryCelebration ? (
+            <div className={`cn-header-score ${victoryCelebration.houstonScore > victoryCelebration.opponentScore ? "is-uh-win" : "is-uh-loss"}`} aria-live="polite">
+              <div className="cn-header-final">FINAL</div>
+
+              <div className="cn-header-matchup">
+                <div>
+                  <span>HOUSTON</span>
+                  <strong>{victoryCelebration.houstonScore}</strong>
+                </div>
+
+                <i aria-hidden="true" />
+
+                <div>
+                  <span>{victoryCelebration.opponentName.toUpperCase()}</span>
+                  <strong>{victoryCelebration.opponentScore}</strong>
+                </div>
+              </div>
+            </div>
+          ) : undefined
+        }
+      />
 
       {victoryCelebration ? (
         <section

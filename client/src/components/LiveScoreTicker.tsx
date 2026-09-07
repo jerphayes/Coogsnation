@@ -260,11 +260,6 @@ export function LiveScoreTicker() {
               0 0 24px rgba(245,158,11,.95)
           }
         }
-        @media(max-width:620px){
-          .ngf-score-badge{padding:0 10px;font-size:10px}
-          .ngf-score-game{padding:0 14px;font-size:13px}
-          .ngf-score-upset-badge{font-size:9px;padding:3px 6px}
-        }
         @media(prefers-reduced-motion:reduce){
           .ngf-score-track{animation:none!important}
           .ngf-score-game.is-upset-game{
@@ -272,6 +267,19 @@ export function LiveScoreTicker() {
             outline:3px solid #fff7ad;
             filter:brightness(1.65)
           }
+        }
+
+        .ngf-score-ticker{height:34px}
+        .ngf-score-badge{height:34px;gap:6px;padding:0 12px;font-size:11px}
+        .ngf-score-dot{width:7px;height:7px}
+        .ngf-score-track{height:34px}
+        .ngf-score-game{gap:6px;padding:0 14px;font-size:12px}
+        .ngf-score-status{font-size:10px;padding:3px 6px}
+        @media(max-width:620px){
+          .ngf-score-badge{padding:0 9px;font-size:10px}
+          .ngf-score-game{padding:0 10px;font-size:11px}
+          .ngf-score-status{font-size:9px;padding:2px 5px}
+          .ngf-score-upset-badge{font-size:9px;padding:3px 6px}
         }
       `}</style>
 

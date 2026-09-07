@@ -336,6 +336,15 @@ export class SportsFactsEngine extends EventEmitter {
 
   restoreCurrent(games: ReconciledGame[]) {
     for (const game of games) {
+      if (
+        game.phase === "final" &&
+        game.awayScore === 0 &&
+        game.homeScore === 0 &&
+        (game.game.sport === "football" || game.game.sport === "basketball")
+      ) {
+        continue;
+      }
+
       this.current.set(game.game.ngfGameId, game);
     }
 

@@ -8,6 +8,29 @@ import type { GameRef } from "../../shared/ngfSportsTypes";
 
 const DAY = 86_400_000;
 
+const POWER_FOUR = new Set([
+  "acc",
+  "sec",
+  "big-12",
+  "big-ten",
+]);
+
+function conferenceKey(value?: string): string {
+  return (value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-");
+}
+
+export function isPowerFourFootballGame(game: GameRef): boolean {
+  if (game.sport !== "football") return true;
+
+  return (
+    POWER_FOUR.has(conferenceKey(game.away.conference)) ||
+    POWER_FOUR.has(conferenceKey(game.home.conference))
+  );
+}
+
 export class SportsFactsService {
   private readonly store = new SportsStore(pool);
 
@@ -45,7 +68,7 @@ export class SportsFactsService {
     // setScheduledSlate() will then preserve live/final states.
     try {
       const restored = await this.store.loadCurrent(24 * 60);
-      sportsFactsEngine.restoreCurrent(restored);
+      sportsFactsEngine.restoreCurrent(restored.filter((item) => isPowerFourFootballGame(item.game)));
     } catch (error) {
       console.error("[SPORTS] Current-state restore failed", error);
     }
@@ -104,6 +127,8 @@ export class SportsFactsService {
           const games = await discoverNcaaDaySlate(date, division);
 
           for (const game of games) {
+            if (!isPowerFourFootballGame(game)) continue;
+
             discovered.set(game.ngfGameId, game);
             await this.store.upsertGame(game);
             this.collector.watch(game);
@@ -141,7 +166,10 @@ export class SportsFactsService {
       const storedGames = await this.store.loadUpcoming(72, 24 * 21);
 
       if (storedGames.length > 0) {
-        sportsFactsEngine.setScheduledSlate(storedGames, now);
+        sportsFactsEngine.setScheduledSlate(
+          storedGames.filter(isPowerFourFootballGame),
+          now,
+        );
       }
     }
 
@@ -152,6 +180,7 @@ export class SportsFactsService {
     const activeGames = await this.store.loadUpcoming(72, 28);
 
     for (const game of activeGames) {
+      if (!isPowerFourFootballGame(game)) continue;
       this.collector.watch(game);
     }
   }

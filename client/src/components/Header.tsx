@@ -8,7 +8,13 @@ import { queryClient } from "@/lib/queryClient";
 import { FORUM_NAVIGATION, forumCategoryPath } from "@/lib/forumNavigation";
 import { LiveScoreTicker } from "@/components/LiveScoreTicker";
 
-export function Header({ leadingBrand }: { leadingBrand?: ReactNode } = {}) {
+export function Header({
+  leadingBrand,
+  centerScore,
+}: {
+  leadingBrand?: ReactNode;
+  centerScore?: ReactNode;
+} = {}) {
   const { isAuthenticated, user } = useAuth();
   const { isGuestMode, enableGuestMode } = useGuest();
   const [, navigate] = useLocation();
@@ -95,14 +101,15 @@ export function Header({ leadingBrand }: { leadingBrand?: ReactNode } = {}) {
 
   return (
     <header className="relative z-50 border-b border-gray-700 bg-gray-900">
-      <div className="flex items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-6">
+      <LiveScoreTicker />
+      <div className="relative flex items-center justify-between px-3 py-2 text-[13px]">
+        <div className="flex items-center gap-4">
           {leadingBrand}
           <Link href="/" className="flex items-center" onClick={closeMenus}>
-            <img src={logoImage} alt="CoogsNation Logo" className="h-12 w-12 object-contain" />
+            <img src={logoImage} alt="CoogsNation Logo" className="h-10 w-10 object-contain" />
           </Link>
 
-          <nav className="hidden items-center gap-6 md:flex" aria-label="Primary navigation">
+          <nav className="hidden items-center gap-3 xl:flex" aria-label="Primary navigation">
 
             <div className="relative flex items-center gap-1">
               <DesktopLink href="/forums" testId="link-forums">Forums</DesktopLink>
@@ -241,7 +248,7 @@ export function Header({ leadingBrand }: { leadingBrand?: ReactNode } = {}) {
           </nav>
         </div>
 
-        <div className="hidden items-center gap-4 md:flex">
+        <div className="hidden items-center gap-4 xl:flex">
           {isAuthenticated ? (
             <>
               <DesktopLink href="/dashboard" testId="link-dashboard">Dashboard</DesktopLink>
@@ -319,9 +326,15 @@ export function Header({ leadingBrand }: { leadingBrand?: ReactNode } = {}) {
           <DesktopLink href="/terms" testId="link-terms">Terms</DesktopLink>
         </div>
 
+        {centerScore && (
+          <div className="pointer-events-none absolute left-1/2 top-1/2 z-[70] -translate-x-1/2 -translate-y-1/2">
+            {centerScore}
+          </div>
+        )}
+
         <button
           type="button"
-          className="rounded border border-gray-600 px-3 py-2 text-white md:hidden"
+          className="rounded border border-gray-600 px-3 py-2 text-white xl:hidden"
           onClick={() => setMobileOpen((open) => !open)}
           aria-expanded={mobileOpen}
           aria-controls="mobile-navigation"
@@ -333,7 +346,7 @@ export function Header({ leadingBrand }: { leadingBrand?: ReactNode } = {}) {
       </div>
 
       {mobileOpen && (
-        <nav id="mobile-navigation" className="border-t border-gray-700 bg-gray-900 px-4 py-4 md:hidden" aria-label="Mobile navigation">
+        <nav id="mobile-navigation" className="border-t border-gray-700 bg-gray-900 px-4 py-4 xl:hidden" aria-label="Mobile navigation">
           <div className="grid gap-1">
             <MobileLink href="/forums" onNavigate={closeMenus}>Forums</MobileLink>
             <MobileLink href="/coogpaws-chat" onNavigate={closeMenus}>Coog Paws Lounge</MobileLink>
@@ -378,7 +391,6 @@ export function Header({ leadingBrand }: { leadingBrand?: ReactNode } = {}) {
           </div>
         </nav>
       )}
-      <LiveScoreTicker />
     </header>
   );
 }

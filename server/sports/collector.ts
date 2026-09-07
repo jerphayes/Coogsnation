@@ -33,6 +33,13 @@ function hasCompleteScore(observation: ScoreObservation): boolean {
   return observation.awayScore != null && observation.homeScore != null;
 }
 
+function isInvalidZeroZeroFinal(observation: ScoreObservation): boolean {
+  return observation.phase === "final" &&
+    observation.awayScore === 0 &&
+    observation.homeScore === 0 &&
+    (observation.game.sport === "football" || observation.game.sport === "basketball");
+}
+
 export class ScheduleDrivenCollector {
   private readonly watches = new Map<string, ScheduledGameWatch>();
   private readonly health = new Map<string, SourceHealth>();
@@ -118,6 +125,11 @@ export class ScheduleDrivenCollector {
         ...result.value,
         sourceLineage: result.value.sourceLineage ?? adapter.lineageId ?? result.value.sourceId,
       };
+      if (isInvalidZeroZeroFinal(observation)) {
+        await this.markFailure(adapter);
+        continue;
+      }
+
       // Persist source health before persisting an observation. The observations
       // table has a foreign key to ngf_sports_sources(source_id), so writing the
       // observation first can abort the live poll before the engine ever ingests it.

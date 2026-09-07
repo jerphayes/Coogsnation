@@ -192,6 +192,15 @@ export function reconcileGame(
   // upstream family remain a single lineage for this penalty.
   const finalPenalty = FINAL_PHASES.has(phaseWinner.phase) && winnerLineages.size === 1 ? 0.8 : 1;
 
+  if (
+    phaseWinner.phase === "final" &&
+    (scoreWinner?.observations[0].awayScore ?? phaseWinner.awayScore) === 0 &&
+    (scoreWinner?.observations[0].homeScore ?? phaseWinner.homeScore) === 0 &&
+    (phaseWinner.game.sport === "football" || phaseWinner.game.sport === "basketball")
+  ) {
+    return null;
+  }
+
   return {
     game: phaseWinner.game,
     awayScore: scoreWinner?.observations[0].awayScore ?? phaseWinner.awayScore,
