@@ -756,24 +756,11 @@ export default function OwnerAdminDashboard() {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="victory-password">Your current password</Label>
-                    <Input
-                      id="victory-password"
-                      type="password"
-                      autoComplete="current-password"
-                      value={victoryPassword}
-                      onChange={(event) => setVictoryPassword(event.target.value)}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      The slider prepares the change. Nothing goes live until you confirm below.
-                    </p>
-                  </div>
                 </div>
 
                 <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-sm text-muted-foreground">
-                    Every change is password-confirmed and written to the administrator audit log.
+                    Every change is written to the administrator audit log.
                   </p>
                   <Button
                     onClick={() => victoryMutation.mutate()}
@@ -781,8 +768,7 @@ export default function OwnerAdminDashboard() {
                       victoryQuery.isLoading ||
                       victoryQuery.isError ||
                       victoryMutation.isPending ||
-                      victoryReason.trim().length < 3 ||
-                      !victoryPassword
+                      victoryReason.trim().length < 3
                     }
                   >
                     {victoryMutation.isPending

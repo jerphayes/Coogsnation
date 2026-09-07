@@ -30,6 +30,7 @@ const roleActionSchema = securedActionSchema.extend({
 }).strict();
 
 const victoryCelebrationActionSchema = securedActionSchema.extend({
+  currentPassword: z.string().max(200).optional(),
   enabled: z.boolean(),
   houstonScore: z.number().int().min(0).max(999).optional(),
   opponentName: z.string().trim().min(1).max(120).optional(),
@@ -80,6 +81,14 @@ async function confirmAdminPassword(actorId: string, currentPassword: string) {
   }
   const valid = await PasswordService.verifyPassword(currentPassword, actor.passwordHash);
   if (!valid) throw new AdminActionError("Current password is incorrect", 403);
+  return actor;
+}
+
+async function resolveAdminActor(actorId: string) {
+  const actor = await storage.getUser(actorId);
+  if (!actor || actor.role !== "admin") {
+    throw new AdminActionError("Administrator account could not be verified", 403);
+  }
   return actor;
 }
 
@@ -490,7 +499,7 @@ export function registerAdminDashboardRoutes(app: Express): void {
   app.patch("/api/admin/victory-celebration", requireAdmin, async (req: any, res) => {
     try {
       const input = victoryCelebrationActionSchema.parse(req.body);
-      const actor = await confirmAdminPassword(req.user.id, input.currentPassword);
+      const actor = await resolveAdminActor(req.user.id);
       const now = new Date();
 
       const updated = await db.transaction(async (tx) => {
