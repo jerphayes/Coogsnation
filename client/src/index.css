@@ -90,14 +90,6 @@ div[class*="absolute"][class*="opacity-0"] {
   }
 }
 
-/* Desktop-only fix for hero page cougar background */
-@media (min-width: 1024px) {
-  .landing-hero {
-    background-attachment: scroll !important;
-    background-position: center center !important;
-    min-height: 150vh !important;
-  }
-}
 
 /* Custom UH styles */
 .uh-red {
