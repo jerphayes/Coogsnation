@@ -47,7 +47,7 @@ export default function Members() {
         </div>
 
         {/* Community Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 gap-4 mb-8 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Members</CardTitle>
@@ -103,7 +103,7 @@ export default function Members() {
                 {isLoading ? (
                   <div className="space-y-4">
                     {[1, 2, 3, 4, 5].map((i) => (
-                      <div key={i} className="flex items-center space-x-4 p-4 border rounded-lg animate-pulse">
+                      <div key={i} className="flex min-w-0 items-center gap-3 sm:gap-4 p-4 border rounded-lg animate-pulse">
                         <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
                         <div className="flex-1">
                           <div className="h-4 bg-gray-200 rounded w-32 mb-2"></div>
@@ -115,25 +115,25 @@ export default function Members() {
                 ) : members && members.length > 0 ? (
                   <div className="space-y-4">
                     {members.map((member: Member) => (
-                      <div key={member.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-                        <div className="flex items-center space-x-4">
-                          <div className="w-12 h-12 bg-uh-red text-white rounded-full flex items-center justify-center font-bold">
+                      <div key={member.id} className="flex flex-col gap-4 p-4 border rounded-lg hover:bg-gray-50 transition-colors sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-uh-red font-bold text-white">
                             {member.displayName.charAt(0).toUpperCase()}
                           </div>
-                          <div>
-                            <h3 className="font-semibold text-uh-black">{member.displayName}</h3>
+                          <div className="min-w-0">
+                            <h3 className="truncate font-semibold text-uh-black">{member.displayName}</h3>
                             <p className="text-sm text-gray-600">
                               Joined {new Date(member.joinedDate).toLocaleDateString()}
                             </p>
-                            <div className="flex items-center space-x-2 mt-1">
+                            <div className="mt-1 flex flex-wrap items-center gap-2">
                               <Badge variant="secondary">{member.level}</Badge>
                               <span className="text-xs text-gray-500">{member.postCount} posts</span>
                             </div>
                           </div>
                         </div>
-                        <div className="flex flex-col items-end space-y-1">
+                        <div className="flex w-full flex-col items-start gap-2 sm:w-auto sm:items-end">
                           {member.badges && member.badges.length > 0 && (
-                            <div className="flex space-x-1">
+                            <div className="flex flex-wrap gap-1">
                               {member.badges.slice(0, 3).map((badge, index) => (
                                 <Badge key={index} variant="outline" className="text-xs">
                                   {badge}
