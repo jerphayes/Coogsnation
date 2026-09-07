@@ -1,19 +1,7 @@
 User-agent: *
 Allow: /
+Disallow: /api/
 
-Disallow: /admin
-Disallow: /admin-full
-Disallow: /admin/news
-Disallow: /dashboard
-Disallow: /member-dashboard
-Disallow: /profile
-Disallow: /messages
-Disallow: /event-management
-Disallow: /login
-Disallow: /reset-password
-Disallow: /join
-Disallow: /signup
-Disallow: /complete-profile
-Disallow: /verify-email
-
+# Private/member routes are intentionally crawlable so their HTTP
+# X-Robots-Tag: noindex directive can be observed by search engines.
 Sitemap: https://coogsnation.com/sitemap.xml
