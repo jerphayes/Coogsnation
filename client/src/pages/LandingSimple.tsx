@@ -1737,81 +1737,154 @@ export default function Landing() {
         @media(min-width:1024px){.cn-header-matchup span{font-size:18px}.cn-header-matchup strong{font-size:18px}}
         @media(min-width:1280px){.cn-header-score{max-width:420px}.cn-header-final{font-size:9px}.cn-header-matchup span{max-width:140px;font-size:19px}.cn-header-matchup strong{font-size:19px}.cn-header-matchup i{height:23px}}
 
-        /* FINAL MOBILE-GUIDED PAGE COMPOSITION */
+        /* CANONICAL RESPONSIVE VICTORY ARTWORK */
+        .cn-victory-hero{
+          width:100%!important;
+          min-height:0!important;
+          margin:0!important;
+          border:0!important;
+          overflow:hidden!important;
+          background:#070d13!important;
+          isolation:isolate;
+        }
 
-        @media(min-width:768px){
+        .cn-victory-hero::before{
+          content:none!important;
+          display:none!important;
+          background:none!important;
+          filter:none!important;
+          transform:none!important;
+        }
 
+        .cn-victory-art{
+          position:absolute!important;
+          inset:0!important;
+          width:100%!important;
+          height:100%!important;
+          max-height:none!important;
+          object-fit:cover!important;
+          object-position:center top!important;
+          image-rendering:auto;
+          transform:none!important;
+        }
+
+        .cn-victory-shade{
+          background:linear-gradient(
+            180deg,
+            rgba(0,0,0,.02) 0%,
+            rgba(0,0,0,.00) 82%,
+            rgba(0,0,0,.10) 100%
+          )!important;
+        }
+
+        .cn-victory-score-wrap{
+          width:100%!important;
+          height:100%!important;
+          min-height:0!important;
+          padding:0!important;
+        }
+
+        /* Phone: preserve the complete 3:2 source composition. */
+        @media(max-width:639px){
           .cn-victory-hero{
-            height:clamp(580px,44vw,720px)!important;
-            min-height:0!important;
-            margin:0!important;
-            border:0!important;
-            overflow:hidden!important;
-            background:#070d13!important;
+            aspect-ratio:3 / 2!important;
+            height:auto!important;
           }
-
-          .cn-victory-hero::before{
-            content:"";
-            position:absolute;
-            inset:-20px;
-            z-index:-4;
-            background-image:url("/coog-victory-celebration.gif");
-            background-size:cover;
-            background-position:center;
-            filter:blur(14px) brightness(.42);
-            transform:scale(1.05);
-          }
-
           .cn-victory-art{
-            position:absolute!important;
-            inset:0!important;
-            width:100%!important;
-            height:100%!important;
-            max-height:none!important;
-            object-fit:contain!important;
-            object-position:center center!important;
-            transform:none!important;
+            object-position:center top!important;
           }
-
-          .cn-victory-shade{
-            background:linear-gradient(
-              180deg,
-              rgba(0,0,0,.02) 0%,
-              rgba(0,0,0,.01) 80%,
-              rgba(0,0,0,.12) 100%
-            )!important;
+          .cn-feature-section{
+            padding-top:10px!important;
           }
+        }
 
+        /* Large / landscape phone. */
+        @media(min-width:640px) and (max-width:767px){
+          .cn-victory-hero{
+            aspect-ratio:3 / 2!important;
+            height:auto!important;
+          }
+          .cn-victory-art{
+            object-position:center top!important;
+          }
+          .cn-feature-section{
+            padding-top:10px!important;
+          }
+        }
+
+        /* Tablet / iPad: preserve the native composition without side fill. */
+        @media(min-width:768px) and (max-width:1023px){
+          .cn-victory-hero{
+            aspect-ratio:3 / 2!important;
+            height:auto!important;
+          }
+          .cn-victory-art{
+            object-position:center 42%!important;
+          }
+          .cn-feature-section{
+            padding:10px 20px 22px!important;
+            border-top:0!important;
+          }
+        }
+
+        /* Notebook / small laptop. */
+        @media(min-width:1024px) and (max-width:1279px){
+          .cn-victory-hero{
+            aspect-ratio:auto!important;
+            height:clamp(520px,50vw,620px)!important;
+          }
+          .cn-victory-art{
+            object-position:center 44%!important;
+          }
           .cn-feature-section{
             padding:12px 24px 24px!important;
             border-top:0!important;
           }
+        }
 
+        /* Laptop / desktop. */
+        @media(min-width:1280px) and (max-width:1535px){
+          .cn-victory-hero{
+            aspect-ratio:auto!important;
+            height:clamp(560px,46vw,680px)!important;
+          }
+          .cn-victory-art{
+            object-position:center 45%!important;
+          }
+          .cn-feature-section{
+            padding:12px 24px 24px!important;
+            border-top:0!important;
+          }
+        }
+
+        /* Large desktop / wide browser. */
+        @media(min-width:1536px){
+          .cn-victory-hero{
+            aspect-ratio:auto!important;
+            height:clamp(620px,39vw,720px)!important;
+          }
+          .cn-victory-art{
+            object-position:center 46%!important;
+          }
+          .cn-feature-section{
+            padding:12px 28px 26px!important;
+            border-top:0!important;
+          }
+        }
+
+        @media(min-width:768px){
           .cn-feature-heading{
             margin:0 auto 10px!important;
           }
-
           .cn-feature-heading h2{
             margin:0 0 4px!important;
             font-size:clamp(24px,2.3vw,34px)!important;
           }
-
           .cn-feature-heading p{
             margin:0!important;
           }
-
           .cn-feature-grid{
             margin-top:8px!important;
-          }
-        }
-
-        @media(min-width:768px) and (max-width:1023px){
-          .cn-victory-hero{
-            height:clamp(560px,72vw,680px)!important;
-          }
-
-          .cn-feature-section{
-            padding-top:10px!important;
           }
         }
 
