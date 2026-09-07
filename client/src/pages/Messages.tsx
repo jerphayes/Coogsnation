@@ -157,12 +157,12 @@ export default function Messages() {
     <div className="min-h-screen bg-gray-50">
       <Header />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden" style={{ height: "calc(100vh - 200px)" }}>
+      <div className="mx-auto max-w-7xl px-0 py-0 sm:px-6 sm:py-8 lg:px-8">
+        <div className="h-[calc(100dvh-6rem)] overflow-hidden bg-white sm:h-[calc(100vh-200px)] sm:rounded-lg sm:shadow-lg">
           <div className="flex h-full">
             
             {/* Conversations Sidebar */}
-            <div className="w-1/3 border-r border-gray-200 flex flex-col">
+            <div className={`${selectedConversation ? "hidden md:flex" : "flex"} w-full flex-col border-r border-gray-200 md:w-1/3`}>
               <div className="p-4 border-b border-gray-200">
                 <h2 className="text-xl font-bold text-uh-black mb-4">Messages</h2>
                 <Input
@@ -246,12 +246,22 @@ export default function Messages() {
             </div>
             
             {/* Messages Area */}
-            <div className="flex-1 flex flex-col">
+            <div className={`${selectedConversation ? "flex" : "hidden md:flex"} min-w-0 flex-1 flex-col`}>
               {selectedConversation ? (
                 <>
                   {/* Chat Header */}
-                  <div className="p-4 border-b border-gray-200 bg-white">
+                  <div className="border-b border-gray-200 bg-white p-4">
                     <div className="flex items-center space-x-3">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="shrink-0 md:hidden"
+                        onClick={() => setSelectedConversation(null)}
+                        aria-label="Back to conversations"
+                      >
+                        <i className="fas fa-arrow-left" aria-hidden="true"></i>
+                      </Button>
                       <Avatar className="w-10 h-10">
                         <AvatarImage src={selectedConvData?.avatar} alt={selectedConvData?.name} />
                         <AvatarFallback className="bg-gray-300 text-gray-700">
@@ -287,7 +297,7 @@ export default function Messages() {
                             }`}
                           >
                             <div
-                              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                              className={`max-w-[85%] rounded-lg px-4 py-2 sm:max-w-xs lg:max-w-md ${
                                 message.senderId === user?.id
                                   ? "bg-uh-red text-white"
                                   : "bg-gray-200 text-gray-900"
