@@ -112,6 +112,14 @@ function rankedLabel(rank: number | null | undefined, abbreviation: string): str
   return rank && rank > 0 ? `#${rank} ${abbreviation}` : abbreviation;
 }
 
+const PREGAME_PHASES = new Set(["scheduled", "pregame"]);
+
+function displayScore(game: ReconciledGame, value: number | null): number | null {
+  // Providers report 0 for competitors before kickoff. That is "not started",
+  // not a score. Suppress it so the client renders its em dash.
+  return PREGAME_PHASES.has(game.phase) ? null : value;
+}
+
 export function toTickerItem(game: ReconciledGame, focusTeamId?: string): TickerItem {
   const upset = detectUpset(game);
   let priority = 10;
@@ -124,9 +132,9 @@ export function toTickerItem(game: ReconciledGame, focusTeamId?: string): Ticker
   return {
     gameId: game.game.ngfGameId,
     awayLabel: rankedLabel(game.game.away.rank, game.game.away.abbreviation),
-    awayScore: game.awayScore,
+    awayScore: displayScore(game, game.awayScore),
     homeLabel: rankedLabel(game.game.home.rank, game.game.home.abbreviation),
-    homeScore: game.homeScore,
+    homeScore: displayScore(game, game.homeScore),
     status: statusFor(game),
     priority,
     accentKey: game.game.away.ngfTeamId,

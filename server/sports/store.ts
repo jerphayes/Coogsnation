@@ -41,6 +41,14 @@ export class SportsStore {
       [game.ngfGameId, game.sport, game.season, game.scheduledStart, game.away.ngfTeamId, game.home.ngfTeamId]);
   }
 
+  // Sources occasionally emit very long status strings. An oversized value
+  // threw on INSERT and failed the entire poll for that game, discarding
+  // every source's observation in the batch. Clamp at the boundary.
+  private clampStatusText(value: string | null | undefined): string | null {
+    if (!value) return null;
+    return value.length > 300 ? value.slice(0, 300) : value;
+  }
+
   async recordObservation(observation: ScoreObservation) {
     if (!await this.isAvailable()) return;
     await this.upsertGame(observation.game);
@@ -48,7 +56,7 @@ export class SportsStore {
       insert into ngf_sports_observations(ngf_game_id,source_id,observed_at,away_score,home_score,phase,period,clock,status_text)
       values($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
       [observation.game.ngfGameId, observation.sourceId, observation.observedAt, observation.awayScore, observation.homeScore,
-       observation.phase, observation.period || null, observation.clock || null, observation.statusText || null]);
+       observation.phase, observation.period || null, observation.clock || null, this.clampStatusText(observation.statusText)]);
   }
 
   async saveCurrent(game: ReconciledGame) {
@@ -60,7 +68,7 @@ export class SportsStore {
         home_score=excluded.home_score,phase=excluded.phase,period=excluded.period,clock=excluded.clock,status_text=excluded.status_text,
         confidence=excluded.confidence,agreeing_sources=excluded.agreeing_sources,conflicting_sources=excluded.conflicting_sources,updated_at=now()`,
       [game.game.ngfGameId, game.acceptedAt, game.awayScore, game.homeScore, game.phase, game.period || null, game.clock || null,
-       game.statusText || null, game.confidence, game.agreeingSources, game.conflictingSources]);
+       this.clampStatusText(game.statusText), game.confidence, game.agreeingSources, game.conflictingSources]);
   }
 
   async loadCurrent(hoursPast = 96): Promise<ReconciledGame[]> {
