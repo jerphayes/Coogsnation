@@ -1415,7 +1415,7 @@ export default function Landing() {
         @media(min-width:1024px) and (max-width:1279px){
           .cn-victory-hero{
             aspect-ratio:auto!important;
-            height:clamp(520px,50vw,620px)!important;
+            height:clamp(420px,56dvh,500px)!important;
           }
           .cn-victory-art{
             object-position:center 44%!important;
@@ -1430,7 +1430,7 @@ export default function Landing() {
         @media(min-width:1280px) and (max-width:1535px){
           .cn-victory-hero{
             aspect-ratio:auto!important;
-            height:clamp(560px,46vw,680px)!important;
+            height:clamp(440px,56dvh,520px)!important;
           }
           .cn-victory-art{
             object-position:center 45%!important;
@@ -1445,7 +1445,7 @@ export default function Landing() {
         @media(min-width:1536px){
           .cn-victory-hero{
             aspect-ratio:auto!important;
-            height:clamp(620px,39vw,720px)!important;
+            height:clamp(460px,56dvh,540px)!important;
           }
           .cn-victory-art{
             object-position:center 46%!important;
@@ -1469,6 +1469,94 @@ export default function Landing() {
           }
           .cn-feature-grid{
             margin-top:8px!important;
+          }
+        }
+
+
+        /* DESKTOP VICTORY COMPOSITION
+           Preserve mobile/tablet. Wide screens use a composed crop so both
+           the victory title and Houston portion of the artwork remain visible. */
+        @media(min-width:1024px){
+          .cn-victory-hero{
+            height:auto!important;
+            aspect-ratio:2097 / 750!important;
+          }
+
+          .cn-victory-art{
+            object-position:center!important;
+            z-index:-3!important;
+          }
+
+          .cn-victory-hero::after{
+            content:""!important;
+            display:none!important;
+            position:absolute;
+            left:0;
+            right:0;
+            bottom:0;
+            height:132px;
+            z-index:-2;
+            pointer-events:none;
+            background:
+              linear-gradient(
+                180deg,
+                rgba(7,13,19,0) 0%,
+                rgba(7,13,19,.08) 18%,
+                rgba(7,13,19,0) 42%
+              ),
+              url("/coog-victory-celebration.gif");
+            background-repeat:no-repeat;
+            background-size:100% 100%,100% auto;
+            background-position:center,center bottom;
+            -webkit-mask-image:linear-gradient(
+              to bottom,
+              transparent 0%,
+              #000 24%,
+              #000 100%
+            );
+            mask-image:linear-gradient(
+              to bottom,
+              transparent 0%,
+              #000 24%,
+              #000 100%
+            );
+          }
+
+          .cn-victory-shade{
+            z-index:-1!important;
+          }
+
+          .cn-feature-section{
+            padding-top:2px!important;
+          }
+
+          .cn-feature-heading{
+            margin-top:0!important;
+            margin-bottom:3px!important;
+          }
+
+          .cn-feature-grid{
+            margin-top:2px!important;
+          }
+        }
+
+        @media(min-width:1280px){
+          .cn-victory-hero{
+            height:auto!important;
+            aspect-ratio:2097 / 750!important;
+          }
+          .cn-victory-hero::after{
+            height:138px;
+          }
+        }
+
+        @media(min-width:1536px){
+          .cn-victory-hero{
+            height:auto!important;
+            aspect-ratio:2097 / 750!important;
+          }
+          .cn-victory-hero::after{
+            height:142px;
           }
         }
 
@@ -1503,11 +1591,18 @@ export default function Landing() {
           className="cn-victory-hero"
           aria-label="Coog Victory Celebration"
         >
-          <img
-            src="/coog-victory-celebration.gif"
-            alt="Coog Victory Celebration"
-            className="cn-victory-art"
-          />
+          <picture>
+            <source
+              media="(min-width: 1024px)"
+              srcSet="/coog-victory-animated.webp"
+              type="image/webp"
+            />
+            <img
+              src="/coog-victory-celebration.gif"
+              alt="Coog Victory Celebration"
+              className="cn-victory-art"
+            />
+          </picture>
 
           <div
             className="cn-victory-shade"
