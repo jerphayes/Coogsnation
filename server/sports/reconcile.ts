@@ -1,5 +1,5 @@
 import type { GamePhase, ReconciledGame, ScoreObservation, SourceHealth } from "../../shared/ngfSportsTypes";
-import { hierarchyPosition } from "./sourceHierarchy";
+import { canonicalSourceLineage, hierarchyPosition } from "./sourceHierarchy";
 
 const FINAL_PHASES = new Set<GamePhase>(["final", "cancelled", "postponed"]);
 
@@ -109,6 +109,46 @@ function bestObservationPerLineage(
   return [...byLineage.values()];
 }
 
+// NCAA is the authority source: it reports its own games rather than
+// re-reporting an aggregator. When a fresh NCAA observation exists, its
+// score wins outright instead of merely breaking a tie. Outside this
+// window we fall back to normal independent-lineage consensus, so a
+// stale NCAA record cannot override a game that has moved on.
+const NCAA_AUTHORITY_WINDOW_MS = 10 * 60 * 1000;
+
+// A football team cannot score exactly 1 point. Multiple aggregators
+// (usatoday, fox) have been observed emitting 1-0 for unplayed games,
+// which was enough to win a quorum on ncaa-6604067 and to deadlock
+// ncaa-6604126 against a correct 14-54 from NCAA. Reject at the gate so
+// impossible values never enter the vote.
+// Basketball is excluded: 1 point is reachable via a single free throw.
+function isPlausibleScore(observation: ScoreObservation): boolean {
+  const away = observation.awayScore;
+  const home = observation.homeScore;
+  if (away == null || home == null) return true;
+
+  if (away < 0 || home < 0) return false;
+  if (away > 150 || home > 150) return false;
+
+  const sport = observation.game?.sport;
+  if (sport === "football") {
+    if (away === 1 || home === 1) return false;
+  }
+  return true;
+}
+
+function hasFreshNcaa(
+  group: { observations: ScoreObservation[] },
+  nowMs: number,
+): boolean {
+  return group.observations.some((item) => {
+    if (canonicalSourceLineage(item.sourceLineage ?? item.sourceId) !== "ncaa") {
+      return false;
+    }
+    return nowMs - Date.parse(item.observedAt) <= NCAA_AUTHORITY_WINDOW_MS;
+  });
+}
+
 export function reconcileGame(
   observations: ScoreObservation[],
   sourceHealth: SourceHealth[] = [],
@@ -122,7 +162,7 @@ export function reconcileGame(
 
   const nowMs = now.getTime();
   const health = new Map(sourceHealth.map((item) => [item.sourceId, item]));
-  const scored = relevant.filter(hasCompleteScore);
+  const scored = relevant.filter(hasCompleteScore).filter(isPlausibleScore);
   const independentScored = bestObservationPerLineage(scored, health, nowMs);
 
   // One upstream lineage gets one vote. Ten mirrors of the same feed cannot
@@ -147,6 +187,12 @@ export function reconcileGame(
   }
 
   const rankedScores = [...scoreGroups.values()].sort((a, b) => {
+    // NCAA is authoritative for its own games. A fresh NCAA observation
+    // outranks independent agreement among aggregators.
+    const aNcaa = hasFreshNcaa(a, nowMs);
+    const bNcaa = hasFreshNcaa(b, nowMs);
+    if (aNcaa !== bNcaa) return aNcaa ? -1 : 1;
+
     // Independent agreement is the primary truth signal.
     if (b.lineages.length !== a.lineages.length) return b.lineages.length - a.lineages.length;
     if (b.weight !== a.weight) return b.weight - a.weight;
